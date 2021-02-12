@@ -331,3 +331,37 @@ DimPlot(os17, reduction = "umap", group.by = "src", pt.size = 1, label = T) +
   scale_color_npg(alpha = 0.7)
 
 save.image(file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/Preprocessed_Seurat_objects/OS17_Zymo_CTL.RData")
+
+#Attempt to Make a vector that contains the column names (cell IDs) for all three of the samples, 
+# then run a subset on the merged/source dataset with cells = that vector.
+
+# cell.ids <- sample(colnames(os17))
+# DimPlot(os17, reduction = "umap", group.by = "src", pt.size = 1, label = T, order = cell.ids) +
+#   coord_fixed() +
+#   ggtitle("OS17 by Source") +
+#   scale_color_npg()
+
+cx.cid <- colnames(cx.raw)
+tb.cid <- colnames(tib.raw)
+lung.cid <- colnames(lung.raw)
+
+cx.cid <- paste("Culture_", cx.cid, sep="")
+tb.cid <- paste("Tibia_", tb.cid, sep="")
+lung.cid <- paste("Lung_", lung.cid, sep="")
+comb.cids <- c(cx.cid, tb.cid, lung.cid)
+
+os17.sub = subset(os17, cells = comb.cids)
+cell.ids <- sample(colnames(os17.sub), 3000)
+#cells(os17) is appended with "Culture_". Need to modify each of the vectors to contain that.
+
+#Together plot
+pdf("All.pdf", width = 8.5, height = 8.5)
+DimPlot(os17.sub, reduction = "umap", group.by = "src", pt.size = 1, label = T) + 
+  coord_fixed() +  
+  scale_color_npg(alpha = 1)
+dev.off()
+
+DimPlot(os17.sub, reduction = "umap", group.by = "src", pt.size = 1, label = T) + 
+  coord_fixed() + 
+  ggtitle("OS17 Clusters") + 
+  scale_color_npg(alpha = 0.7)
