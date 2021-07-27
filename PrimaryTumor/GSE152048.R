@@ -80,9 +80,9 @@ comb <- comb %>%
   FindClusters()
 
 # Save a stopping point - merged and harmony aligned
-saveRDS(comb, "comb.rds")
+qs::qsave(comb, "PrimaryTumor/comb.qs")
 # Start from this stopping point
-comb <- readRDS("comb.rds")
+comb <- qs::qread("PrimaryTumor/comb.qs")
 
 DimPlot(comb, reduction = "umap", label = T, repel = T) +
   coord_fixed() +
@@ -135,14 +135,11 @@ ms$Endothelial <- c("PECAM1", "VWF")
 ms$Myoblast <- c("MYL1", "MYLPF")
 ms$BCell <- c("MS4A1", "CD19", "JCHAIN")
 
-mod_names <- names(ms[i])
+mod_names <- names(ms)
 
-for(i in 1:13) {
+for(i in 1:length(mod_names)) {
   primary <- AddModuleScore(primary, ms[i], name = names(ms[i]))
-  # FeaturePlot(primary, features = names(ms[i]), pt.size = 1,
-  #             order = T, cols = c("lightgoldenrod", "darkred"))
-}
-
-for(i in 1:13) {
-  rm(ms$names(ms[i]))
+  p <- FeaturePlot(primary, features = str_c(names(ms[i]), "1"), pt.size = 1,
+                   order = T, cols = c("lightgoldenrod", "darkred"))
+  print(p)
 }

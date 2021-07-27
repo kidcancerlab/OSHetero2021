@@ -3,5 +3,8 @@
 .RData
 .Ruserdata
 .rds
+.qs
+.spin.R
+.spin.Rmd
 PrimaryTumor/GSE152048
 PrimaryTumor/GSE152048/*
