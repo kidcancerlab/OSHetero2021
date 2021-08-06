@@ -319,6 +319,10 @@ library(org.Hs.eg.db)
 library(dplyr)
 library(enrichplot)
 length(unique(tumor_comb$seurat_clusters))
+
+if(!dir.exists("PrimaryTumor/TumorCombGSEGO")) {
+  dir.create("PrimaryTumor/TumorCombMarksGSEOGO")
+}
 #Make iterative loop to perform GSEA analysis with GO gene lists for Cellular Component, Biological Processes or Molecular Function
 #Output is a ridgeplot and walk plot for the GSEA analysis. These give directional to my results.
 #Issue with building modules is that I do not know how to account for negatively expressed genes for markers
