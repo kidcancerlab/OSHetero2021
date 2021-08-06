@@ -321,7 +321,7 @@ library(enrichplot)
 length(unique(tumor_comb$seurat_clusters))
 
 if(!dir.exists("PrimaryTumor/TumorCombGSEGO")) {
-  dir.create("PrimaryTumor/TumorCombMarksGSEOGO")
+  dir.create("PrimaryTumor/TumorCombGSEGO")
 }
 #Make iterative loop to perform GSEA analysis with GO gene lists for Cellular Component, Biological Processes or Molecular Function
 #Output is a ridgeplot and walk plot for the GSEA analysis. These give directional to my results.
