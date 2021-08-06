@@ -6,6 +6,8 @@
 .qs
 .spin.R
 .spin.Rmd
-PrimaryTumor/GSE152048
+PrimaryTumor/SavedFiles
+PrimaryTumor/TumorCombGSEGO
+PrimaryTumor/TumorCombMarks
 PrimaryTumor/GSE152048/*
 .tsv
