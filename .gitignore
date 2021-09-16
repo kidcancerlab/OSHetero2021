@@ -2,3 +2,12 @@
 .Rhistory
 .RData
 .Ruserdata
+.rds
+.qs
+.spin.R
+.spin.Rmd
+PrimaryTumor/SavedFiles
+PrimaryTumor/TumorCombGSEGO
+PrimaryTumor/TumorCombMarks
+PrimaryTumor/GSE152048/*
+.tsv
