@@ -1,5 +1,20 @@
 source("R:/RESRoberts/Bioinformatics/Analysis/scSeurat.R")
+source("R:/RESRoberts/Bioinformatics/Analysis/Sanjana/Downstream.v2.R")
+#loading libraries
+library(Seurat)
+library(future)
+library(ggplot2)
+# library(fgsea)
+library(msigdbr)
+library(clusterProfiler)
+library(SingleR)
+library(dplyr) # %<%
+library(pheatmap)
+library(RColorBrewer)
+library(viridis) # inferno color palette
+library(grid)
 
+#Merge by condition
 #OS17
 os17.tib.raw <- tenXLoadQC("R:/RESRoberts/Bioinformatics/scRNAOuts/S0018xS0028/filtered_feature_bc_matrix/", spec = "mixHuman")
 os17.tib.raw <- subset(os17.tib.raw, subset = nFeature_RNA >3000 & nCount_RNA <60000 & percent.mt <18)
@@ -97,7 +112,7 @@ OS7.lung.raw$cond <- "NCHOS7"
   OS7.lung.raw <- subset(OS7.lung.raw, cells = sample(Cells(OS7.lung.raw), min))
 
 
-# Merge (by model) tibi and lung datasets into a single Seurat object
+# Merge into a single Seurat object
 OS17.TL <- merge(os17.tib.raw, y = c(os17.lung.raw),
                    add.cell.ids = c("OS17_Tibia", "OS17_Lung"),
                    project = "Heterogeneity")
@@ -235,6 +250,10 @@ DimPlot(OS7, reduction = "umap", pt.size = 1, label = T, split.by = "src") +
 save.image(file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/OS_All.RData")
 
 #Plot the cluster distribution in each sample
+temp <- colSums(table(Idents(OS2), OS2$src))
+min <- min(temp)
+cell.ids <- sample(colnames(OS2["OS2"]))
+
 table(Idents(OS17.TL), OS17.TL$src)
 prop <- prop.table(table(Idents(OS17.TL), OS17.TL$src), margin = 2)*100
 colSums(prop)
@@ -274,6 +293,8 @@ colSums(prop)
 # 2   40.574196    1.176064
 # 3    0.000000   26.426842
 
+save(list = c(cx.sub, lung.sub, tib.sub, os17), 
+           file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/OS17CTL.sub.RData")
 save(list = c(os17.tib.raw, os17.lung.raw, OS17.TL), 
      file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/Fig3_OS17TL.RData")
 save(list = c(t143b.cx.raw, t143b.lung.raw, t143b.tib.raw, t143b), 
@@ -281,6 +302,10 @@ save(list = c(t143b.cx.raw, t143b.lung.raw, t143b.tib.raw, t143b),
 save(list = c(OS2.tib.raw, OS2.lung.raw, OS2), 
      file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/Fig3_OS2TL.RData")
 save(list = c(OS7.tib.raw, OS7.lung.raw, OS7), 
+     file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/Fig3_OS7TL.RData")
+
+#remove these objects and then run CCR on OS and save that file separately; create OS.listonce cleared and re-started
+save(list = c(OS, OS.CCR), 
      file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/Fig3_OS7TL.RData")
 
 #Modify data to account for optimal number of clusters using nRes and pSil functions
@@ -331,6 +356,48 @@ DimPlot(OS7, reduction = "umap", pt.size = 1, label = T, split.by = "src") +
   NoLegend() + NoAxes()
 
 
+#For lab meeting
+cx.raw.nC <- nRes(cx.raw, 
+                  res = seq(from = 0.1, to = 0.5, by = 0.1))
+plot <- pSil(cx.raw.nC, 0.5)
+
+cx.raw <- FindClusters(cx.raw, resolution = 0.2)
+
+plot <- DimPlot(cx.raw, reduction = "umap", pt.size = 1, label = T, split.by = "src") +
+  coord_fixed()
+# 
+# #Discussion from lab meeting - manually assign cluster IDs for OS17-culture
+# cx.raw.new <- cx.raw
+# library(grDevices)
+# library(grDevices, lib.loc = "C:/Program Files/R/R-3.6.2/library")
+# windows()
+# cx.raw.new <- CellSelector(plot = plot, object = cx.raw.new, ident = "4")
+# 
+# Idents(cx.raw) <- factor(x = Idents(cx.raw), levels = sort(levels(cx.raw)))
+# Clusters <- Idents(object = cx.raw)
+# names(Clusters) <- colnames(x = cx.raw)
+# cx.raw.new <- AddMetaData(
+#   object = cx.raw.new,
+#   metadata = Clusters,
+#   col.name = 'cluster.idents'
+# )
+# head(x = cx.raw.new[[]])
+# 
+# clusters <- cx.raw.new@meta.data[["cluster.idents"]]
+# dist.matrix <- dist(x = Embeddings(object = cx.raw.new[["pca"]])[, 1:20])
+# sil <- silhouette(x = as.numeric(x = as.factor(x = clusters)), dist = dist.matrix)
+# # cx.raw.new$sil <- sil[, 3]
+# 
+# windows()
+# # col= pal_npg("nrc")(n)
+# plot(sil,
+#      col = pal_npg("nrc")(4)) # with cluster-wise coloring
+# 
+# pdf("temp.pdf")
+# DimPlot(cx.raw.new, reduction = "umap", pt.size = 1, label = T) +
+#   coord_fixed()
+# dev.off()
+
 #subset after finding clusters
 # re-arrange and re-name levels 
 
@@ -350,7 +417,6 @@ OS7$src <- as.factor(OS7$src)
 OS7$src <- factor(as.factor(OS7$src), levels = c("NCHOS7_Tibia", "NCHOS7_Lung"))
 OS7$src <- revalue(OS7$src, c("NCHOS7_Tibia"="Tibia", "NCHOS7_Lung"="Lung"))
 
-#optimal clsuter resolution set usign Silhouette scoring
 OS17.TL <- OS17.TL %>% FindClusters(resolution = 0.2)
 t143b <- t143b %>% FindClusters(resolution = 0.15)
 OS2 <- OS2 %>% FindClusters(resolution = 0.15)
@@ -387,4 +453,318 @@ OS7 %>% FindClusters(resolution = 0.2) %>%
   ggtitle("OS7")+
   coord_fixed() + NoLegend() + NoAxes()+
   scale_color_npg(alpha = 1)
+dev.off()
+
+#create heatmap 
+B.list <- list(OS17 = OS17.TL,
+               t143b = t143b,
+               OS2 = OS2,
+               OS7 = OS7)
+
+#Heatmap and em.hm files
+em.hm.list <- list()
+for (i in 1:length(B.list)) {
+  em.hm.list[[i]] <- DGEA(B.list[[i]]) 
+}
+
+library(data.table)
+for(i in 1:(length(em.hm.list))) {
+  em.hm.list[[i]] <- setDT(em.hm.list[[i]], keep.rownames = TRUE)[]
+}
+
+temp1 <- em.hm.list[[1]]
+temp2 <- em.hm.list[[2]]
+temp3 <- em.hm.list[[3]]
+temp4 <- em.hm.list[[4]]
+
+cx <- inner_join(temp1, temp2, by = "rn")
+pd <- inner_join(temp3, temp4, by = "rn")
+cx.pd <- inner_join(cx, pd, by = "rn")
+
+##Write table to edit rownames to easily convert to dataframe
+write.table(cx.pd, file=('R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2021/cxpd.tsv'), quote=FALSE, sep='\t')
+cx.pd <- read.table(file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2021/cxpd.tsv", header=T)
+
+#remove "HALLMARK_"
+c <- rownames(cx.pd)
+c <- gsub("HALLMARK_", "", c)
+#remove "_" by removing special characters
+c <- gsub("_", " ", c)
+rownames(cx.pd) <- c
+
+cx.pd.log <- -log10(cx.pd) #log transform
+library(pheatmap)   
+cx.pd_transpose <- as.data.frame(t(cx.pd.log))
+df <- as.matrix(cx.pd_transpose)
+#Write table to print supplemental information
+write.table(df, file=('R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2021/cxpd_plot.tsv'), quote=FALSE, sep='\t')
+
+subj<-c(paste0("A", 0:3),
+        paste0("B", 0:3),
+        paste0("C", 0:2),
+        paste0("D", 0:3))
+rownames(df)<-subj
+aka2 = data.frame(ID = factor(c(rep("OS17", 4),
+                                rep("t143B", 4),
+                                rep("OS2", 3),
+                                rep("OS7", 4)
+                                )))
+rownames(aka2)<-subj
+aka3 = list(ID = c(OS17 = "#E64B35FF", t143B = "#4DBBD5FF", OS2 = "#00A087FF", OS7 = "#3C5488FF"))
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#   install.packages("BiocManager")
+# 
+# BiocManager::install("ComplexHeatmap")
+library(ComplexHeatmap)
+color = colorRampPalette(rev(brewer.pal(n = 7, name =
+                                          "RdYlBu")))(100)
+#calculate percentage of cells in lung for each cluster
+aka4 <- data.frame (Lpercent = c(46.577747,
+                                 10.17901,
+                                 39.69814,
+                                 3.545104,
+                                 2.2204908,
+                                 92.306194,
+                                 3.3502143,
+                                 2.1231009,
+                                 20.32767,
+                                 71.480583,
+                                 8.191748,
+                                 71.01349,
+                                 1.383604,
+                                 1.176064,
+                                 26.426842))
+rownames(aka4)<-subj
+aka5 = (c(rep("OS17", 4), rep("t143B", 4), rep("OS2", 3), rep("OS7", 4)))
+column_ha = HeatmapAnnotation(model = aka5, bar1 = anno_barplot(aka4))
+pdf("temp.pdf", height = 7, width = 8)
+Heatmap(t(df), 
+        col = col, 
+        name = "-log10(p)", 
+        cluster_columns = FALSE,
+        top_annotation = column_ha)+ geom_text(aes(label = pvalue))
+dev.off()
+
+col.breaks=seq(-log10(1),min(max(-log10(cx.pd))+1,18),by=0.5)
+col=inferno(length(col.breaks)) # library(viridis)
+col=c("white",colorRampPalette(brewer.pal(n = 7, name ="Reds"))(50))
+pheatmap(-log10(cx.pd,cluster_rows = TRUE,cluster_cols = TRUE,
+         cellwidth = 5,cellheight = 7,treeheight_row = 0,treeheight_col=0,
+         color = col,scale='none',breaks=col.breaks,fontsize = 8))
+
+
+#IPA analysis
+# Decided to proceed with A2, B1, (B2, B3), C1, D0 and D3
+# Find differentially expressed features selected cluster and remaining cells
+#OS17
+A0.markers <- FindMarkers(OS17.TL, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+A1.markers <- FindMarkers(OS17.TL, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+A2.markers <- FindMarkers(OS17.TL, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+A3.markers <- FindMarkers(OS17.TL, ident.1 = "3", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+
+#remove unnecessary columns
+myList <- list(A0.markers, A1.markers, A2.markers, A3.markers)
+myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
+A0.markers <- myList[[1]]
+A1.markers <- myList[[2]]
+A2.markers <- myList[[3]]
+A3.markers <- myList[[4]]
+  
+# view results
+# head(A2.markers)
+# FeaturePlot(object = OS17.TL, features = 'NFKBIA')
+B0.markers <- FindMarkers(t143b, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+B1.markers <- FindMarkers(t143b, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+B2.markers <- FindMarkers(t143b, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+B3.markers <- FindMarkers(t143b, ident.1 = "3", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+
+myList <- list(B0.markers, B1.markers, B2.markers, B3.markers)
+myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
+B0.markers <- myList[[1]]
+B1.markers <- myList[[2]]
+B2.markers <- myList[[3]]
+B3.markers <- myList[[4]]
+
+C0.markers <- FindMarkers(OS2, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+C1.markers <- FindMarkers(OS2, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+C2.markers <- FindMarkers(OS2, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+
+myList <- list(C0.markers, C1.markers, C2.markers)
+myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
+C0.markers <- myList[[1]]
+C1.markers <- myList[[2]]
+C2.markers <- myList[[3]]
+
+D0.markers <- FindMarkers(OS7, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+D1.markers <- FindMarkers(OS7, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+D2.markers <- FindMarkers(OS7, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+D3.markers <- FindMarkers(OS7, ident.1 = "3", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
+
+myList <- list(D0.markers, D1.markers, D2.markers, D3.markers)
+myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
+D0.markers <- myList[[1]]
+D1.markers <- myList[[2]]
+D2.markers <- myList[[3]]
+D3.markers <- myList[[4]]
+
+library(xlsx)
+write.xlsx(A0.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/A0.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(A1.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/A1.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(A2.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/A2.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(A3.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/A3.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+
+
+write.xlsx(B0.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/B0.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(B1.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/B1.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(B2.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/B2.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(B3.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/B3.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+
+write.xlsx(C0.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/C0.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(C1.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/C1.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(C2.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/C2.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+
+write.xlsx(D0.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/D0.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(D1.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/D1.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(D2.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/D2.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(D3.markers, file = "R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/D3.markers.xlsx", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+
+#Uploaded individual datasets on IPA; ran Expression analysis with adj p value cutoff at 0.01
+df <- read.delim("IPA_updown.txt", header = TRUE)
+rownames(df) <- df[,1]
+df[,1] <- NULL
+
+
+# cx.pd <- cx.pd[-(23:30),] #remove rows with names NA - figure out why we have NAs!!
+cx.pd.log <- -log10(cx.pd) #log transform
+library(pheatmap)   
+
+cx.pd_transpose <- as.data.frame(t(cx.pd.log))
+df <- as.matrix(cx.pd_transpose)
+
+subj<-c(paste0("A", 0:3),
+        paste0("B", 0:3),
+        paste0("C", 0:2),
+        paste0("D", 0:3))
+rownames(df)<-subj
+aka2 = data.frame(ID = factor(c(rep("OS17", 4),
+                                rep("t143B", 4),
+                                rep("OS2", 3),
+                                rep("OS7", 4)
+)))
+rownames(aka2)<-subj
+aka3 = list(ID = c(OS17 = "#E64B35FF", t143B = "#4DBBD5FF", OS2 = "#00A087FF", OS7 = "#3C5488FF"))
+# 
+# df[] <- lapply(df, gsub, pattern='HALLMARK_', replacement='')
+# df
+
+cols <- makeColorRampPalette(c("snow1", "red"), # distances 3 to max(distmat) colored from green to black
+                             100)
+
+pheatmap(t(scale(df)),
+         color = cols, 
+         annotation_col = aka2, 
+         annotation_colors = aka3,
+         annotation_legend = TRUE,
+         gaps_col =  4,
+         show_colnames = T, show_rownames = T, cluster_rows = T, 
+         cluster_cols = T, legend = TRUE, 
+         clustering_distance_rows = "euclidean", border_color = FALSE)
+
+Heatmap(t(scale(df)), 
+        col = col, 
+        name = "-log10(p)", 
+        top_annotation = column_ha)
+
+color = colorRampPalette(rev(brewer.pal(n = 7, name =
+                                          "RdYlBu")))(100)
+
+##Apply glycolysis, Hypoxia, tnfa, emt modules and compare between clusters
+data <- OS17.TL
+
+for(i in 1:length(mod_names)) {
+  data <- AddModuleScore(data, gl[i], name = names(gl[i]))
+}
+RidgePlot(data, features = str_c(names(gl[6]), "1"))
+# VlnPlot(data, features = str_c(names(gl[3]), "1"))
+DotPlot(data, features = TNFA, cluster.idents = TRUE)
+
+#noted a clear differnece in the TNFA_VIA_NFkB module
+#Identify genes that are most differntially expressed in this module
+
+data <- OS17.TL
+pdf("Dotplot_OS17.pdf", height = 30, width = 7)
+DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
+dev.off()
+
+data <- t143b
+pdf("Dotplot_143B.pdf", height = 30, width = 7)
+DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
+dev.off()
+
+data <- OS2
+pdf("Dotplot_OS2.pdf", height = 30, width = 7)
+DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
+dev.off()
+
+data <- OS7
+pdf("Dotplot_OS7.pdf", height = 30, width = 7)
+DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
+dev.off()
+
+################################Pathway enrichment analysis 
+
+P1 <- df %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "Sample") %>%
+  full_join(aka4 %>% rownames_to_column(var = "Sample")) %>%
+  pivot_longer(c(-Sample, -Lpercent),
+               names_to = "Pathway",
+               values_to = "pval",
+               names_repair = "minimal") %>%
+  mutate(Signif = pval >= (-1 * log10(0.05)),
+         sample_order = str_remove(Sample, "[0-9]") %>%
+           rank() * 1000 - Lpercent,
+         Sample = reorder(Sample, sample_order)) %>%
+  ggplot(., aes(x = Sample, y = Pathway, fill = Signif)) + 
+  geom_tile() +
+  geom_text(aes(label = sprintf("%0.2f", pval))) +
+  scale_fill_manual(values = c("gray", "#CC3333")) +
+  scale_y_discrete(limits = rev) +
+  theme(legend.position = "none") +
+  ylab("") 
+P2 <- aka4 %>%
+  rownames_to_column(var = "Sample") %>%
+  full_join(aka2 %>%
+              rownames_to_column(var = "Sample")) %>%
+  mutate(sample_order = str_remove(Sample, "[0-9]") %>%
+           rank() * 1000 - Lpercent,
+         Sample = reorder(Sample, sample_order),
+         ID = reorder(ID, sample_order)) %>%
+  ggplot(., aes(x = Sample, y = Lpercent, fill = ID)) +
+  geom_bar(stat = "identity") +
+  ylab("Percent\nin lung") +
+  xlab("") + theme_bw()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(legend.position = "top", ) +
+  labs(fill = "") 
+
+pdf("Pvalueplot.pdf", height = 12, width = 12)
+cowplot::plot_grid(P2, P1, ncol = 1, align = "v",rel_heights = c(2, 10))
 dev.off()
