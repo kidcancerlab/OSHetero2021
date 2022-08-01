@@ -1942,31 +1942,35 @@ Figure 5. Lung colonization bottleneck enriches for clonal populations with a co
 ```{r Fig5processing}
 source("/home/gdrobertslab/rsexf001/OSHetero2021/scSeurat_updated.R")
 
-# Note that below is all OS-17 - Emily Create Seurat objects and perform initial QC.  Label
-# original source.  below loading is not correct and does not match the paper's figure -Emily
-# cx.raw <-
-# tenXLoadQC('/gpfs0/home2/gdrobertslab/lab/Counts/S0016xS0027/filtered_feature_bc_matrix/',
-# spec = 'mixHuman') cx.raw cx.raw <- subset(cx.raw, subset = nFeature_RNA >3500 & nCount_RNA
-# <50000 & percent.mt <15) cx.raw$src <- 'Culture'
-
-# Zymo copied from RESRoberts (orginal code referenced this) Create Seurat objects and perform
-# initial QC. Label original source.
+# Note that below is all OS-17 - Emily
+# Create Seurat objects and perform initial QC.
+# Label original source.
+# Different directory than used elsewhere-double check which should use (S0016-zymo vs S0016) -Emily
 cx.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/filtered_feature_bc_matrix/",
-    spec = "mixHuman")
+                     spec = "mixHuman")
 
-cx.raw <- subset(cx.raw, subset = nFeature_RNA > 3500 & nCount_RNA < 50000 & percent.mt < 15)
+cx.raw <- subset(cx.raw,
+                 subset = nFeature_RNA > 3500 &
+                   nCount_RNA < 50000 &
+                   percent.mt < 15)
 cx.raw$src <- "Culture"
 
 tib.raw <- tenXLoadQC("/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/filtered_feature_bc_matrix/",
-    spec = "mixHuman")
+                      spec = "mixHuman")
 
-tib.raw <- subset(tib.raw, subset = nFeature_RNA > 3000 & nCount_RNA < 60000 & percent.mt < 18)
+tib.raw <- subset(tib.raw,
+                  subset = nFeature_RNA > 3000 &
+                    nCount_RNA < 60000 &
+                    percent.mt < 18)
 tib.raw$src <- "Tibia"
 
 lung.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix/",
-    spec = "mixHuman")
+                       spec = "mixHuman")
 
-lung.raw <- subset(lung.raw, subset = nFeature_RNA > 1250 & nCount_RNA < 60000 & percent.mt < 25)
+lung.raw <- subset(lung.raw,
+                   subset = nFeature_RNA > 1250 &
+                     nCount_RNA < 60000 &
+                     percent.mt < 25)
 lung.raw$src <- "Lung"
 ```
 
@@ -1976,46 +1980,83 @@ B) UMAP analysis of lineage tagged OS-17 cells in culture, implanted into tibia,
 
 ```{r Fig5b}
 # Subset all to #2800 cells in each condition
-cx.raw <- subset(cx.raw, cells = sample(Cells(cx.raw), 2800))
-tib.raw <- subset(tib.raw, cells = sample(Cells(tib.raw), 2800))
-lung.raw <- subset(lung.raw, cells = sample(Cells(lung.raw), 2800))
+cx.raw <- subset(cx.raw,
+                 cells = sample(Cells(cx.raw),
+                                2800))
+tib.raw <- subset(tib.raw,
+                  cells = sample(Cells(tib.raw),
+                                 2800))
+lung.raw <- subset(lung.raw,
+                   cells = sample(Cells(lung.raw),
+                                  2800))
 
 # Merge into a single Seurat object
-os17 <- merge(cx.raw, y = c(tib.raw, lung.raw), add.cell.ids = c("Culture", "Tibia", "Lung"), project = "LineageTracing")
+os17 <- merge(cx.raw,
+              y = c(tib.raw,
+                    lung.raw),
+              add.cell.ids = c("Culture",
+                               "Tibia",
+                               "Lung"),
+              project = "LineageTracing")
 
 # Process and cluster
 os17 <- NormalizeData(os17) %>%
-    FindVariableFeatures(selection.method = "vst") %>%
-    ScaleData() %>%
-    RunPCA(pc.genes = os.17@var.genes, npcs = 20) %>%
-    RunUMAP(reduction = "pca", dims = 1:20) %>%
-    FindNeighbors(reduction = "pca", dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = os.17@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
 
 # CCR Attempt to regress out the effects of cell cycle on these tumor cells
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
-os17 <- CellCycleScoring(object = os17, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 
-os17 <- ScaleData(object = os17, vars.to.regress = c("S.Score", "G2M.Score"), features = rownames(x = os17))
+os17 <- CellCycleScoring(object = os17,
+                         s.features = s.genes,
+                         g2m.features = g2m.genes,
+                         set.ident = TRUE)
+
+os17 <- ScaleData(object = os17,
+                  vars.to.regress = c("S.Score",
+                                      "G2M.Score"),
+                  features = rownames(x = os17))
+
 os17 <- RunPCA(os17, pc.genes = os.17@var.genes, npcs = 20) %>%
-    RunUMAP(reduction = "pca", dims = 1:20) %>%
-    FindNeighbors(reduction = "pca", dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
 
-DimPlot(os17, reduction = "umap", pt.size = 1, label = T) + coord_fixed() + ggtitle("OS17 Clusters") +
-    scale_color_npg(alpha = 0.7)
+DimPlot(os17,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("OS17 Clusters") +
+  scale_color_npg(alpha = 0.7)
 
 # Plot the data
 set.seed(100)
 cell.ids <- sample(colnames(os17))
-DimPlot(os17, reduction = "umap", group.by = "src", pt.size = 1, label = F, order = cell.ids) +
-    coord_fixed() + ggtitle("OS17 by Source") + scale_color_npg()
+
+DimPlot(os17,
+        reduction = "umap",
+        group.by = "src",
+        pt.size = 1,
+        label = F,
+        order = cell.ids) +
+  coord_fixed() +
+  ggtitle("OS17 by Source") +
+  scale_color_npg()
 
 ################## Find the optimum resolution for clustering
-os17.nC <- nRes(os17, res = seq(from = 0.2, to = 0.3, by = 0.01))
+os17.nC <- nRes(os17,
+                res = seq(from = 0.2,
+                          to = 0.3,
+                          by = 0.01))
 
-save(os17, file = "/home/gdrobertslab/rsexf001/OSHetero2021/os17.RData")
+save(os17,
+     file = "/home/gdrobertslab/rsexf001/OSHetero2021/os17.RData")
 ```
 
 ## Figure 5C
@@ -2024,17 +2065,31 @@ C) Frequency distribution of clones identified in each of the conditions. A high
 
 ```{r Fig5c}
 # Add lineage tracing tags to the Seurat objects
-cx.raw <- processLTBC(cx.raw, lt.loc = "/gpfs0/home/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/lt.fq",
-    cid.loc = "/gpfs0/home/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/cid.fq", histogram = T,
-    title = "Culture, Top 40 Clones", ymax = 1.75, col.fill = "#E64B35FF", relative = T)
+cx.raw <- processLTBC(cx.raw,
+                      lt.loc = "/gpfs0/home/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/lt.fq",
+                      cid.loc = "/gpfs0/home/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/cid.fq",
+                      histogram = T,
+                      title = "Culture, Top 40 Clones",
+                      ymax = 1.75,
+                      col.fill = "#E64B35FF",
+                      relative = T)
 
-tib.raw <- processLTBC(tib.raw, lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
-    cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq", histogram = T, title = "Tibia, Top 40 Clones",
-    ymax = 1.75, col.fill = "#00A087FF", relative = T)
+tib.raw <- processLTBC(tib.raw,
+                       lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
+                       cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
+                       histogram = T,
+                       title = "Tibia, Top 40 Clones",
+                       ymax = 1.75,
+                       col.fill = "#00A087FF",
+                       relative = T)
 
-lung.raw <- processLTBC(lung.raw, lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
-    cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq", histogram = T, title = "Lineage Barcode Enrichment by Microenvironment",
-    ymax = 1.75, relative = T)
+lung.raw <- processLTBC(lung.raw,
+                        lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
+                        cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
+                        histogram = T,
+                        title = "Lung, Top 40 Clones",
+                        ymax = 1.75,
+                        relative = T)
 ```
 
 ## Figure 5D
@@ -2046,72 +2101,118 @@ D) Overlay of cells sharing a common ancestor onto the dimensional reduction plo
 ```{r Fig5d_1}
 source("/home/gdrobertslab/rsexf001/OSHetero2021/scSeurat_updated.R")
 load("/home/gdrobertslab/rsexf001/OSHetero2021/os17.RData")
+
 # Extract the barcode frequency lists
-cx.lt.list <- processLTBC(cx.raw, lt.loc = "/gpfs0/home/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/lt.fq",
-    cid.loc = "/gpfs0/home/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/cid.fq", ret.list = TRUE)
-tib.lt.list <- processLTBC(tib.raw, lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
-    cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq", ret.list = TRUE)
-lung.lt.list <- processLTBC(lung.raw, lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
-    cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq", ret.list = TRUE)
+cx.lt.list <- processLTBC(cx.raw,
+                          lt.loc = "/gpfs0/home/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/lt.fq",
+                          cid.loc = "/gpfs0/home/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/cid.fq",
+                          ret.list = TRUE)
+tib.lt.list <- processLTBC(tib.raw,
+                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
+                           cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
+                           ret.list = TRUE)
+lung.lt.list <- processLTBC(lung.raw,
+                            lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
+                            cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
+                            ret.list = TRUE)
 
 # Subset the three samples, but retain the current umap data
-cx.sub <- subset(os17, subset = src == "Culture")
-tib.sub <- subset(os17, subset = src == "Tibia")
-lung.sub <- subset(os17, subset = src == "Lung")
+cx.sub <- subset(os17,
+                 subset = src == "Culture")
+tib.sub <- subset(os17,
+                  subset = src == "Tibia")
+lung.sub <- subset(os17,
+                   subset = src == "Lung")
 
 Idents(os17) <- os17$RNA_snn_res.0.3
-DimPlot(os17, label = T, split.by = "src") + coord_fixed()
+DimPlot(os17,
+        label = T,
+        split.by = "src") +
+  coord_fixed()
 
 # Subset the three samples, but retain the current umap data
-cx.sub <- subset(os17, subset = src == "Culture")
-tib.sub <- subset(os17, subset = src == "Tibia")
-lung.sub <- subset(os17, subset = src == "Lung")
+cx.sub <- subset(os17,
+                 subset = src == "Culture")
+tib.sub <- subset(os17,
+                  subset = src == "Tibia")
+lung.sub <- subset(os17,
+                   subset = src == "Lung")
 
-DimPlot(lung.sub, label = T) + coord_fixed()
+DimPlot(lung.sub,
+        label = T) +
+  coord_fixed()
 
 #################### subset to cells that have a lineage tag memory.limit(size = 40000)
 source("/home/gdrobertslab/rsexf001/OSHetero2021/Downstream.v2.R")
-# library(xlsx) Culture
+# library(xlsx)
+
+# Culture
 Culture.LTcells <- vector(mode = "character")
 for (i in 1:nrow(cx.lt.list)) {
-    temp <- WhichCells(cx.sub, expression = lt == cx.lt.list[[i, 1]])
-    Culture.LTcells <- append(Culture.LTcells, temp)
+  temp <- WhichCells(cx.sub,
+                     expression = lt == cx.lt.list[[i, 1]])
+  Culture.LTcells <- append(Culture.LTcells,
+                            temp)
 }
-cx.tagged <- subset(cx.sub, cells = Culture.LTcells)
+cx.tagged <- subset(cx.sub,
+                    cells = Culture.LTcells)
 
 # Tibia
 tib.LTcells <- vector(mode = "character")
 for (i in 1:nrow(tib.lt.list)) {
-    temp <- WhichCells(tib.sub, expression = lt == tib.lt.list[[i, 1]])
-    tib.LTcells <- append(tib.LTcells, temp)
+  temp <- WhichCells(tib.sub,
+                     expression = lt == tib.lt.list[[i, 1]])
+  tib.LTcells <- append(tib.LTcells,
+                        temp)
 }
-tib.tagged <- subset(tib.sub, cells = tib.LTcells)
+tib.tagged <- subset(tib.sub,
+                     cells = tib.LTcells)
 
 # Lung
 lung.LTcells <- vector(mode = "character")
 for (i in 1:nrow(lung.lt.list)) {
-    # originally said 1:515, unclear why and received a 'subscript out of bounds' error, so
-    # changed to match the previous code for cx and tib -Emily
-    temp <- WhichCells(lung.sub, expression = lt == lung.lt.list[[i, 1]])
-    lung.LTcells <- append(lung.LTcells, temp)
+  # originally said 1:515, unclear why and received a 'subscript out of bounds' error, so
+  # changed to match the previous code for cx and tib -Emily
+  temp <- WhichCells(lung.sub,
+                     expression = lt == lung.lt.list[[i, 1]])
+  lung.LTcells <- append(lung.LTcells,
+                         temp)
 }
 
-lung.tagged <- subset(lung.sub, cells = lung.LTcells)
+lung.tagged <- subset(lung.sub,
+                      cells = lung.LTcells)
 
-lung.sub <- subset(lung.sub, idents = c("0", "1", "3", "6"))  ##Remove outlier cells in cluster 2 and 5 # Had to edit some of these cluster names (likely due to random seed changes in plotting) -Emily
+## Remove outlier cells in cluster 2 and 5
+# Had to edit some of these cluster names (likely due to random seed changes in plotting) -Emily
+lung.sub <- subset(lung.sub,
+                   idents = c("0",
+                              "1",
+                              "3",
+                              "6"))
+
 
 pdf("LungOutline.pdf", height = 5, width = 5)
-DimPlot(lung.sub, reduction = "umap", pt.size = 1, label = TRUE) + coord_fixed() + ggtitle("Lung-derived") +
-    # xlim(0,9) +
-NoAxes() + scale_color_npg(alpha = 1)
+DimPlot(lung.sub,
+        reduction = "umap",
+        pt.size = 1,
+        label = TRUE) +
+  coord_fixed() +
+  ggtitle("Lung-derived") +
+  # xlim(0,9) +
+  NoAxes() +
+  scale_color_npg(alpha = 1)
 dev.off()
-## X11cairo 
-##        2
 
-# Show example in Rm html file -Emily
-DimPlot(lung.sub, reduction = "umap", pt.size = 1, label = TRUE) + coord_fixed() + ggtitle("Lung-derived") +
-    # xlim(0,9) +
-NoAxes() + scale_color_npg(alpha = 1)
+# Show example in Rmd html file -Emily
+DimPlot(lung.sub,
+        reduction = "umap",
+        pt.size = 1,
+        label = TRUE) +
+  coord_fixed() +
+  ggtitle("Lung-derived") +
+  # xlim(0,9) +
+  NoAxes() +
+  scale_color_npg(alpha = 1)
 ```
 
 ### Lung Panel
@@ -2119,18 +2220,32 @@ NoAxes() + scale_color_npg(alpha = 1)
 ```{r Fig5d}
 ### Key Figure Image for Lung -Emily
 ### Need to repeat for culture and tibia -Emily
+
 # Lung
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+vplayout <- function(x,y) viewport(layout.pos.row = x,
+                                   layout.pos.col = y)
 pdf("grid_lung_v4.pdf", width = 10, height = 10)
 grid.newpage()
-pushViewport(viewport(layout = grid.layout(1, 4)))
+pushViewport(viewport(layout = grid.layout(1,4)))
+
 for (i in 1:4) {
-    p <- DimPlot(lung.tagged, reduction = "umap", pt.size = 1, cells.highlight = WhichCells(lung.sub,
-        expression = lt == lung.lt.list[[i, 1]]), cols.highlight = "#4DBBD5FF", sizes.highlight = 3) +
-        coord_fixed() + theme(legend.position = "none") + ggtitle(paste("Clone", lung.lt.list[[i,
-        1]])) + #xlim(0,9) + 1]])) + #xlim(0,9) +
-    NoLegend() + NoAxes()
-    print(p, vp = vplayout(ceiling(i/4), i))
+  p <- DimPlot(lung.tagged,
+               reduction = "umap",
+               pt.size = 1,
+               cells.highlight = WhichCells(lung.sub,
+                                            expression = lt == lung.lt.list[[i, 1]]),
+               cols.highlight = "#4DBBD5FF",
+               sizes.highlight = 3) +
+    coord_fixed() +
+    theme(legend.position = "none") +
+    ggtitle(paste("Clone",
+                  lung.lt.list[[i,1]])) +
+    #xlim(0,9) + 1]])) +
+    #xlim(0,9) +
+    NoLegend() +
+    NoAxes()
+  
+  print(p, vp = vplayout(ceiling(i/4), i))
 }
 dev.off()
 ```
@@ -2140,14 +2255,15 @@ dev.off()
 E) UMAP visualization of cells belonging to top ten enriched clonal families highlighted in red.
 
 ```{r Fig5e}
-# Compare Enriched vs non-enriched Glycolysis and Hypoxia seem to be trending together
+# Compare Enriched vs non-enriched 
 
 # Group first 12 against the tagged Lung
 data <- lung.tagged
 LT <- vector(mode = "character")
 for (i in 1:10) {
-    temp <- WhichCells(lung.sub, expression = lt == lung.lt.list[[i, 1]])
-    LT <- append(LT, temp)
+  temp <- WhichCells(lung.sub,
+                     expression = lt == lung.lt.list[[i, 1]])
+  LT <- append(LT, temp)
 }
 Idents(data, cells = LT) <- "Enriched"
 
@@ -2155,16 +2271,24 @@ Idents(data, cells = LT) <- "Enriched"
 # 1
 LT <- vector(mode = "character")
 for (i in 135:377) {
-    temp <- WhichCells(lung.sub, expression = lt == lung.lt.list[[i, 1]])
-    LT <- append(LT, temp)
+  temp <- WhichCells(lung.sub,
+                     expression = lt == lung.lt.list[[i, 1]])
+  LT <- append(LT, temp)
 }
 Idents(data, cells = LT) <- "Non-enriched"
 
 cell.ids <- sample(colnames(data))
 
 # Culture plots pdf('OS17_Enr.pdf', width = 5, height = 5)
-DimPlot(data, reduction = "umap", pt.size = 1, cells.highlight = WhichCells(data, idents = "Enriched"),
-    cols.highlight = "#E64B35FF", sizes.highlight = 2, order = cell.ids) + coord_fixed()
+DimPlot(data,
+        reduction = "umap",
+        pt.size = 1,
+        cells.highlight = WhichCells(data,
+                                     idents = "Enriched"),
+        cols.highlight = "#E64B35FF",
+        sizes.highlight = 2,
+        order = cell.ids) +
+  coord_fixed()
 ```
 
 ## Figure 5F
@@ -2183,36 +2307,47 @@ B.list <- list(OS17 = data)
 
 em.hm.list <- list()
 for (i in 1:length(B.list)) {
-    em.hm.list[[i]] <- DGEA(B.list[[i]])
+  em.hm.list[[i]] <- DGEA(B.list[[i]])
 }
 
 temp1 <- em.hm.list[[1]]
 temp1 <- -log10(temp1)
+
 # remove '_' by removing special characters
 c <- rownames(temp1)
 c <- gsub("HALLMARK ", "", c)
 c <- gsub("_", " ", c)
 rownames(temp1) <- c
+
 # remove negative 0 values due to number of decimal points displayed
 temp1 <- abs(temp1)
 temp1 <- temp1["Enriched"]
 
-# Subset to only pathways with siginificant pvalue (-1 * log10(0.05)) = 1.30103
+# Subset to only pathways with significant pvalue (-1 * log10(0.05)) = 1.30103
 temp1["Enriched"] >= 1.30103 -> temp1$logical
-colnames(temp1) <- c("pvalue", "significant")
+colnames(temp1) <- c("pvalue",
+                     "significant")
 logical <- temp1$significant
 temp1 <- temp1[logical, ]
-temp1 <- rownames_to_column(temp1, var = "Pathway")
-position <- order(temp1$pvalue, decreasing = TRUE)
+temp1 <- rownames_to_column(temp1,
+                            var = "Pathway")
+position <- order(temp1$pvalue,
+                  decreasing = TRUE)
 temp1 <- temp1[position, ]
-plot <- ggplot(temp1, aes(x = pvalue, y = Pathway)) + geom_bar(stat = "identity") + scale_fill_brewer(type = "qual",
-    palette = "Set1") + theme_bw() + ylab("")
+plot1 <- ggplot(temp1,
+                aes(x = pvalue,
+                    y = Pathway)) +
+  geom_bar(stat = "identity") +
+  scale_fill_brewer(type = "qual",
+                    palette = "Set1") +
+  theme_bw() +
+  ylab("")
 
 pdf("Enr_Pathway.pdf", height = 5, width = 10)
-plot(plot)
+plot(plot1)
 dev.off()
 
 # for vewing in html output -Emily
-plot
+plot1
 ```
 
