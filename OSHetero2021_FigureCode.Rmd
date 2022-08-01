@@ -2056,7 +2056,130 @@ os17.nC <- nRes(os17,
                           by = 0.01))
 
 save(os17,
-     file = "/home/gdrobertslab/rsexf001/OSHetero2021/os17.RData")
+     file = "/home/gdrobertslab/rsexf001/OSHetero2021/Data/os17.RData")
+```
+
+### Figure 5 Supplemental Heatmap
+
+#### Clusters DT 
+
+```{r Fig5_os17_supplheat_dt}
+os17markers <- FindAllMarkers(os17,
+                              min.pct = 0.25,
+                              logfc.threshold = 0.25)
+
+# Print top 10 in each cluster and organize for best viewing
+os17markers %>%
+  group_by(cluster) %>%
+  top_n(n = 10, wt = avg_log2FC) -> t
+
+t <- as.data.frame(t)
+
+t <- as.data.frame(t)
+t$cluster <- as.numeric(as.character(t$cluster))
+t <- t[order(t$cluster),]
+t <- t[,c(7, 1:6)]
+t <- t[,c(7, 1:6)]
+#could also use arrange() to sort by column
+
+DT::datatable(t, 
+              rownames = FALSE,
+              extensions = c('FixedColumns',
+                             'Buttons'),
+              options = list(
+                pageLength = 10,
+                scrollX = TRUE,
+                scrollCollapse = TRUE,
+                dom = 'Bfrtip',
+                buttons = c('copy',
+                            'csv',
+                            'excel')
+              ))
+```
+
+#### Clusters Heatmap
+
+```{r Fig5_os17_supplheat}
+# Visualize colors that match those in the dimplot for group.colors
+#library("scales")
+#show_col(pal_npg("nrc")(10))
+
+DoHeatmap(os17,
+          features = t$gene,
+          group.by = 'ident',
+          group.bar = T,
+          label = T,
+          group.bar.height = 0.08,
+          draw.lines = T,
+          lines.width = 15,
+          group.colors = c("#E64B35FF",
+                           "#4DBBD5FF",
+                           "#00A087FF",
+                           "#3C5488FF")) +
+  scale_fill_gradientn(colors = c("blue",
+                                  "light grey",
+                                  "red")) 
+```
+
+#### Src DT 
+
+```{r Fig5_os17_supplheat_dt}
+Idents(os17) <- os17$src
+os17markers <- FindAllMarkers(os17,
+                              min.pct = 0.25,
+                              logfc.threshold = 0.25)
+
+# Print top 10 in each cluster and organize for best viewing
+os17markers %>%
+  group_by(cluster) %>%
+  top_n(n = 10, wt = avg_log2FC) -> t
+
+t <- as.data.frame(t)
+
+t <- as.data.frame(t)
+t$cluster <- as.numeric(as.character(t$cluster))
+t <- t[order(t$cluster),]
+t <- t[,c(7, 1:6)]
+t <- t[,c(7, 1:6)]
+#could also use arrange() to sort by column
+
+DT::datatable(t, 
+              rownames = FALSE,
+              extensions = c('FixedColumns',
+                             'Buttons'),
+              options = list(
+                pageLength = 10,
+                scrollX = TRUE,
+                scrollCollapse = TRUE,
+                dom = 'Bfrtip',
+                buttons = c('copy',
+                            'csv',
+                            'excel')
+              ))
+```
+
+#### Src Heatmap
+
+```{r Fig5_os17_supplheat}
+# Visualize colors that match those in the dimplot for group.colors
+#library("scales")
+#show_col(pal_npg("nrc")(10))
+
+DoHeatmap(os17,
+          features = t$gene,
+          group.by = 'ident',
+          group.bar = T,
+          label = T,
+          group.bar.height = 0.08,
+          draw.lines = T,
+          lines.width = 15,
+          group.colors = c("#E64B35FF",
+                           "#4DBBD5FF",
+                           "#00A087FF",
+                           "#3C5488FF")) +
+  scale_fill_gradientn(colors = c("blue",
+                                  "light grey",
+                                  "red")) 
 ```
 
 ## Figure 5C
