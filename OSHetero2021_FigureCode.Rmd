@@ -29,7 +29,6 @@ knitr::opts_chunk$set(
 **Cell line and PDX models of osteosarcoma display transcriptional heterogeneity.**
 
 ```{r Fig1_lib, cache=FALSE}
-setwd("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021")
 source("scSeurat.R")
 source("Downstream.v2.R")
 
@@ -878,21 +877,70 @@ pathways[[4]] <- em
 # FALSE) save.image(file ='AllpseudoBulk_Venn.RData')
 
 ################ Two sided Barplot
-SanjanaPlots <- read.delim("SanjanaPlots.txt")
+SanjanaPlots <- read.delim("SanjanaPlots.txt") %>%
+    mutate(Tissue = stringr::str_replace(Tissue,
+                                "Tibia",
+                                "Tibia Gene Sets") %>%
+                stringr::str_replace("Lung", "Lung Gene Sets"),
+            Pathway = stringr::str_wrap(Pathway, width = 25))
 
-ggplot(SanjanaPlots, aes(x = -1 * Order,
-                         y = p.adjust,
-                         fill = p.adjust > 0)) +
-  geom_bar(stat = "identity") +
-  coord_flip() +
-  facet_wrap(~Tissue) +
-  scale_fill_brewer(type = "qual",
+figure_3c <-
+    ggplot() +
+    geom_bar(data = SanjanaPlots,
+            aes(x = -1 * Order,
+                y = p.adjust,
+                fill = p.adjust > 0),
+            stat = "identity") +
+    coord_flip() +
+    facet_wrap(~Tissue,
+                ncol = 1,
+                scales = "free") +
+    scale_fill_brewer(type = "qual",
                     palette = "Set1") +
-  geom_text(aes(y = Label_y *
-                  3, label = Pathway)) +
-  theme_bw() +
-  ylab("") +
-  ylim(-5, 5)
+    geom_hline(yintercept = c(-1.5, 1.5),
+                color = "gray",
+                linetype = 2,
+                size = 1) +
+    geom_hline(yintercept = 0,
+               color = "black",
+               size = 1) +
+    geom_text(data = SanjanaPlots,
+            aes(x = -1 * Order,
+                y = Label_y * 3,
+                label = Pathway)) +
+    geom_text(data = tibble(y = c(-2.5, 2.5, -2.5, 2.5),
+                            x = c(0.5, 0.5, 0.5, 0.5),
+                            label = c("Downregulated\nduring tibia colonization",
+                                    "Upregulated\nduring tibia colonization",
+                                    "Downregulated\nduring lung colonization",
+                                    "Upregulated\nduring lung colonization"),
+                            Tissue = c("Tibia Gene Sets",
+                                        "Tibia Gene Sets",
+                                        "Lung Gene Sets",
+                                        "Lung Gene Sets")),
+            aes(x = x,
+                y = y,
+                label = label)) +
+    theme_bw() +
+    theme(strip.background = element_rect(color = "white", fill = "white"),
+          strip.text.x = element_text(size = 20),
+          legend.position = "none",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          axis.line.x = element_line(color = "black"),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank()) +
+    labs(title = "Tibia Gene Sets",
+         y = "",
+         x = "") +
+    ylim(-5, 5) +
+    xlim(-5.5, 1)
+
+ggsave("Figure_3C.png",
+       plot = figure_3c,
+       width = 6,
+       height = 9)
 ```
 
 
@@ -902,27 +950,16 @@ Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive ch
 
 ## Figure 3B
 
-B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown in cell culture (####p <0.001). Within model comparison, identified increase in ITH scores as cells colonize tibia and lung microenvironments, with the exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák multiple comparisons test.
+B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown
+in cell culture (####p <0.001). Within model comparison, identified increase in
+ITH scores as cells colonize tibia and lung microenvironments, with the
+exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák
+multiple comparisons test.
 
 ```{r Fig3b}
+load("Data/OS.listv3.CCR.RData")
 
-#Create List to compute ITH scores
-OS.list <- list(OB = OB,
-                OS17.cx = os17.cx.raw,
-                OS17.Tibia = os17.tib.raw, 
-                OS17.Lung = os17.lung.raw, 
-                t143B.cx = t143b.cx.raw,
-                t143B.Tibia = t143b.tib.raw, 
-                t143B.Lung = t143b.lung.raw,
-                OS2.Flank = OS2.cx.raw,
-                OS2.Tibia = OS2.tib.raw, 
-                OS2.Lung = OS2.lung.raw, 
-                OS7.Flank= OS7.cx.raw,
-                OS7.Tibia = OS7.tib.raw, 
-                OS7.Lung = OS7.lung.raw) 
-
-#load(file = "/gpfs0/home/gdrobertslab/rssxr002/Analysis/2020-OS/OS.list.RData")
-for (i in 1: length(OS.list)) {
+for (i in 1:length(OS.list)) {
   OS.list[[i]] <- NormalizeData(OS.list[[i]]) %>%
     FindVariableFeatures(selection.method = "vst") %>%
     ScaleData() %>%
@@ -938,7 +975,7 @@ for (i in 1: length(OS.list)) {
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
 
-for (i in 1: length(OS.list)) {
+for (i in 1:length(OS.list)) {
   OS.list[[i]] <- CellCycleScoring(object = OS.list[[i]], s.features = s.genes,
                                    g2m.features = g2m.genes, set.ident = TRUE)
   OS.list[[i]] <- ScaleData(object = OS.list[[i]],
@@ -950,8 +987,9 @@ for (i in 1: length(OS.list)) {
     FindClusters(resolution = 0.3)
 }
 
-save(OS.list, file = "OS.listv3.CCR.RData")
+save(OS.list, file = "Data/OS.listv3.CCR.RData")
 ```
+
 
 ## Figure 3C
 
