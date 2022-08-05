@@ -884,46 +884,47 @@ SanjanaPlots <- read.delim("SanjanaPlots.txt") %>%
                 stringr::str_replace("Lung", "Lung Gene Sets"),
             Pathway = stringr::str_wrap(Pathway, width = 25))
 
-figure_3c <-
+figure_2c <-
     ggplot() +
     geom_bar(data = SanjanaPlots,
             aes(x = -1 * Order,
                 y = p.adjust,
                 fill = p.adjust > 0),
-            stat = "identity") +
+            stat = "identity",
+            alpha = 0.8) +
     coord_flip() +
     facet_wrap(~Tissue,
                 ncol = 1,
                 scales = "free") +
-    scale_fill_brewer(type = "qual",
-                    palette = "Set1") +
     geom_hline(yintercept = c(-1.5, 1.5),
-                color = "gray",
-                linetype = 2,
-                size = 1) +
+               color = "gray",
+               linetype = 2,
+               size = 1) +
     geom_hline(yintercept = 0,
                color = "black",
                size = 1) +
     geom_text(data = SanjanaPlots,
-            aes(x = -1 * Order,
-                y = Label_y * 3,
-                label = Pathway)) +
+              aes(x = -1 * Order,
+                  y = Label_y * 3,
+                  label = Pathway)) +
     geom_text(data = tibble(y = c(-2.5, 2.5, -2.5, 2.5),
                             x = c(0.5, 0.5, 0.5, 0.5),
                             label = c("Downregulated\nduring tibia colonization",
-                                    "Upregulated\nduring tibia colonization",
-                                    "Downregulated\nduring lung colonization",
-                                    "Upregulated\nduring lung colonization"),
+                                      "Upregulated\nduring tibia colonization",
+                                      "Downregulated\nduring lung colonization",
+                                      "Upregulated\nduring lung colonization"),
                             Tissue = c("Tibia Gene Sets",
-                                        "Tibia Gene Sets",
-                                        "Lung Gene Sets",
-                                        "Lung Gene Sets")),
+                                       "Tibia Gene Sets",
+                                       "Lung Gene Sets",
+                                       "Lung Gene Sets")),
             aes(x = x,
                 y = y,
-                label = label)) +
+                label = label),
+            fontface = "bold") +
+    scale_fill_manual(values = c("#377eb8", "#e41a1c")) +
     theme_bw() +
     theme(strip.background = element_rect(color = "white", fill = "white"),
-          strip.text.x = element_text(size = 20),
+          strip.text.x = element_text(size = 20, face = "bold"),
           legend.position = "none",
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
@@ -937,12 +938,17 @@ figure_3c <-
     ylim(-5, 5) +
     xlim(-5.5, 1)
 
-ggsave("Figure_3C.png",
+ggsave("figures/figure_2/figure_2c.png",
        plot = figure_3c,
        width = 6,
        height = 9)
+
+save(figure_2c, file = "figures/figure_2/figure_2c.RData")
 ```
 
+```{r assembleFig2}
+patchwork stuff
+```
 
 # Figure 3
 
