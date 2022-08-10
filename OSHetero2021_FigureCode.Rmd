@@ -663,105 +663,90 @@ B) Venn diagrams showing overlap of differentially expressed genes that are up- 
 ```{r Fig2b}
 load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS_merged_postCCR.RData")
 
-Idents(OS) <- OS$src
+OS$cell_line <- stringr::str_remove(OS$src, "_.+") %>%
+    stringr::str_replace("t143b", "143B") %>%
+    stringr::str_replace("NCHOS2", "NCH-OS-2") %>%
+    stringr::str_replace("NCHOS7", "NCH-OS-7")
+OS$tissue <- stringr::str_remove(OS$src, ".+_") %>%
+    stringr::str_replace("Flank", "Culture")
 
-OS <- RenameIdents(OS,
-                   OS17_Culture = "Culture",
-                   OS17_Lung = "Lung",
-                   OS17_Tibia = "Tibia",
-                   t143b_Culture = "Culture",
-                   t143b_Lung = "Lung",
-                   t143b_Tibia = "Tibia",
-                   NCHOS2_Flank = "Culture",
-                   NCHOS2_Lung = "Lung",
-                   NCHOS2_Tibia = "Tibia",
-                   NCHOS7_Flank = "Culture",
-                   NCHOS7_Lung = "Lung",
-                   NCHOS7_Tibia = "Tibia")
+OS <- subset(OS, subset = cell_line != "OB")
 
-OS$tissue <- Idents(OS)
+Idents(OS) <- OS$tissue
 
-os17 <- subset(OS, cells = WhichCells(OS, expression = cond == "OS17"))
-t143B <- subset(OS, cells = WhichCells(OS, expression = cond == "t143b"))
-NCHOS2 <- subset(OS, cells = WhichCells(OS, expression = cond == "NCHOS2"))
-NCHOS7 <- subset(OS, cells = WhichCells(OS, expression = cond == "NCHOS7"))
+de_out <- list()
+for (tissue_name in c("Lung", "Tibia")) {
+    for (cl_name in unique(OS$cell_line)) {
+        message(tissue_name, " ", cl_name)
+        temp_seurat <- subset(OS, subset = (tissue == tissue_name |
+                                    tissue == "Culture") &
+                                    cell_line == cl_name)
+        temp_de_out <-
+            FindMarkers(temp_seurat,
+                        ident.1 = tissue_name,
+                        ident.2 = "Culture",
+                        min.pct = 0.1) %>%
+            filter(p_val_adj <= 0.05)
 
-# Create list of objects to use for Find markers analysis
-data <- list(os17 = os17,
-             t143B = t143B,
-             NCHOS2 = NCHOS2,
-             NCHOS7 = NCHOS7)
+        de_out[[tissue_name]][["up"]][[cl_name]] <-
+            temp_de_out %>%
+            filter(avg_log2FC > 0) %>%
+            rownames()
 
-# Lung marker - UP
-Lung.up <- list(NULL)
-for (i in 1:length(data)) {
-  tmp <- data[[i]]
-  x <- FindMarkers(tmp,
-                   ident.1 = "Lung",
-                   ident.2 = "Culture",
-                   only.pos = TRUE,
-                   min.pct = 0.1)
-  Lung.up[[i]] <- rownames(x)
+        de_out[[tissue_name]][["down"]][[cl_name]] <-
+            temp_de_out %>%
+            filter(avg_log2FC < 0) %>%
+            rownames()
+
+        rm(temp_seurat, temp_de_out)
+    }
 }
 
-# Tibia markers - UP
-Tibia.up <- list(NULL)
-for (i in 1:length(data)) {
-  tmp <- data[[i]]
-  x <- FindMarkers(tmp,
-                   ident.1 = "Tibia",
-                   ident.2 = "Culture",
-                   only.pos = TRUE,
-                   min.pct = 0.1)
-  Tibia.up[[i]] <- rownames(x)
+figure_2b <- list()
+for (tissue_name in c("Lung", "Tibia")) {
+    for (direction in c("up", "down")) {
+        figure_2b[[paste0(tissue_name,
+                          " - ",
+                          direction)]] <-
+            ggvenn::ggvenn(de_out[[tissue_name]][[direction]],
+                           fill_color = c("#0073C2FF",
+                                          "#EFC000FF",
+                                          "#868686FF",
+                                          "#CD534CFF"),
+                           stroke_size = 0.9,
+                           set_name_size = 5,
+                           text_size = 2.5,
+                           show_percentage = TRUE) +
+            ggtitle(paste0(tissue_name,
+                           " - ",
+                           direction)) +
+            theme(plot.title = element_text(hjust = 0.5,
+                                            vjust = -15,
+                                            size = 20,
+                                            face = "bold"),
+                  plot.margin = margin(-3, 0, -3, 0, "cm"))
+
+        # Fix the position of the bottom two set names
+        figure_2b[[paste0(tissue_name,
+                          " - ",
+                          direction)]]$layers[[3]]$data$x <-
+            c(-1, -0.8, 0.8, 1)
+    }
 }
 
-# Lung markers - DOWN
-Lung.down <- list(NULL)
-for (i in 1:length(data)) {
-  tmp <- data[[i]]
-  x <- FindMarkers(tmp,
-                   ident.1 = "Lung",
-                   ident.2 = "Culture",
-                   only.pos = FALSE,
-                   min.pct = 0.1)
-  x <- x[x$avg_log2FC < 0, ]
-  Lung.down[[i]] <- rownames(x)
-}
+# Put all four plots into one image
+figure_2b_merged <-
+    gridExtra::grid.arrange(grobs = figure_2b,
+                            vp = viewport(width = 1, height = 0.9))
 
-# Tibia markers - DOWN
-Tibia.down <- list(NULL)
-for (i in 1:length(data)) {
-  tmp <- data[[i]]
-  x <- FindMarkers(tmp,
-                   ident.1 = "Tibia",
-                   ident.2 = "Culture",
-                   only.pos = FALSE,
-                   min.pct = 0.1)
-  x <- x[x$avg_log2FC < 0, ]
-  Tibia.down[[i]] <- rownames(x)
-}
+# Save plot
+ggsave("figures/figure_2/figure_2b.png",
+       plot = figure_2b_merged,
+       width = 10,
+       height = 10)
 
-# Create Venn Diagram for Figure 2
-library(ggvenn)
-genes <- Lung.down
-x <- list(A = genes[[1]],
-          B = genes[[2]],
-          C = genes[[3]],
-          D = genes[[4]])
-
-# PDF of Venn Diagram
-pdf("Lung.down.pdf", width = 7, height = 7)
-plot <- ggvenn(x,
-               fill_color = c("#0073C2FF",
-                              "#EFC000FF",
-                              "#868686FF",
-                              "#CD534CFF"),
-               stroke_size = 0.9,
-               set_name_size = 10,
-               show_percentage = TRUE)
-plot
-dev.off()
+# Save RData obj
+save(figure_2c, file = "figures/figure_2/figure_2c.RData")
 ```
 
 ```{r Fig2b_all, dependson="Fig2b", eval=F}
@@ -939,7 +924,7 @@ figure_2c <-
     xlim(-5.5, 1)
 
 ggsave("figures/figure_2/figure_2c.png",
-       plot = figure_3c,
+       plot = figure_2c,
        width = 6,
        height = 9)
 
