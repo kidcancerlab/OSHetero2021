@@ -76,8 +76,10 @@ tenXLoadQC <- function(path10x, spec) {
 #   Input lt.fq and cid.fq into the lt.loc and cid.loc variables in the function below
 
 processLTBC <- function(sobject,
-                        lt.loc, cid.loc,
+                        lt.loc,
+                        cid.loc,
                         histogram = F,
+                        plot.only = F, 
                         col.fill = "#4DBBD5FF",
                         ymax = NA,
                         relative = F,
@@ -152,12 +154,15 @@ processLTBC <- function(sobject,
     print(p)
   } 
   if (isTRUE(ret.list)) {
-    return(bc.freq)
-  } else {
+    return(bc.freq) 
+  }
+  else if (isTRUE(plot.only)) {
+    return(p)
+  }
+  else {
     return(sobject)
   }
 }
-
 
 # The function PCAtoPlot is designed to take a QCed and trimmed Seurat object, perform a normalization/
 #   scaling transformation, regress out the mitochondrial gene percentage, find the principal components,
