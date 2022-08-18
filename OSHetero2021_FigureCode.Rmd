@@ -589,14 +589,18 @@ B) Venn diagrams showing overlap of differentially expressed genes that are up- 
 
 ```{r Fig2b}
 load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS_merged_postCCR.RData")
+
 OS$cell_line <- stringr::str_remove(OS$src, "_.+") %>%
     stringr::str_replace("t143b", "143B") %>%
     stringr::str_replace("NCHOS2", "NCH-OS-2") %>%
     stringr::str_replace("NCHOS7", "NCH-OS-7")
 OS$tissue <- stringr::str_remove(OS$src, ".+_") %>%
     stringr::str_replace("Flank", "Culture")
+
 OS <- subset(OS, subset = cell_line != "OB")
+
 Idents(OS) <- OS$tissue
+
 de_out <- list()
 for (tissue_name in c("Lung", "Tibia")) {
     for (cl_name in unique(OS$cell_line)) {
@@ -610,17 +614,21 @@ for (tissue_name in c("Lung", "Tibia")) {
                         ident.2 = "Culture",
                         min.pct = 0.1) %>%
             filter(p_val_adj <= 0.05)
+
         de_out[[tissue_name]][["up"]][[cl_name]] <-
             temp_de_out %>%
             filter(avg_log2FC > 0) %>%
             rownames()
+
         de_out[[tissue_name]][["down"]][[cl_name]] <-
             temp_de_out %>%
             filter(avg_log2FC < 0) %>%
             rownames()
+
         rm(temp_seurat, temp_de_out)
     }
 }
+
 figure_2b <- list()
 for (tissue_name in c("Lung", "Tibia")) {
     for (direction in c("up", "down")) {
@@ -644,6 +652,7 @@ for (tissue_name in c("Lung", "Tibia")) {
                                             size = 20,
                                             face = "bold"),
                   plot.margin = margin(-3, 0, -3, 0, "cm"))
+
         # Fix the position of the bottom two set names
         figure_2b[[paste0(tissue_name,
                           " - ",
@@ -651,6 +660,7 @@ for (tissue_name in c("Lung", "Tibia")) {
             c(-1, -0.8, 0.8, 1)
     }
 }
+
 # Put all four plots into one image
 figure_2b_merged <-
     gridExtra::grid.arrange(grobs = figure_2b,
@@ -660,6 +670,7 @@ ggsave("figures/figure_2/figure_2b.png",
        plot = figure_2b_merged,
        width = 10,
        height = 10)
+
 # Save RData obj
 save(figure_2c, file = "figures/figure_2/figure_2c.RData")
 ```
@@ -766,6 +777,7 @@ SanjanaPlots <- read.delim("SanjanaPlots.txt") %>%
                                 "Tibia Gene Sets") %>%
                 stringr::str_replace("Lung", "Lung Gene Sets"),
             Pathway = stringr::str_wrap(Pathway, width = 25))
+
 figure_2c <-
     ggplot() +
     geom_bar(data = SanjanaPlots,
@@ -819,10 +831,12 @@ figure_2c <-
          x = "") +
     ylim(-5, 5) +
     xlim(-5.5, 1)
+
 ggsave("figures/figure_2/figure_2c.png",
        plot = figure_2c,
        width = 6,
        height = 9)
+
 save(figure_2c, file = "figures/figure_2/figure_2c.RData")
 ```
 
@@ -844,6 +858,7 @@ multiple comparisons test.
 
 ```{r Fig3b}
 load("Data/OS.listv3.CCR.RData")
+
 for (i in 1:length(OS.list)) {
   OS.list[[i]] <- NormalizeData(OS.list[[i]]) %>%
     FindVariableFeatures(selection.method = "vst") %>%
@@ -858,6 +873,7 @@ for (i in 1:length(OS.list)) {
 # Attempt to regress out the effects of cell cycle on these tumor cells
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
+
 for (i in 1:length(OS.list)) {
   OS.list[[i]] <- CellCycleScoring(object = OS.list[[i]], s.features = s.genes,
                                    g2m.features = g2m.genes, set.ident = TRUE)
@@ -869,6 +885,7 @@ for (i in 1:length(OS.list)) {
     FindNeighbors(reduction = "pca", dims = 1:20) %>%
     FindClusters(resolution = 0.3)
 }
+
 save(OS.list, file = "Data/OS.listv3.CCR.RData")
 ```
 
