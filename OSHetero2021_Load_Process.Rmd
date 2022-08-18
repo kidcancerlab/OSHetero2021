@@ -80,7 +80,7 @@ os17.cx.raw <- subset(os17.cx.raw,
                         nCount_RNA < 50000 &
                         percent.mt < 15)
 
-os17.cx.raw$src <- "OS17_Culture"
+os17.cx.raw$src <- "Culture"
 os17.cx.raw$cond <- "OS17"
 
 ## Tibia
@@ -91,7 +91,7 @@ os17.tib.raw <- subset(os17.tib.raw,
                          nCount_RNA < 60000 &
                          percent.mt < 18)
 
-os17.tib.raw$src <- "OS17_Tibia"
+os17.tib.raw$src <- "Tibia"
 os17.tib.raw$cond <- "OS17"
 
 ## Lung
@@ -104,7 +104,7 @@ os17.lung.raw <- subset(os17.lung.raw,
                           nCount_RNA < 60000 &
                           percent.mt < 25)
 
-os17.lung.raw$src <- "OS17_Lung"
+os17.lung.raw$src <- "Lung"
 os17.lung.raw$cond <- "OS17"
 ```
 
@@ -113,8 +113,6 @@ os17.lung.raw$cond <- "OS17"
 For lineage analysis in Figure 5.
 
 ```{r Fig5_tag, dependson='load_os17'}
-source("/home/gdrobertslab/rsexf001/OSHetero2021/scSeurat_updated.R")
-
 # Plot histograms of lineage tracing tags in the Seurat objects
 os17.cx.raw <- processLTBC(os17.cx.raw,
                       lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
@@ -135,8 +133,10 @@ os17.lung.raw <- processLTBC(os17.lung.raw,
                         relative = T)
 ```
 
+### Create OS17 object for lineage analysis
+
 ```{r Fig5_process, dependson='Fig5_tag'}
-# Subset all to #2800 cells in each condition
+# Subset all to 2800 cells in each condition
 os17.cx.raw <- subset(os17.cx.raw,
                  cells = sample(Cells(os17.cx.raw),
                                 2800))
@@ -235,7 +235,7 @@ VlnPlot(t143b.cx.raw,
                      "percent.mt"),
         ncol = 3)
 
-t143b.cx.raw$src <- "t143b_Culture"
+t143b.cx.raw$src <- "Culture"
 t143b.cx.raw$cond <- "t143b"
 
 ## Tibia
@@ -252,7 +252,7 @@ VlnPlot(t143b.tib.raw,
                      "percent.mt"),
         ncol = 3)
 
-t143b.tib.raw$src <- "t143b_Tibia"
+t143b.tib.raw$src <- "Tibia"
 t143b.tib.raw$cond <- "t143b"
 
 # Lung
@@ -270,7 +270,7 @@ VlnPlot(t143b.lung.raw,
                      "percent.mt"),
         ncol = 3)
 
-t143b.lung.raw$src <- "t143b_Lung"
+t143b.lung.raw$src <- "Lung"
 t143b.lung.raw$cond <- "t143b"
 ```
 
@@ -292,7 +292,7 @@ VlnPlot(OS2.cx.raw,
                      "percent.mt"),
         ncol = 3)
 
-OS2.cx.raw$src <- "NCHOS2_Flank"
+OS2.cx.raw$src <- "Flank"
 OS2.cx.raw$cond <- "NCHOS2"
 
 ## Tibia
@@ -310,7 +310,7 @@ VlnPlot(OS2.tib.raw,
                      "percent.mt"),
         ncol = 3)
 
-OS2.tib.raw$src <- "NCHOS2_Tibia"
+OS2.tib.raw$src <- "Tibia"
 OS2.tib.raw$cond <- "NCHOS2"
 
 ## Lung
@@ -327,7 +327,7 @@ VlnPlot(OS2.lung.raw,
                      "percent.mt"),
         ncol = 3)
 
-OS2.lung.raw$src <- "NCHOS2_Lung"
+OS2.lung.raw$src <- "Lung"
 OS2.lung.raw$cond <- "NCHOS2"
 ```
 
@@ -349,7 +349,7 @@ VlnPlot(OS7.cx.raw,
                      "percent.mt"),
         ncol = 3)
 
-OS7.cx.raw$src <- "NCHOS7_Flank"
+OS7.cx.raw$src <- "Flank"
 OS7.cx.raw$cond <- "NCHOS7"
 
 ## Tibia
@@ -366,7 +366,7 @@ VlnPlot(OS7.tib.raw,
                      "percent.mt"),
         ncol = 3)
 
-OS7.tib.raw$src <- "NCHOS7_Tibia"
+OS7.tib.raw$src <- "Tibia"
 OS7.tib.raw$cond <- "NCHOS7"
 
 ## Lung
@@ -382,7 +382,7 @@ VlnPlot(OS7.lung.raw,
                      "percent.mt"),
         ncol = 3)
 
-OS7.lung.raw$src <- "NCHOS7_Lung"
+OS7.lung.raw$src <- "Lung"
 OS7.lung.raw$cond <- "NCHOS7"
 ```
 
@@ -390,7 +390,8 @@ OS7.lung.raw$cond <- "NCHOS7"
 
 ```{r save_raw}
 # Save raw objects
-# Make list for easy loop saving
+
+# Make lists for easy loop saving
 sample_list <- c(OB,
                  os17.cx.raw,
                  os17.tib.raw,
@@ -419,14 +420,16 @@ sample_names <- c("OB",
                   "OS7.tib.raw",
                   "OS7.lung.raw")
 
-# correlate sample names and sample labels
+# Correlate sample names and sample labels
 names(sample_list) <- sample_names
 
+# Save each raw object
 for (item in sample_names) {
-  save(item,
-       file = paste("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/Raw/",
+  # Save each sample as an individual Seurat object with proper name
+  assign(item, sample_list[[item]])
+  save(list = item, file = paste("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/Raw/",
                     item,
-                    ".Rdata",
+                    ".RData",
                     sep = ""))
 }
 ```
@@ -590,3 +593,6 @@ for (i in 1: length(OS.list)) {
 save(OS.list, file = "OS.listv3.CCR.RData")
 ```
 
+```{r versions}
+sessionInfo()
+```
