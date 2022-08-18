@@ -1,5 +1,4 @@
 # Set up environment, activate library components
-#install.packages("ggsci")
 library(ggsci)
 library("cowplot")
 library("dplyr")
@@ -8,11 +7,6 @@ library("reticulate")
 library("Seurat")
 library("reshape2")
 library("ggplot2")
-# library("harmony")
-# library("future")
-
-# plan(strategy = "multicore", workers = 3)
-
 
 ## Define functions
 
@@ -81,7 +75,16 @@ tenXLoadQC <- function(path10x, spec) {
 #or 	> cut -d":" -f3 pre-cid.fq > cid.fq
 #   Input lt.fq and cid.fq into the lt.loc and cid.loc variables in the function below
 
-processLTBC <- function(sobject, lt.loc, cid.loc, histogram = F, col.fill = "#4DBBD5FF", ymax = NA, relative = F, title = "LT Barcode Frequency", ret.list = F) {
+processLTBC <- function(sobject,
+                        lt.loc,
+                        cid.loc,
+                        histogram = F,
+                        plot.only = F, 
+                        col.fill = "#4DBBD5FF",
+                        ymax = NA,
+                        relative = F,
+                        title = "LT Barcode Frequency",
+                        ret.list = F) {
   
   # Read in the master Cellecta barcode tables for QC purposes
   bc14 <- read.table("R:/RESRoberts/Sanjana/Lineage Tracing/Cellecta/Cellecta-bc14s.txt")
@@ -94,7 +97,10 @@ processLTBC <- function(sobject, lt.loc, cid.loc, histogram = F, col.fill = "#4D
   # Import the lineage tracing and matching cell ID tables extracted from the fastqs
   lt.bc <- read.table(lt.loc)
   cid.bc <- read.table(cid.loc)
-  # cid.bc <- paste(cid.bc[[1]],"-1", sep = "")
+
+  # Add necessary suffix to cid.bc
+  cid.bc$V1 = paste(cid.bc$V1, "-1", sep = "") 
+  
   bc <- data.frame(cid.bc, lt.bc)
   colnames(bc) <- c("cid", "lt")
   
@@ -135,10 +141,10 @@ processLTBC <- function(sobject, lt.loc, cid.loc, histogram = F, col.fill = "#4D
   # Create histogram graphs if desired (default using blue color from npg from ggsci)
   if(isTRUE(histogram)) {
     p <- ggplot(bc.plot.data, aes(x = reorder(Var1, -Freq), y = Freq)) +
-          geom_bar(fill = col.fill, stat = "identity") +
-          ggtitle(title) +
-          ylab(ylabel) +
-          xlab("Top 40 Lineage Barcode") 
+      geom_bar(fill = col.fill, stat = "identity") +
+      ggtitle(title) +
+      ylab(ylabel) +
+      xlab("40 Most Enriched Clones") 
     #remove grid lines and grey background
     p <- p + theme_bw() +
       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
@@ -148,14 +154,15 @@ processLTBC <- function(sobject, lt.loc, cid.loc, histogram = F, col.fill = "#4D
     print(p)
   } 
   if (isTRUE(ret.list)) {
-    return(bc.freq)
-  } else {
-    return_obj <- list("bc_plot_data" = bc.plot.data, "fig" = p, "sobject" = sobject)
-    return(return_obj)
+    return(bc.freq) 
+  }
+  else if (isTRUE(plot.only)) {
+    return(p)
+  }
+  else {
+    return(sobject)
   }
 }
-
-
 
 # The function PCAtoPlot is designed to take a QCed and trimmed Seurat object, perform a normalization/
 #   scaling transformation, regress out the mitochondrial gene percentage, find the principal components,
