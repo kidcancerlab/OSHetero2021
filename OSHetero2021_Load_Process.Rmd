@@ -108,7 +108,67 @@ os17.lung.raw$src <- "Lung"
 os17.lung.raw$cond <- "OS17"
 ```
 
-### Add lineage tags to metadata 
+### Process OS17 culture for Figure 1
+
+```{r Fig1a1_process}
+os17.cx <- NormalizeData(os17.cx.raw) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = os17.cx@var.genes,
+         npcs = 20) %>%
+  RunUMAP(reduction = "pca",
+          dims = 1:20) %>%
+  FindNeighbors(reduction = "pca",
+                dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+DimPlot(os17.cx,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  scale_color_npg(alpha = 0.7)
+
+# Regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+os17.cx <- CellCycleScoring(object = os17.cx,
+                            s.features = s.genes,
+                            g2m.features = g2m.genes,
+                            set.ident = TRUE)
+os17.cx <- ScaleData(object = os17.cx,
+                     vars.to.regress = c("S.Score",
+                                         "G2M.Score"),
+                     features = rownames(x = os17.cx))
+
+os17.cx <- RunPCA(os17.cx,
+                  pc.genes = os17.cx@var.genes,
+                  npcs = 20) %>%
+  RunUMAP(reduction = "pca",
+          dims = 1:20) %>%
+  FindNeighbors(reduction = "pca",
+                dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+# Find optimal clustering resolution
+os17.cx.nC <- nRes(os17.cx, 
+                   res = seq(from = 0.1,
+                             to = 0.2,
+                             by = 0.05))
+plot <- pSil(os17.cx.nC,
+             0.15)
+plot
+
+# With res = 0.15, cells in cluster 3 do not have any significantly different genes that are deferentially regulated
+# Therefore, we decided to proceed with res = 0.1
+os17.cx <- FindClusters(os17.cx,
+                        resolution = 0.1)
+
+save(os17.cx,
+     file ="/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/os17.cx_CCR.RData")
+```
+
+### Add lineage tags to metadata for Figure 5
 
 For lineage analysis in Figure 5.
 
@@ -133,7 +193,7 @@ os17.lung.raw <- processLTBC(os17.lung.raw,
                         relative = T)
 ```
 
-### Create OS17 object for lineage analysis
+### Create OS17 object for lineage analysis in Figure 5
 
 ```{r Fig5_process, dependson='Fig5_tag'}
 # Subset all to 2800 cells in each condition
@@ -386,6 +446,65 @@ OS7.lung.raw$src <- "Lung"
 OS7.lung.raw$cond <- "NCHOS7"
 ```
 
+### Process NCHS-OS7 flank for Figure 1
+
+```{r Fig1a3_process}
+OS7.cx <- NormalizeData(OS7.cx.raw) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = OS7.cx@var.genes,
+         npcs = 20) %>%
+  RunUMAP(reduction = "pca",
+          dims = 1:20) %>%
+  FindNeighbors(reduction = "pca",
+                dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+DimPlot(OS7.cx,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  scale_color_npg(alpha = 0.7)
+
+# Attempt to regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+OS7.cx <- CellCycleScoring(object = OS7.cx,
+                               s.features = s.genes,
+                               g2m.features = g2m.genes,
+                               set.ident = TRUE)
+OS7.cx <- ScaleData(object = OS7.cx,
+                        vars.to.regress = c("S.Score",
+                                            "G2M.Score"),
+                        features = rownames(x = OS7.cx))
+
+OS7.cx <- RunPCA(OS7.cx,
+                     pc.genes = OS7.cx@var.genes,
+                     npcs = 20) %>%
+  RunUMAP(reduction = "pca",
+          dims = 1:20) %>%
+  FindNeighbors(reduction = "pca",
+                dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+#Find optimal clustering resolution
+OS7.cx.nC <- nRes(OS7.cx, 
+                     res = seq(from = 0.1,
+                               to = 0.15,
+                               by = 0.01))
+plot <- pSil(OS7.cx.nC,
+             0.15)
+plot
+
+OS7.cx <- FindClusters(OS7.cx,
+                          resolution = 0.15)
+
+save(OS7.cx,
+     file ="/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS7.cx_CCR.RData")
+```
+
+
 ## Save Raw Objects
 
 ```{r save_raw}
@@ -499,7 +618,8 @@ OS <- RunPCA(OS, pc.genes = OS@var.genes, npcs = 20) %>%
              FindNeighbors(reduction = "pca", dims = 1:20) %>%
              FindClusters(resolution = 0.3)
 
-save(OS, file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS_merged_postCCR.RData")
+save(OS,
+     file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS_merged_postCCR.RData")
 
 OS$cond <- as.factor(OS$cond)
 OS$cond <- factor(as.factor(OS$cond),
@@ -590,7 +710,8 @@ for (i in 1: length(OS.list)) {
     FindClusters(resolution = 0.3)
 }
 
-save(OS.list, file = "OS.listv3.CCR.RData")
+save(OS.list,
+     file = "OS.listv3.CCR.RData")
 ```
 
 ```{r versions}
