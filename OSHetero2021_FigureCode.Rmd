@@ -1567,13 +1567,20 @@ dev.off()
 
 ## Figure 3D
 
-D) Metabolic heterogeneity in glycolysis activation. We used a pathway enrichment analysis for hallmark gene sets using genes differentially upregulated in each cluster relative to every other cluster within the same model. P values were adjusted for multiple comparisons. Boxes in grey identify non-significant pathway enrichments, whereas boxes in red identify statistically significant enrichments. Bar plot shows percentage of cells identified per cluster in lung metastases. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
+D) Metabolic heterogeneity in glycolysis activation. We used a pathway enrichment
+analysis for hallmark gene sets using genes differentially upregulated in each'
+cluster relative to every other cluster within the same model. P values were
+adjusted for multiple comparisons. Boxes in grey identify non-significant pathway
+enrichments, whereas boxes in red identify statistically significant enrichments.
+Bar plot shows percentage of cells identified per cluster in lung metastases.
+In B-D, samples subset to equal number of cells to allow inter-model comparison
+(n=1500 per condition).
 
 ### Processing
 
 ```{r Fig3d_1}
 library(data.table)
-library(pheatmap)
+#library(pheatmap)
 #Create list of objects used in Figure 3 heatmap 
 B.list <- list(OS17 = OS17.TL,
                t143b = t143b,
@@ -1615,49 +1622,45 @@ cx.pd <- read.table(file = "Figure 3/cxpd.tsv", header=T)
 # Make the "rn" column the rownames -Emily
 cx.pd <- remove_rownames(cx.pd) %>%
         column_to_rownames(var = "rn")
+```
+
+### Code I gave to Sanjana at some point for Figure 3d
+I modified this from code she gave me to clean it up and get it working
+
+The only data we need are the cs.pd object and the percent of lung cells per cluster
+which is entered here as aka4
+```{r, eval=FALSE}
+#ComplexHeatmap
+# We can update this to the matching file produced by the concatenated code RMD
+cx.pd <- read.delim("Data/fromSanjanaALongTimeAgo/cxpd.tsv", row.names = 1)
 
 #remove "HALLMARK_"
-c <- rownames(cx.pd)
-c <- gsub("HALLMARK_", "", c)
+#remove "_"
+rownames(cx.pd) <- rownames(cx.pd) %>%
+    gsub("HALLMARK_", "", .) %>%
+    gsub("_", " ", .)
 
-#remove "_" by removing special characters
-c <- gsub("_", " ", c)
-rownames(cx.pd) <- c
+df <- -log10(cx.pd) %>%#log transform
+    t()
 
-#log transform
-cx.pd.log <- -log10(cx.pd)
+#library(pheatmap)   
 
-cx.pd_transpose <- as.data.frame(t(cx.pd.log))
-df <- as.matrix(cx.pd_transpose)
-
-#Write table to print supplemental information
-write.table(df, file=('Figure 3/cxpd_plot.tsv'), quote=FALSE, sep='\t')
-
-subj<-c(paste0("A", 0:3),
-        paste0("B", 0:3),
-        paste0("C", 0:2),
-        paste0("D", 0:3))
-
+subj <- c(paste0("A", 0:3),
+          paste0("B", 0:3),
+          paste0("C", 0:2),
+          paste0("D", 0:3))
 rownames(df)<-subj
 
 aka2 = data.frame(ID = factor(c(rep("OS17", 4),
                                 rep("t143B", 4),
                                 rep("OS2", 3),
-                                rep("OS7", 4)
-                                )))
+                                rep("OS7", 4))))
 
 rownames(aka2)<-subj
 
-aka3 = list(ID = c(OS17 = "#E64B35FF",
-                   t143B = "#4DBBD5FF",
-                   OS2 = "#00A087FF",
-                   OS7 = "#3C5488FF"))
+aka3 = list(ID = c(OS17 = "#E64B35FF", t143B = "#4DBBD5FF", OS2 = "#00A087FF", OS7 = "#3C5488FF"))
 
-library(ComplexHeatmap)
-color = colorRampPalette(rev(brewer.pal(n = 7, name =
-                                          "RdYlBu")))(100)
-
-#calculate percentage of cells in lung for each cluster
+# We should grab these value directly from the data instead of manual insertion
 aka4 <- data.frame (Lpercent = c(46.577747,
                                  10.17901,
                                  39.69814,
@@ -1673,288 +1676,95 @@ aka4 <- data.frame (Lpercent = c(46.577747,
                                  1.383604,
                                  1.176064,
                                  26.426842))
-rownames(aka4) <- subj
-
-aka5 = (c(rep("OS17", 4),
-          rep("t143B", 4),
-          rep("OS2", 3),
-          rep("OS7", 4)))
-
-column_ha = HeatmapAnnotation(model = aka5,
-                              bar1 = anno_barplot(aka4))
-#pdf("TL_OS17_143B_OS2_OS7_2/temp.pdf", height = 7, width = 8)
-#Heatmap(t(df), 
-#        col = col, 
-#        name = "-log10(p)", 
-##        cluster_columns = FALSE,
-#       top_annotation = column_ha)+ geom_text(aes(label = pvalue))
-#dev.off()
-
-col.breaks=seq(-log10(1),min(max(-log10(cx.pd))+1,18),by=0.5)
-col=inferno(length(col.breaks)) # library(viridis)
-col=c("white",colorRampPalette(brewer.pal(n = 7, name ="Reds"))(50))
-
-pheatmap(-log10(cx.pd),cluster_rows = TRUE,cluster_cols = TRUE,
-         cellwidth = 5,cellheight = 7,treeheight_row = 0,treeheight_col=0,
-         color = col,scale='none',breaks=col.breaks,fontsize = 8)
-```
-
-```{r Fig3d_2}
-library(dichromat)
-
-#IPA analysis
-# Decided to proceed with A2, B1, (B2, B3), C1, D0 and D3
-# Find differentially expressed features selected cluster and remaining cells
-
-#OS17
-A0.markers <- FindMarkers(OS17.TL, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-A1.markers <- FindMarkers(OS17.TL, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-A2.markers <- FindMarkers(OS17.TL, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-A3.markers <- FindMarkers(OS17.TL, ident.1 = "3", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-
-#remove unnecessary columns
-myList <- list(A0.markers, A1.markers, A2.markers, A3.markers)
-myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
-A0.markers <- myList[[1]]
-A1.markers <- myList[[2]]
-A2.markers <- myList[[3]]
-A3.markers <- myList[[4]]
-  
-# view results
-# head(A2.markers)
-# FeaturePlot(object = OS17.TL, features = 'NFKBIA')
-B0.markers <- FindMarkers(t143b, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-B1.markers <- FindMarkers(t143b, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-B2.markers <- FindMarkers(t143b, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-B3.markers <- FindMarkers(t143b, ident.1 = "3", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-
-myList <- list(B0.markers, B1.markers, B2.markers, B3.markers)
-myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
-B0.markers <- myList[[1]]
-B1.markers <- myList[[2]]
-B2.markers <- myList[[3]]
-B3.markers <- myList[[4]]
-
-C0.markers <- FindMarkers(OS2, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-C1.markers <- FindMarkers(OS2, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-C2.markers <- FindMarkers(OS2, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-
-myList <- list(C0.markers, C1.markers, C2.markers)
-myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
-C0.markers <- myList[[1]]
-C1.markers <- myList[[2]]
-C2.markers <- myList[[3]]
-
-D0.markers <- FindMarkers(OS7, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-D1.markers <- FindMarkers(OS7, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-D2.markers <- FindMarkers(OS7, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-D3.markers <- FindMarkers(OS7, ident.1 = "3", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-
-myList <- list(D0.markers, D1.markers, D2.markers, D3.markers)
-myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
-D0.markers <- myList[[1]]
-D1.markers <- myList[[2]]
-D2.markers <- myList[[3]]
-D3.markers <- myList[[4]]
-
-#library(xlsx)
-#write.xlsx(A0.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/A0.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(A1.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/A1.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(A2.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/A2.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(A3.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/A3.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-
-
-#write.xlsx(B0.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/B0.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(B1.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/B1.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(B2.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/B2.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(B3.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/B3.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-
-#write.xlsx(C0.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/C0.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(C1.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/C1.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(C2.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/C2.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-
-#write.xlsx(D0.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/D0.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(D1.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/D1.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(D2.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/D2.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(D3.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/D3.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-
-#Uploaded individual datasets on IPA; ran Expression analysis with adj p value cutoff at 0.01
-#Emily commented out below
-#df <- read.delim("TL_OS17_143B_OS2_OS7_2/IPA_updown.txt", header = TRUE)
-#rownames(df) <- df[,1]
-#df[,1] <- NULL
-```
-
-```{r Fig3d_3}
-# cx.pd <- cx.pd[-(23:30),] #remove rows with names NA - figure out why we have NAs!!
-cx.pd.log <- -log10(cx.pd) #log transform
-library(pheatmap)   
-
-cx.pd_transpose <- as.data.frame(t(cx.pd.log))
-df <- as.matrix(cx.pd_transpose)
-
-subj<-c(paste0("A", 0:3),
-        paste0("B", 0:3),
-        paste0("C", 0:2),
-        paste0("D", 0:3))
-rownames(df)<-subj
-
-aka2 = data.frame(ID = factor(c(rep("OS17", 4),
-                                rep("t143B", 4),
-                                rep("OS2", 3),
-                                rep("OS7", 4)
-)))
-rownames(aka2)<-subj
-
-aka3 = list(ID = c(OS17 = "#E64B35FF",
-                   t143B = "#4DBBD5FF",
-                   OS2 = "#00A087FF",
-                   OS7 = "#3C5488FF"))
-
-# df[] <- lapply(df, gsub, pattern='HALLMARK_', replacement='')
-# df
-
-cols <- colorRampPalette(c("snow1", "red"), # distances 3 to max(distmat) colored from green to black
-                             100)
-
-# not the heatmap code used in final version -Emily commented out
-#pheatmap(t(scale(df)),
- #        color = cols, 
- #        annotation_col = aka2, 
- #        annotation_colors = aka3,
- #        annotation_legend = TRUE,
-         #gaps_col =  4,
- #        show_colnames = T, show_rownames = T, cluster_rows = T, 
- #        cluster_cols = T, legend = TRUE, 
-#         clustering_distance_rows = "euclidean", border_color = FALSE)
-
-#Heatmap(t(scale(df)), 
-#        col = col, 
-#        name = "-log10(p)", 
-#        top_annotation = column_ha)
-
-#not used elsewhere here -Emily
-#color = colorRampPalette(rev(brewer.pal(n = 7, name =
-#                                          "RdYlBu")))(100)
-
-# Apply glycolysis, Hypoxia, tnfa, emt modules and compare between clusters
-data <- OS17.TL
-
-for(i in 1:length(mod_names)) {
-  data <- AddModuleScore(data, gl[i], name = names(gl[i]))
-}
-RidgePlot(data, features = str_c(names(gl[6]), "1"))
-# VlnPlot(data, features = str_c(names(gl[3]), "1"))
-DotPlot(data, features = TNFA, cluster.idents = TRUE)
-
-#noted a clear differnece in the TNFA_VIA_NFkB module
-#Identify genes that are most differntially expressed in this module
-
-data <- OS17.TL
-pdf("TL_OS17_143B_OS2_OS7_2/Dotplot_OS17.pdf", height = 30, width = 7)
-DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
-dev.off()
-
-data <- t143b
-pdf("TL_OS17_143B_OS2_OS7_2/Dotplot_143B.pdf", height = 30, width = 7)
-DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
-dev.off()
-
-data <- OS2
-pdf("TL_OS17_143B_OS2_OS7_2/Dotplot_OS2.pdf", height = 30, width = 7)
-DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
-dev.off()
-
-data <- OS7
-pdf("TL_OS17_143B_OS2_OS7_2/Dotplot_OS7.pdf", height = 30, width = 7)
-DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
-dev.off()
-```
-
-### Heatmap
-
-```{r Fig3d_heatmap}
-# Pathway enrichment analysis 
+rownames(aka4)<-subj
 
 P1 <- df %>%
   as.data.frame() %>%
   rownames_to_column(var = "Sample") %>%
   full_join(aka4 %>%
-              rownames_to_column(var = "Sample")) %>%
-  pivot_longer(c(-Sample,
-                 -Lpercent),
+                rownames_to_column(var = "Sample")) %>%
+  pivot_longer(c(-Sample, -Lpercent),
                names_to = "Pathway",
                values_to = "pval",
                names_repair = "minimal") %>%
   mutate(Signif = pval >= (-1 * log10(0.05)),
-         sample_order = str_remove(Sample,
-                                   "[0-9]") %>%
+         sample_order = str_remove(Sample, "[0-9]") %>%
            rank() * 1000 - Lpercent,
-         Sample = reorder(Sample,
-                          sample_order)) %>%
-  ggplot(.,
-         aes(x = Sample,
-             y = Pathway,
-             fill = Signif)) +
-  geom_tile() +
-  geom_text(aes(label = sprintf("%0.2f",
-                                pval))) +
-  scale_fill_manual(values = c("gray",
-                               "#CC3333")) +
-  scale_y_discrete(limits = rev) +
-  theme(legend.position = "none") +
-  ylab("")
+         sample_group = str_sub(Sample, 1, 1),
+         Sample = str_c(str_match(Sample, "([ABCD])(.)")[, 2],
+                        "  Cluster ",
+                        str_match(Sample, "([ABCD])(.)")[, 3]),
+         Sample = reorder(Sample, sample_order),
+         Signif = str_replace(Signif, "TRUE", "p-value < 0.05") %>%
+                    str_replace("FALSE", "p-value > 0.05")) %>%
+  ggplot(., aes(x = Sample, y = Pathway, fill = Signif)) + 
+    geom_tile() +
+    geom_text(aes(label = sprintf("%0.2f", pval)), size = 3) +
+    scale_fill_manual(values = c("red", "gray"), name = "") +
+    scale_y_discrete(limits = rev, position = "right") +
+    theme(panel.background = element_blank(),
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.margin = unit(c(0, 0, 0, 0), "cm"),
+          panel.border = element_rect(colour = "black", fill = NA),
+          axis.text.x = element_text(angle = 90,
+                                     hjust = 1,
+                                     vjust = 0.4,
+                                     size = 12),
+          axis.text.y = element_text(size = 12)) +
+    labs(x = "",
+         y = "") +
+    facet_grid(. ~ sample_group,
+               scales = "free_x",
+               space = "free")
 
 P2 <- aka4 %>%
   rownames_to_column(var = "Sample") %>%
   full_join(aka2 %>%
               rownames_to_column(var = "Sample")) %>%
-  mutate(sample_order = str_remove(Sample,
-                                   "[0-9]") %>%
+  mutate(sample_order = str_remove(Sample, "[0-9]") %>%
            rank() * 1000 - Lpercent,
-         Sample = reorder(Sample,
-                          sample_order),
-         ID = reorder(ID, sample_order)) %>%
-  ggplot(.,
-         aes(x = Sample,
-             y = Lpercent,
-             fill = ID)) +
-  geom_bar(stat = "identity") +
-  ylab("Percent\nin lung") +
-  xlab("") +
-  theme_bw() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank()) +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())+
-  theme(legend.position = "top", ) +
-  labs(fill = "")
+         sample_group = str_sub(Sample, 1, 1),
+         Sample = str_c(str_match(Sample, "([ABCD])(.)")[, 2],
+                        "  Cluster ",
+                        str_match(Sample, "([ABCD])(.)")[, 3]),
+         Sample = reorder(Sample, sample_order),
+         ID = str_replace(ID, "t143B", "143B") %>%
+                str_replace("OS2", "NCH-OS-2") %>%
+                str_replace("OS7", "NCH-OS-7") %>%
+                reorder(sample_order)) %>%
+  ggplot(., aes(x = Sample, y = Lpercent, fill = ID)) +
+    geom_bar(stat = "identity") +
+    ylab("Percent\nin lung") +
+    xlab("") +
+    labs(fill = "Model",
+         y = "Percent in\nmetastases(%)") +
+    scale_fill_brewer(palette = "Set2") +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          panel.background = element_blank(),
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.margin = unit(c(0, 0, -0.2, 0), "cm"),
+          panel.border = element_rect(colour = "black", fill = NA)) +
+    facet_grid(. ~ sample_group,
+               scales = "free_x",
+               space = "free")
 
-# Plot combined bar plot (percentage of cells identified per cluster in lung metastases) and heatmap of hallmark pathway expressions
-pdf("Figure 3/Pvalueplot.pdf", height = 12, width = 12)
+
 cowplot::plot_grid(P2,
                    P1,
                    ncol = 1,
                    align = "v",
                    rel_heights = c(2, 10))
-dev.off()
 
+ggsave("figures/figure_3/figure_3d.png",
+       width = 13,
+       height = 10)
 ```
+
+
+
 
 # Figure 4 - Images
 
