@@ -51,6 +51,11 @@ library(tibble)
 library(tidyr)
 library(tidyverse)
 library(stringr)
+library(reshape2)
+library(pzfx)
+library(ggridges)
+library(effsize)
+library(perm)
 ```
 
 ## Figure 1A
@@ -627,49 +632,88 @@ save(figure_2c, file = "figures/figure_2/figure_2c.RData")
 
 # Figure 3
 
-Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow.
+Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
+
+```{r Fig3_load}
+load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS.listv3.CCR.RData")
+```
 
 ## Figure 3B
 
-B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown
-in cell culture (####p <0.001). Within model comparison, identified increase in
-ITH scores as cells colonize tibia and lung microenvironments, with the
-exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák
-multiple comparisons test.
+*statistical method subject to change*
 
-```{r Fig3b, eval=F}
-load("Data/OS.listv3.CCR.RData")
+B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown in cell culture (####p <0.001). Within model comparison, identified increase in ITH scores as cells colonize tibia and lung microenvironments, with the exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák multiple comparisons test.
 
+```{r Fig3b}
+ITH.score <- list()
 for (i in 1:length(OS.list)) {
-  OS.list[[i]] <- NormalizeData(OS.list[[i]]) %>%
-    FindVariableFeatures(selection.method = "vst") %>%
-    ScaleData() %>%
-    RunPCA(pc.genes = OS.list[[i]]@var.genes, npcs = 20) %>%
-    RunUMAP(reduction = "pca", dims = 1:20) %>%
-    FindNeighbors(reduction = "pca", dims = 1:20) %>%
-    FindClusters(resolution = 0.3) %>%
-    subset(cells = sample(Cells(OS.list[[i]]), 1500))
-}
-# CCR
-# Attempt to regress out the effects of cell cycle on these tumor cells
-s.genes <- cc.genes$s.genes
-g2m.genes <- cc.genes$g2m.genes
-
-for (i in 1:length(OS.list)) {
-  OS.list[[i]] <- CellCycleScoring(object = OS.list[[i]], s.features = s.genes,
-                                   g2m.features = g2m.genes, set.ident = TRUE)
-  OS.list[[i]] <- ScaleData(object = OS.list[[i]],
-                            vars.to.regress = c("S.Score", "G2M.Score"),
-                            features = rownames(x = OS.list[[i]]))
-  OS.list[[i]] <- RunPCA(OS.list[[i]], pc.genes = OS.list[[i]]@var.genes, npcs = 20) %>%
-    RunUMAP(reduction = "pca", dims = 1:20) %>%
-    FindNeighbors(reduction = "pca", dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
+  z <- (Embeddings(OS.list[[i]], reduction = "pca")[, 1:20])
+  mat <- dist(z, diag = TRUE, upper = FALSE)
+  mat2 <- as.matrix(mat)
+  mat2[upper.tri(mat2, diag = TRUE)] <- NA
+  ITH.score[[i]] <- colMeans(mat2, na.rm = TRUE)
 }
 
-save(OS.list, file = "Data/OS.listv3.CCR.RData")
+library(xlsx)
+for (i in c(1:12)){
+  write.xlsx(ITH.score[i],
+             file=paste(i,"test.xlsx"))
+}
+
+raw_ith <- read_pzfx("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/ITH_Scores_1500.pzfx",
+                     table = 1)
+
+ith <- melt(raw_ith)
+colnames(ith) <- c("Sample", "ITHScore")
+ith$logITH <- log10(ith$ITHScore)
+ridge_cols <- c("#B8B8B8FF",
+                "#D43F3AFF", "#D43F3AFF", "#D43F3AFF",
+                "#EEA236FF", "#EEA236FF", "#EEA236FF",
+                "#357EBDFF", "#357EBDFF", "#357EBDFF",
+                "#5CB85CFF", "#5CB85CFF", "#5CB85CFF"
+)
+rplot <- ggplot(ith, aes(x = logITH, y = Sample, fill = Sample)) +
+  geom_density_ridges(scale = 2) +
+  scale_y_discrete(expand = c(0, 0), limits = rev) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_fill_manual(values = ridge_cols) +
+  theme_ridges() +
+  xlab("log[ITH Score]") +
+  theme(legend.position = "none",
+        axis.title.x = element_text(hjust = 0.5),
+        axis.title.y = element_blank())
+# Perform a Mann-Whitney U for each group
+comps <- tribble(
+  ~ctl, ~comp,
+  1, 2,
+  1, 5,
+  1, 8,
+  1, 11,
+  2, 3,
+  2, 4,
+  5, 6,
+  5, 7,
+  8, 9,
+  8, 10,
+  11, 12,
+  11, 13
+)
+mwu <- matrix(nrow = 13, ncol = 13)
+for(i in seq_along(comps$ctl)) {
+  s <- wilcox.test(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]])
+  mwu[comps$ctl[i], comps$comp[i]] <- s$p.value
+}
+efs <- matrix(nrow = 13, ncol = 13)
+for(i in seq_along(comps$ctl)) {
+  s <- cohen.d(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]])
+  efs[comps$ctl[i], comps$comp[i]] <- s$estimate
+}
+per <- matrix(nrow = 13, ncol = 13)
+for(i in seq_along(comps$ctl)) {
+  s <- permTS(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]], alternative = "two.sided")
+  per[comps$ctl[i], comps$comp[i]] <- s$p.value
+}
 ```
-
 
 ## Figure 3C
 
