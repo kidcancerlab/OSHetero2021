@@ -644,7 +644,7 @@ load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS.listv3.CCR.RData")
 
 B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown in cell culture (####p <0.001). Within model comparison, identified increase in ITH scores as cells colonize tibia and lung microenvironments, with the exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák multiple comparisons test.
 
-```{r Fig3b}
+```{r Fig3b, dependson='Fig3_load', eval=F}
 ITH.score <- list()
 for (i in 1:length(OS.list)) {
   z <- (Embeddings(OS.list[[i]], reduction = "pca")[, 1:20])
@@ -719,325 +719,90 @@ for(i in seq_along(comps$ctl)) {
 
 C) UMAP analysis for merged primary and metastatic samples in each of the four models. Cells in grey represent remaining cells in merged sample. Cluster enrichment analysis shows distribution of cells in each cluster in the two microenvironment conditions (tibia, lung). While some cells in the primary and metastatic lesions adopted shared phenotypes, others adopted distinct phenotypes.
 
-```{r Fig3c, eval=F}
-# Merge by condition
-# OS17
-# os17.tib.raw <- tenXLoadQC('R:/RESRoberts/Bioinformatics/scRNAOuts/S0018xS0028/filtered_feature_bc_matrix/',
-# spec = 'mixHuman')
-# os17.tib.raw <- subset(os17.tib.raw,
-#                        subset = nFeature_RNA > 3000 &
-#                          nCount_RNA < 60000 &
-#                          percent.mt < 18)
-os17.tib.raw$src <- "OS17_Tibia"
-os17.tib.raw$cond <- "OS17"
-# os17.lung.raw <-
-# tenXLoadQC('R:/RESRoberts/Bioinformatics/scRNAOuts/S0024xS0029/filtered_feature_bc_matrix/',
-# spec = 'mixHuman')
-# os17.lung.raw <- subset(os17.lung.raw, subset = nFeature_RNA >1250 &
-# nCount_RNA <60000 & percent.mt <25)
-os17.lung.raw$src <- "OS17_Lung"
-os17.lung.raw$cond <- "OS17"
-# Subset number of cells in each Seurat object to the least in the group
-a <- table(os17.tib.raw$orig.ident)
-b <- table(os17.lung.raw$orig.ident)
-list <- c(a, b)
-min <- min(list)
-os17.tib.raw <- subset(os17.tib.raw,
-                       cells = sample(Cells(os17.tib.raw),
-                                      min))
-os17.lung.raw <- subset(os17.lung.raw,
-                        cells = sample(Cells(os17.lung.raw),
-                                       min))
-# t143b
-# t143b.cx.raw <- tenXLoadQC(path10x =
-# 'R:/RESRoberts/Bioinformatics/scRNAOuts/S0017-143b/filtered_feature_bc_matrix/', spec =
-# 'mixHuman') t143b.cx.raw <- subset(t143b.cx.raw, subset = nFeature_RNA >4000 & nCount_RNA
-# <74000 & percent.mt <17) VlnPlot(t143b.cx.raw, features = c('nFeature_RNA', 'nCount_RNA',
-# 'percent.mt'), ncol = 3)
-t143b.cx.raw$src <- "t143b_Cx"
-t143b.cx.raw$cond <- "t143b"
-# t143b.tib.raw <- tenXLoadQC(path10x =
-# 'R:/RESRoberts/Bioinformatics/scRNAOuts/S0052-143B-Tibia/filtered_feature_bc_matrix/', spec
-# = 'mixHuman') t143b.tib.raw <- subset(t143b.tib.raw, subset = nFeature_RNA >1000 &
-# nCount_RNA <30000 & percent.mt <22) VlnPlot(t143b.tib.raw, features = c('nFeature_RNA',
-# 'nCount_RNA', 'percent.mt'), ncol = 3)
-t143b.tib.raw$src <- "t143b_Tibia"
-t143b.tib.raw$cond <- "t143b"
-# t143b.lung.raw <- tenXLoadQC(path10x =
-# 'R:/RESRoberts/Bioinformatics/scRNAOuts/S0019-143B-lung/filtered_feature_bc_matrix/', spec =
-# 'mixHuman') t143b.lung.raw <- subset(t143b.lung.raw, subset = nFeature_RNA >1000 &
-# nCount_RNA <30000 & percent.mt <22) VlnPlot(t143b.lung.raw, features = c('nFeature_RNA',
-# 'nCount_RNA', 'percent.mt'), ncol = 3)
-t143b.lung.raw$src <- "t143b_Lung"
-t143b.lung.raw$cond <- "t143b"
-# Subset number of cells in each Seurat object to the least in the group
-a <- table(t143b.tib.raw$orig.ident)
-b <- table(t143b.lung.raw$orig.ident)
-list <- c(a, b)
-min <- min(list)
-t143b.tib.raw <- subset(t143b.tib.raw,
-                        cells = sample(Cells(t143b.tib.raw),
-                                       min))
-t143b.lung.raw <- subset(t143b.lung.raw,
-                         cells = sample(Cells(t143b.lung.raw),
-                                        min))
-# NCHOS2
-#OS2.tib.raw<- tenXLoadQC(path10x =
-# 'R:/RESRoberts/Bioinformatics/scRNAOuts/S0042-NCHOS2-tibia/filtered_feature_bc_matrix/',
-# spec = 'mixHuman') OS2.tib.raw <- subset(OS2.tib.raw, subset = nFeature_RNA >2500 &
-# nCount_RNA <40000 & percent.mt <20)
-OS2.tib.raw$src <- "NCHOS2_Tibia"
-OS2.tib.raw$cond <- "NCHOS2"
-# OS2.lung.raw <- tenXLoadQC(path10x =
-# 'R:/RESRoberts/Bioinformatics/scRNAOuts/S0041-NCHOS2-lung/filtered_feature_bc_matrix/', spec
-# = 'mixHuman') OS2.lung.raw <- subset(OS2.lung.raw, subset = nFeature_RNA >2500 & nCount_RNA
-# <60000 & percent.mt <30)
-OS2.lung.raw$src <- "NCHOS2_Lung"
-OS2.lung.raw$cond <- "NCHOS2"
-# Subset number of cells in each Seurat object to the least in the group
-a <- table(OS2.tib.raw$orig.ident)
-b <- table(OS2.lung.raw$orig.ident)
-list <- c(a, b)
-min <- min(list)
-OS2.tib.raw <- subset(OS2.tib.raw,
-                      cells = sample(Cells(OS2.tib.raw),
-                                     min))
-OS2.lung.raw <- subset(OS2.lung.raw,
-                       cells = sample(Cells(OS2.lung.raw),
-                                      min))
-# NCHOS7 
-# OS7.tib.raw<- tenXLoadQC(path10x =
-# 'R:/RESRoberts/Bioinformatics/scRNAOuts/S0034-NCHOS7-tib/filtered_feature_bc_matrix/', spec
-# = 'mixHuman') OS7.tib.raw <- subset(OS7.tib.raw, subset = nFeature_RNA >2000 & nCount_RNA
-# <35000 & percent.mt <14)
-OS7.tib.raw$src <- "NCHOS7_Tibia"
-OS7.tib.raw$cond <- "NCHOS7"
-# OS7.lung.raw<- tenXLoadQC(path10x =
-# 'R:/RESRoberts/Bioinformatics/scRNAOuts/S0055-NCHOS7-lung/filtered_feature_bc_matrix/', spec
-# = 'mixHuman') OS7.lung.raw <- subset(OS7.lung.raw, subset = nCount_RNA <42000 & percent.mt
-# <20)
-OS7.lung.raw$src <- "NCHOS7_Lung"
-OS7.lung.raw$cond <- "NCHOS7"
-# Subset number of cells in each Seurat object to the least in the group
-a <- table(OS7.tib.raw$orig.ident)
-b <- table(OS7.lung.raw$orig.ident)
-list <- c(a, b)
-min <- min(list)
-OS7.tib.raw <- subset(OS7.tib.raw,
-                      cells = sample(Cells(OS7.tib.raw),
-                                     min))
-OS7.lung.raw <- subset(OS7.lung.raw,
-                       cells = sample(Cells(OS7.lung.raw),
-                                      min))
+```{r Fig3c, dependson='Fig3_load', eval=F}
+# Isolate tibia and lung Seurat objects from the OS.list of Seurat objects
+OS17_Tibia <- OS.list$OS17.Tibia
+OS17_Lung <- OS.list$OS17.Lung
+
+t143B_Tibia <- OS.list$t143B.Tibia
+t143B_Lung <- OS.list$t143B.Lung
+
+OS2_Tibia <- OS.list$OS2.Tibia
+OS2_Lung <- OS.list$OS2.Lung
+
+OS7_Tibia <- OS.list$OS7.Tibia
+OS7_Lung  <- OS.list$OS7.Lung
+
 # Merge tibia and lung objects into a single Seurat object
-OS17.TL <- merge(os17.tib.raw,
-                 y = c(os17.lung.raw),
+OS17_TL <- merge(OS17_Tibia,
+                 y = c(OS17_Lung),
                  add.cell.ids = c("OS17_Tibia",
                                   "OS17_Lung"),
                  project = "Heterogeneity")
-t143b <- merge(t143b.tib.raw,
-               y = c(t143b.lung.raw),
+t143b_TL <- merge(t143B_Tibia,
+               y = c(t143B_Lung),
                add.cell.ids = c("t143b_Tibia",
                                 "t143b_Lung"),
                project = "Heterogeneity")
-OS2 <- merge(OS2.tib.raw,
-             y = c(OS2.lung.raw),
+OS2_TL <- merge(OS2_Tibia,
+             y = c(OS2_Lung),
              add.cell.ids = c("OS2_Tibia",
                               "OS2_Lung"),
              project = "Heterogeneity")
-OS7 <- merge(OS7.tib.raw,
-             y = c(OS7.lung.raw),
+OS7_TL <- merge(OS7_Tibia,
+             y = c(OS7_Lung),
              add.cell.ids = c("OS7_Tibia",
                               "OS7_Lung"),
              project = "Heterogeneity")
+
 # Process and cluster
-OS17.TL <- NormalizeData(OS17.TL) %>%
-  FindVariableFeatures(selection.method = "vst") %>%
-  ScaleData() %>%
-  RunPCA(pc.genes = OS17.TL@var.genes,
-         npcs = 20) %>%
-  RunUMAP(reduction = "pca",
-          dims = 1:20) %>%
-  FindNeighbors(reduction = "pca",
-                dims = 1:20) %>%
-  FindClusters(resolution = 0.3)
-t143b <- NormalizeData(t143b) %>%
-    FindVariableFeatures(selection.method = "vst") %>%
-    ScaleData() %>%
-    RunPCA(pc.genes = t143b@var.genes,
-           npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-OS2 <- NormalizeData(OS2) %>%
-    FindVariableFeatures(selection.method = "vst") %>%
-    ScaleData() %>%
-    RunPCA(pc.genes = OS2@var.genes,
-           npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-OS7 <- NormalizeData(OS7) %>%
-    FindVariableFeatures(selection.method = "vst") %>%
-    ScaleData() %>%
-    RunPCA(pc.genes = OS7@var.genes,
-           npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-# CCR
-# Attempt to regress out the effects of cell cycle on these tumor cells
-s.genes <- cc.genes$s.genes
-g2m.genes <- cc.genes$g2m.genes
+
 #OS17
-OS17.TL <- CellCycleScoring(object = OS17.TL,
-                            s.features = s.genes,
-                            g2m.features = g2m.genes,
-                            set.ident = TRUE)
-OS17.TL <- ScaleData(object = OS17.TL,
-                     vars.to.regress = c("S.Score",
-                                         "G2M.Score"),
-                     features = rownames(x = OS17.TL))
-OS17.TL <- RunPCA(OS17.TL,
-                  pc.genes = OS17.TL@var.genes,
+OS17_TL <- RunPCA(OS17_TL,
+                  pc.genes = OS17_TL@var.genes,
                   npcs = 20) %>%
   RunUMAP(reduction = "pca",
           dims = 1:20) %>%
   FindNeighbors(reduction = "pca",
                 dims = 1:20) %>%
   FindClusters(resolution = 0.3)
-#t143b
-t143b <- CellCycleScoring(object = t143b,
-                          s.features = s.genes,
-                            g2m.features = g2m.genes,
-                          set.ident = TRUE)
-t143b <- ScaleData(object = t143b,
-                   vars.to.regress = c("S.Score",
-                                       "G2M.Score"),
-                     features = rownames(x = t143b))
-t143b <- RunPCA(t143b,
-                pc.genes = t143b@var.genes,
+
+#t143B
+t143b_TL <- RunPCA(t143b_TL,
+                pc.genes = t143b_TL@var.genes,
                 npcs = 20) %>%
   RunUMAP(reduction = "pca",
           dims = 1:20) %>%
   FindNeighbors(reduction = "pca",
                 dims = 1:20) %>%
   FindClusters(resolution = 0.3)
+
 #OS2
-OS2 <- CellCycleScoring(object = OS2,
-                        s.features = s.genes,
-                       g2m.features = g2m.genes,
-                       set.ident = TRUE)
-OS2 <- ScaleData(object = OS2,
-                 vars.to.regress = c("S.Score",
-                                     "G2M.Score"),
-                 features = rownames(x = OS2))
-OS2 <- RunPCA(OS2,
-              pc.genes = OS2@var.genes,
+OS2_TL <- RunPCA(OS2_TL,
+              pc.genes = OS2_TL@var.genes,
               npcs = 20) %>%
   RunUMAP(reduction = "pca",
           dims = 1:20) %>%
   FindNeighbors(reduction = "pca",
                 dims = 1:20) %>%
   FindClusters(resolution = 0.3)
+
 #OS7
-OS7 <- CellCycleScoring(object = OS7,
-                        s.features = s.genes,
-                        g2m.features = g2m.genes,
-                        set.ident = TRUE)
-OS7 <- ScaleData(object = OS7,
-                 vars.to.regress = c("S.Score",
-                                     "G2M.Score"),
-                features = rownames(x = OS7))
-OS7 <- RunPCA(OS7,
-              pc.genes = OS7@var.genes,
+OS7_TL <- RunPCA(OS7_TL,
+              pc.genes = OS7_TL@var.genes,
               npcs = 20) %>%
   RunUMAP(reduction = "pca",
           dims = 1:20) %>%
   FindNeighbors(reduction = "pca",
                 dims = 1:20) %>%
   FindClusters(resolution = 0.3)
-# Plot the data
-## OS17
-DimPlot(OS17.TL,
-        reduction = "umap",
-        group.by = "src",
-        pt.size = 1,
-        label = T) +
-  coord_fixed() +
-  ggtitle("OS17 by Source") +
-  scale_color_npg(alpha = 0.7)
-DimPlot(OS17.TL,
-        reduction = "umap",
-        pt.size = 1,
-        label = T,
-        split.by = "src") +
-  coord_fixed() +
-  ggtitle("OS17 Clusters") +
-  scale_color_npg(alpha = 0.7)
-## t143b
-DimPlot(t143b,
-        reduction = "umap",
-        group.by = "src",
-        pt.size = 1,
-        label = T) +
-  coord_fixed() +
-  ggtitle("t143b by Source") +
-  scale_color_npg(alpha = 0.7)
-DimPlot(t143b,
-        reduction = "umap",
-        pt.size = 1,
-        label = T,
-        split.by = "src") +
-  coord_fixed() +
-  ggtitle("t143b Clusters") +
-  scale_color_npg(alpha = 1)
-## OS2
-DimPlot(OS2,
-        reduction = "umap",
-        group.by = "src",
-        pt.size = 1,
-        label = T) +
-  coord_fixed() +
-  ggtitle("OS2 by Source") +
-  scale_color_npg(alpha = 0.7)
-DimPlot(OS2,
-        reduction = "umap",
-        pt.size = 1,
-        label = T,
-        split.by = "src") + 
-  coord_fixed() + 
-  ggtitle("OS2 Clusters") + 
-  scale_color_npg(alpha = 0.7)
-## OS7
-DimPlot(OS7,
-        reduction = "umap",
-        group.by = "src",
-        pt.size = 1,
-        label = T) +
-  coord_fixed() +
-  ggtitle("OS7 by Source") +
-  scale_color_npg(alpha = 0.7)
-DimPlot(OS7,
-        reduction = "umap",
-        pt.size = 1,
-        label = T,
-        split.by = "src") +
-  coord_fixed() +
-  ggtitle("OS7 Clusters") +
-  scale_color_npg(alpha = 0.7)
-#Plot the cluster distribution in each sample
-#OS17
-table(Idents(OS17.TL),
-      OS17.TL$src)
-prop <- prop.table(table(Idents(OS17.TL),
-                         OS17.TL$src),
+
+# Cluster distribution in each sample
+# OS17
+table(Idents(OS17_TL),
+      OS17_TL$src)
+prop <- prop.table(table(Idents(OS17_TL),
+                         OS17_TL$src),
                    margin = 2)*100
 colSums(prop)
 prop
@@ -1047,10 +812,10 @@ prop
 # 2   1.053001   39.698140
 # 3   5.229905   3.545104
 #t143b
-table(Idents(t143b),
-      t143b$src)
-prop <- prop.table(table(Idents(t143b),
-                         t143b$src),
+table(Idents(t143b_TL),
+      t143b_TL$src)
+prop <- prop.table(table(Idents(t143b_TL),
+                         t143b_TL$src),
                    margin = 2)*100
 colSums(prop)
 prop
@@ -1060,10 +825,10 @@ prop
 # 2   0.4479938   3.3502143
 # 3   0.5064277   2.1231009
 # OS2
-table(Idents(OS2),
-      OS2$src)
-prop <- prop.table(table(Idents(OS2),
-                         OS2$src),
+table(Idents(OS2_TL),
+      OS2_TL$src)
+prop <- prop.table(table(Idents(OS2_TL),
+                         OS2_TL$src),
                    margin = 2)*100
 colSums(prop)
 prop
@@ -1072,10 +837,10 @@ prop
 # 1   5.339806    71.480583
 # 2   12.378641   8.191748
 # OS7
-table(Idents(OS7),
-      OS7$src)
-prop <- prop.table(table(Idents(OS7),
-                         OS7$src),
+table(Idents(OS7_TL),
+      OS7_TL$src)
+prop <- prop.table(table(Idents(OS7_TL),
+                         OS7_TL$src),
                    margin = 2)*100
 colSums(prop)
 prop
@@ -1084,30 +849,18 @@ prop
 # 1   59.425804    1.383604
 # 2   40.574196    1.176064
 # 3    0.000000   26.426842
-#save(list = c(cx.sub, lung.sub, tib.sub, os17), 
-#           file = "TL_OS17_143B_OS2_OS7_2/OS17CTL.sub.RData")
-#save(list = c(os17.tib.raw, os17.lung.raw, OS17.TL), 
-#     file = "TL_OS17_143B_OS2_OS7_2/Fig3_OS17TL.RData")
-#save(list = c(t143b.cx.raw, t143b.lung.raw, t143b.tib.raw, t143b), 
-#     file = "TL_OS17_143B_OS2_OS7_2/Fig3_t143bTL.RData")
-#save(list = c(OS2.tib.raw, OS2.lung.raw, OS2), 
-#     file = "TL_OS17_143B_OS2_OS7_2/Fig3_OS2TL.RData")
-#save(list = c(OS7.tib.raw, OS7.lung.raw, OS7), 
-#     file = "TL_OS17_143B_OS2_OS7_2/Fig3_OS7TL.RData")
-#remove these objects and then run CCR on OS and save that file separately; create OS.list once cleared and re-started
-#save(list = c(OS, OS.CCR), 
-#     file = "TL_OS17_143B_OS2_OS7_2/Fig3_OS7TL.RData")
+
 #Modify data to account for optimal number of clusters using nRes and pSil functions
-OS17.TL.nRes <- nRes(OS17.TL, 
+OS17_TL.nRes <- nRes(OS17_TL, 
                      res = seq(from = 0.1,
                                to = 0.2,
                                by = 0.05))
-OS17.TL.nRes
-plot <- pSil(OS17.TL.nRes,
+OS17_TL.nRes
+plot <- pSil(OS17_TL.nRes,
              0.15)
-OS17.TL <- FindClusters(OS17.TL,
+OS17_TL <- FindClusters(OS17_TL,
                         resolution = 0.20)
-DimPlot(OS17.TL,
+DimPlot(OS17_TL,
         reduction = "umap",
         pt.size = 1,
         label = T,
@@ -1115,30 +868,32 @@ DimPlot(OS17.TL,
   coord_fixed() +
   NoLegend() +
   NoAxes()
+
 #Modify data to account for optimal number of clusters using nRes and pSil functions
-t143b.nRes <- nRes(t143b, 
+t143b_TL.nRes <- nRes(t143b_TL, 
                      res = seq(from = 0.1,
                                to = 0.4,
                                by = 0.05))
-t143b.nRes
-plot <- pSil(t143b.nRes,
+t143b_TL.nRes
+plot <- pSil(t143b_TL.nRes,
              0.15)
-t143b <- FindClusters(t143b,
+t143b_TL <- FindClusters(t143b_TL,
                       resolution = 0.15)
-DimPlot(t143b,
+DimPlot(t143b_TL,
         reduction = "umap",
         pt.size = 1,
         label = T,
         split.by = "src") +
   coord_fixed()
+
 #Modify data to account for optimal number of clusters using nRes and pSil functions
-OS2.nRes <- nRes(OS2, 
+OS2_TL.nRes <- nRes(OS2_TL, 
                      res = seq(from = 0.1,
                                to = 0.4,
                                by = 0.05))
-plot <- pSil(OS2.nRes, 0.15)
-OS2 <- FindClusters(OS2, resolution = 0.15)
-DimPlot(OS2,
+plot <- pSil(OS2_TL.nRes, 0.15)
+OS2_TL <- FindClusters(OS2_TL, resolution = 0.15)
+DimPlot(OS2_TL,
         reduction = "umap",
         pt.size = 1,
         label = T,
@@ -1146,17 +901,18 @@ DimPlot(OS2,
   coord_fixed() +
   NoLegend() +
   NoAxes()
+
 #Modify data to account for optimal number of clusters using nRes and pSil functions
-OS7.nRes <- nRes(OS7,
+OS7_TL.nRes <- nRes(OS7_TL,
                  res = seq(from = 0.1,
                            to = 0.2,
                            by = 0.05))
-OS7.nRes
-plot <- pSil(OS7.nRes,
+OS7_TL.nRes
+plot <- pSil(OS7_TL.nRes,
              0.1)
-OS7 <- FindClusters(OS7,
+OS7_TL <- FindClusters(OS7_TL,
                     resolution = 0.1)
-DimPlot(OS7,
+DimPlot(OS7_TL,
         reduction = "umap",
         pt.size = 1,
         label = T,
@@ -1164,55 +920,37 @@ DimPlot(OS7,
   coord_fixed() +
   NoLegend() +
   NoAxes()
-library(plyr)
-OS17.TL$src <- as.factor(OS17.TL$src)
-OS17.TL$src <- factor(as.factor(OS17.TL$src),
-                      levels = c("OS17_Tibia",
-                                 "OS17_Lung"))
-OS17.TL$src <- revalue(OS17.TL$src,
-                       c("OS17_Tibia"="Tibia",
-                         "OS17_Lung"="Lung"))
-OS2$src <- as.factor(OS2$src)
-OS2$src <- factor(as.factor(OS2$src),
-                  levels = c("NCHOS2_Tibia",
-                             "NCHOS2_Lung"))
-OS2$src <- revalue(OS2$src, c("NCHOS2_Tibia"="Tibia",
-                              "NCHOS2_Lung"="Lung"))
-OS7$src <- as.factor(OS7$src)
-OS7$src <- factor(as.factor(OS7$src),
-                  levels = c("NCHOS7_Tibia",
-                             "NCHOS7_Lung"))
-OS7$src <- revalue(OS7$src, c("NCHOS7_Tibia"="Tibia",
-                              "NCHOS7_Lung"="Lung"))
-OS17.TL <- OS17.TL %>% FindClusters(resolution = 0.2)
-t143b <- t143b %>% FindClusters(resolution = 0.15)
-OS2 <- OS2 %>% FindClusters(resolution = 0.15)
-OS7 <- OS7 %>% FindClusters(resolution = 0.2)
+
+OS17_TL <- OS17_TL %>% FindClusters(resolution = 0.2)
+t143b_TL <- t143b_TL %>% FindClusters(resolution = 0.15)
+OS2_TL <- OS2_TL %>% FindClusters(resolution = 0.15)
+OS7_TL <- OS7_TL %>% FindClusters(resolution = 0.2)
+
 # Generate PDF files for the Figure 3 plots
-pdf("TL_OS17_143B_OS2_OS7_2/OS17.TL_fig3.pdf", width = 5, height = 5)
-OS17.TL %>% FindClusters(resolution = 0.2) %>% 
-  subset(cells = sample(Cells(OS17.TL), 3000)) %>% 
+# Previous code used a subset of 3000 (contrary to description of 1500 cells for Figure 3 in paper)
+pdf("figures/figure_3/OS17_TL_fig3.pdf", width = 5, height = 5)
+OS17_TL %>% FindClusters(resolution = 0.2) %>% 
   DimPlot(reduction = "umap", pt.size = 1, label = T, split.by = "src") + 
   coord_fixed() + NoLegend() + NoAxes()+
   scale_color_npg(alpha = 1)
 dev.off()
-pdf("TL_OS17_143B_OS2_OS7_2/t143b_fig3.pdf", width = 5, height = 5)
-t143b %>% FindClusters(resolution = 0.15) %>% 
-  subset(cells = sample(Cells(t143b), 3000)) %>% 
+
+pdf("figures/figure_3/t143b_fig3.pdf", width = 5, height = 5)
+t143b_TL %>% FindClusters(resolution = 0.15) %>% 
   DimPlot(reduction = "umap", pt.size = 1, label = T, split.by = "src") + 
   coord_fixed() + NoLegend() + NoAxes()+
   scale_color_npg(alpha = 1)
 dev.off()
-pdf("TL_OS17_143B_OS2_OS7_2/OS2_fig3.pdf", width = 5, height = 5)
-OS2 %>% FindClusters(resolution = 0.15) %>% 
-  subset(cells = sample(Cells(OS2), 3000)) %>% 
+
+pdf("figures/figure_3/OS2_fig3.pdf", width = 5, height = 5)
+OS2_TL %>% FindClusters(resolution = 0.15) %>% 
   DimPlot(reduction = "umap", pt.size = 1, label = T, split.by = "src") + 
   coord_fixed() + NoLegend() + NoAxes()+
   scale_color_npg(alpha = 1)
 dev.off()
-pdf("TL_OS17_143B_OS2_OS7_2/OS7_fig3.pdf", width = 10, height = 10)
-OS7 %>% FindClusters(resolution = 0.2) %>% 
-  subset(cells = sample(Cells(OS7), 3000)) %>% 
+
+pdf("figures/figure_3/OS7_fig3.pdf", width = 10, height = 10)
+OS7_TL %>% FindClusters(resolution = 0.2) %>% 
   DimPlot(reduction = "umap", pt.size = 1, label = T, split.by = "src") +
   ggtitle("OS7")+
   coord_fixed() + NoLegend() + NoAxes()+
@@ -1226,14 +964,14 @@ D) Metabolic heterogeneity in glycolysis activation. We used a pathway enrichmen
 
 ### Processing
 
-```{r Fig3d_1, eval=F}
+```{r Fig3d_process, dependson='Fig3c', eval=F}
 library(data.table)
 library(pheatmap)
 #Create list of objects used in Figure 3 heatmap 
-B.list <- list(OS17 = OS17.TL,
-               t143b = t143b,
-               OS2 = OS2,
-               OS7 = OS7)
+B.list <- list(OS17 = OS17_TL,
+               t143b = t143b_TL,
+               OS2 = OS2_TL,
+               OS7 = OS7_TL)
 # Use DGEA function to find hallmark pathway expression
 em.hm.list <- list()
 for (i in 1:length(B.list)) {
@@ -1259,7 +997,7 @@ write.table(cx.pd, file=('Figure 3/cxpd.tsv'), quote=FALSE, sep='\t')
 cx.pd <- read.table(file = "Figure 3/cxpd.tsv", header=T)
 # Make the "rn" column the rownames -Emily
 cx.pd <- remove_rownames(cx.pd) %>%
-        column_to_rownames(var = "rn")
+  column_to_rownames(var = "rn")
 #remove "HALLMARK_"
 c <- rownames(cx.pd)
 c <- gsub("HALLMARK_", "", c)
@@ -1281,7 +1019,7 @@ aka2 = data.frame(ID = factor(c(rep("OS17", 4),
                                 rep("t143B", 4),
                                 rep("OS2", 3),
                                 rep("OS7", 4)
-                                )))
+)))
 rownames(aka2)<-subj
 aka3 = list(ID = c(OS17 = "#E64B35FF",
                    t143B = "#4DBBD5FF",
@@ -1311,121 +1049,17 @@ aka5 = (c(rep("OS17", 4),
           rep("t143B", 4),
           rep("OS2", 3),
           rep("OS7", 4)))
-column_ha = HeatmapAnnotation(model = aka5,
-                              bar1 = anno_barplot(aka4))
-#pdf("TL_OS17_143B_OS2_OS7_2/temp.pdf", height = 7, width = 8)
-#Heatmap(t(df), 
-#        col = col, 
-#        name = "-log10(p)", 
-##        cluster_columns = FALSE,
-#       top_annotation = column_ha)+ geom_text(aes(label = pvalue))
-#dev.off()
-col.breaks=seq(-log10(1),min(max(-log10(cx.pd))+1,18),by=0.5)
-col=inferno(length(col.breaks)) # library(viridis)
-col=c("white",colorRampPalette(brewer.pal(n = 7, name ="Reds"))(50))
-pheatmap(-log10(cx.pd),cluster_rows = TRUE,cluster_cols = TRUE,
-         cellwidth = 5,cellheight = 7,treeheight_row = 0,treeheight_col=0,
-         color = col,scale='none',breaks=col.breaks,fontsize = 8)
-```
 
-```{r Fig3d_2, eval=F}
-library(dichromat)
-#IPA analysis
-# Decided to proceed with A2, B1, (B2, B3), C1, D0 and D3
-# Find differentially expressed features selected cluster and remaining cells
-#OS17
-A0.markers <- FindMarkers(OS17.TL, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-A1.markers <- FindMarkers(OS17.TL, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-A2.markers <- FindMarkers(OS17.TL, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-A3.markers <- FindMarkers(OS17.TL, ident.1 = "3", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-#remove unnecessary columns
-myList <- list(A0.markers, A1.markers, A2.markers, A3.markers)
-myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
-A0.markers <- myList[[1]]
-A1.markers <- myList[[2]]
-A2.markers <- myList[[3]]
-A3.markers <- myList[[4]]
-  
-# view results
-# head(A2.markers)
-# FeaturePlot(object = OS17.TL, features = 'NFKBIA')
-B0.markers <- FindMarkers(t143b, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-B1.markers <- FindMarkers(t143b, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-B2.markers <- FindMarkers(t143b, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-B3.markers <- FindMarkers(t143b, ident.1 = "3", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-myList <- list(B0.markers, B1.markers, B2.markers, B3.markers)
-myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
-B0.markers <- myList[[1]]
-B1.markers <- myList[[2]]
-B2.markers <- myList[[3]]
-B3.markers <- myList[[4]]
-C0.markers <- FindMarkers(OS2, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-C1.markers <- FindMarkers(OS2, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-C2.markers <- FindMarkers(OS2, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-myList <- list(C0.markers, C1.markers, C2.markers)
-myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
-C0.markers <- myList[[1]]
-C1.markers <- myList[[2]]
-C2.markers <- myList[[3]]
-D0.markers <- FindMarkers(OS7, ident.1 = "0", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-D1.markers <- FindMarkers(OS7, ident.1 = "1", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-D2.markers <- FindMarkers(OS7, ident.1 = "2", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-D3.markers <- FindMarkers(OS7, ident.1 = "3", ident.2 = NULL, only.pos = FALSE, min.pct = 0.25)
-myList <- list(D0.markers, D1.markers, D2.markers, D3.markers)
-myList <- lapply(myList, function(x) { x["p_val"] <- NULL; x[, 2:3] <- NULL; x })
-D0.markers <- myList[[1]]
-D1.markers <- myList[[2]]
-D2.markers <- myList[[3]]
-D3.markers <- myList[[4]]
-#library(xlsx)
-#write.xlsx(A0.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/A0.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(A1.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/A1.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(A2.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/A2.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(A3.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/A3.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(B0.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/B0.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(B1.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/B1.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(B2.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/B2.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(B3.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/B3.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(C0.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/C0.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(C1.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/C1.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(C2.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/C2.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(D0.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/D0.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(D1.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/D1.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(D2.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/D2.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#write.xlsx(D3.markers, file = "TL_OS17_143B_OS2_OS7_2/markers/D3.markers.xlsx", 
-#           col.names = TRUE, row.names = TRUE, append = FALSE)
-#Uploaded individual datasets on IPA; ran Expression analysis with adj p value cutoff at 0.01
-#Emily commented out below
-#df <- read.delim("TL_OS17_143B_OS2_OS7_2/IPA_updown.txt", header = TRUE)
-#rownames(df) <- df[,1]
-#df[,1] <- NULL
-```
-
-```{r Fig3d_3, eval=F}
-# cx.pd <- cx.pd[-(23:30),] #remove rows with names NA - figure out why we have NAs!!
+# cx.pd <- cx.pd[-(23:30),] #remove rows with names NA
 cx.pd.log <- -log10(cx.pd) #log transform
 library(pheatmap)   
 cx.pd_transpose <- as.data.frame(t(cx.pd.log))
 df <- as.matrix(cx.pd_transpose)
-subj<-c(paste0("A", 0:3),
+subj <- c(paste0("A", 0:3),
         paste0("B", 0:3),
         paste0("C", 0:2),
         paste0("D", 0:3))
-rownames(df)<-subj
+rownames(df) <- subj
 aka2 = data.frame(ID = factor(c(rep("OS17", 4),
                                 rep("t143B", 4),
                                 rep("OS2", 3),
@@ -1438,56 +1072,11 @@ aka3 = list(ID = c(OS17 = "#E64B35FF",
                    OS7 = "#3C5488FF"))
 # df[] <- lapply(df, gsub, pattern='HALLMARK_', replacement='')
 # df
-cols <- colorRampPalette(c("snow1", "red"), # distances 3 to max(distmat) colored from green to black
-                             100)
-# not the heatmap code used in final version -Emily commented out
-#pheatmap(t(scale(df)),
- #        color = cols, 
- #        annotation_col = aka2, 
- #        annotation_colors = aka3,
- #        annotation_legend = TRUE,
-         #gaps_col =  4,
- #        show_colnames = T, show_rownames = T, cluster_rows = T, 
- #        cluster_cols = T, legend = TRUE, 
-#         clustering_distance_rows = "euclidean", border_color = FALSE)
-#Heatmap(t(scale(df)), 
-#        col = col, 
-#        name = "-log10(p)", 
-#        top_annotation = column_ha)
-#not used elsewhere here -Emily
-#color = colorRampPalette(rev(brewer.pal(n = 7, name =
-#                                          "RdYlBu")))(100)
-# Apply glycolysis, Hypoxia, tnfa, emt modules and compare between clusters
-data <- OS17.TL
-for(i in 1:length(mod_names)) {
-  data <- AddModuleScore(data, gl[i], name = names(gl[i]))
-}
-RidgePlot(data, features = str_c(names(gl[6]), "1"))
-# VlnPlot(data, features = str_c(names(gl[3]), "1"))
-DotPlot(data, features = TNFA, cluster.idents = TRUE)
-#noted a clear differnece in the TNFA_VIA_NFkB module
-#Identify genes that are most differntially expressed in this module
-data <- OS17.TL
-pdf("TL_OS17_143B_OS2_OS7_2/Dotplot_OS17.pdf", height = 30, width = 7)
-DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
-dev.off()
-data <- t143b
-pdf("TL_OS17_143B_OS2_OS7_2/Dotplot_143B.pdf", height = 30, width = 7)
-DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
-dev.off()
-data <- OS2
-pdf("TL_OS17_143B_OS2_OS7_2/Dotplot_OS2.pdf", height = 30, width = 7)
-DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
-dev.off()
-data <- OS7
-pdf("TL_OS17_143B_OS2_OS7_2/Dotplot_OS7.pdf", height = 30, width = 7)
-DotPlot(data, features = TNFA, cluster.idents = TRUE)+coord_flip()
-dev.off()
 ```
 
 ### Heatmap
 
-```{r Fig3d_heatmap, eval=F}
+```{r Fig3d_heatmap, dependson='Fig3d_process', eval=F}
 # Pathway enrichment analysis 
 P1 <- df %>%
   as.data.frame() %>%
@@ -1542,7 +1131,7 @@ P2 <- aka4 %>%
   theme(legend.position = "top", ) +
   labs(fill = "")
 # Plot combined bar plot (percentage of cells identified per cluster in lung metastases) and heatmap of hallmark pathway expressions
-pdf("Figure 3/Pvalueplot.pdf", height = 12, width = 12)
+pdf("figures/figure_3/figure_3d.pdf", height = 12, width = 12)
 cowplot::plot_grid(P2,
                    P1,
                    ncol = 1,
