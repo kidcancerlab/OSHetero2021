@@ -378,27 +378,27 @@ Figure 2. Osteosarcoma cells adopt distinct transcriptional profiles as they col
 
 B) Venn diagrams showing overlap of differentially expressed genes that are up- or down- regulated in primary or metastatic tumors relative to corresponding starting population of cells (cell line or PDX flank tumors). Region outlined in red identifies differentially expressed genes shared across at least three models.
 
-```{r Fig2b}
+```{r Fig2b, fig.height=10, fig.width=10}
 load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS_merged_postCCR.RData")
 
-OS$cell_line <- stringr::str_remove(OS$src, "_.+") %>%
+OS$model <- OS$model %>%
     stringr::str_replace("t143b", "143B") %>%
     stringr::str_replace("NCHOS2", "NCH-OS-2") %>%
     stringr::str_replace("NCHOS7", "NCH-OS-7")
-OS$tissue <- stringr::str_remove(OS$src, ".+_") %>%
+OS$tissue <- OS$src %>%
     stringr::str_replace("Flank", "Culture")
 
-OS <- subset(OS, subset = cell_line != "OB")
+OS <- subset(OS, subset = model != "OB")
 
 Idents(OS) <- OS$tissue
 
 de_out <- list()
 for (tissue_name in c("Lung", "Tibia")) {
-    for (cl_name in unique(OS$cell_line)) {
+    for (cl_name in unique(OS$model)) {
         message(tissue_name, " ", cl_name)
         temp_seurat <- subset(OS, subset = (tissue == tissue_name |
                                     tissue == "Culture") &
-                                    cell_line == cl_name)
+                                    model == cl_name)
         temp_de_out <-
             FindMarkers(temp_seurat,
                         ident.1 = tissue_name,
@@ -518,6 +518,8 @@ pathways[[4]] <- em
 #################### TRUE ) plot dev.off()
 ```
 
+## Figure 2C
+
 C) Pathway enrichment analysis with adjusted p values for hallmark gene sets associated with these shared genes
 
 ```{r Fig2c, dependson = "Fig2b", fig.height=6, fig.width=10}
@@ -634,30 +636,30 @@ save(figure_2c, file = "figures/figure_2/figure_2c.RData")
 
 Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
 
-```{r Fig3_load}
-load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS.listv3.CCR.RData")
-```
-
 ## Figure 3B
 
 *statistical method subject to change*
 
 B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown in cell culture (####p <0.001). Within model comparison, identified increase in ITH scores as cells colonize tibia and lung microenvironments, with the exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák multiple comparisons test.
 
-```{r Fig3b, dependson='Fig3_load', eval=F}
+```{r Fig3_load}
+load("Data/OSlist_1500_CCR.RData")
+```
+
+```{r Fig3b, dependson='Fig3_load'}
 ITH.score <- list()
-for (i in 1:length(OS.list)) {
-  z <- (Embeddings(OS.list[[i]], reduction = "pca")[, 1:20])
+for (i in 1:length(OS.list_1500)) {
+  z <- (Embeddings(OS.list_1500[[i]], reduction = "pca")[, 1:20])
   mat <- dist(z, diag = TRUE, upper = FALSE)
   mat2 <- as.matrix(mat)
   mat2[upper.tri(mat2, diag = TRUE)] <- NA
   ITH.score[[i]] <- colMeans(mat2, na.rm = TRUE)
 }
 
-library(xlsx)
+#library(xlsx)
 for (i in c(1:12)){
-  write.xlsx(ITH.score[i],
-             file=paste(i,"test.xlsx"))
+  as.data.frame(ITH.score[i]) %>%
+  write_excel_csv(file=paste("Data/ITH/",i,"test.csv"))
 }
 
 raw_ith <- read_pzfx("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/ITH_Scores_1500.pzfx",
@@ -682,6 +684,9 @@ rplot <- ggplot(ith, aes(x = logITH, y = Sample, fill = Sample)) +
   theme(legend.position = "none",
         axis.title.x = element_text(hjust = 0.5),
         axis.title.y = element_blank())
+
+rplot
+
 # Perform a Mann-Whitney U for each group
 comps <- tribble(
   ~ctl, ~comp,
@@ -719,139 +724,90 @@ for(i in seq_along(comps$ctl)) {
 
 C) UMAP analysis for merged primary and metastatic samples in each of the four models. Cells in grey represent remaining cells in merged sample. Cluster enrichment analysis shows distribution of cells in each cluster in the two microenvironment conditions (tibia, lung). While some cells in the primary and metastatic lesions adopted shared phenotypes, others adopted distinct phenotypes.
 
-```{r Fig3c, dependson='Fig3_load', eval=F}
+```{r Fig3c, dependson='Fig3_load'}
+load("Data/OSlist_CCR.RData")
+
 # Isolate tibia and lung Seurat objects from the OS.list of Seurat objects
-OS17_Tibia <- OS.list$OS17.Tibia
-OS17_Lung <- OS.list$OS17.Lung
-
-t143B_Tibia <- OS.list$t143B.Tibia
-t143B_Lung <- OS.list$t143B.Lung
-
-OS2_Tibia <- OS.list$OS2.Tibia
-OS2_Lung <- OS.list$OS2.Lung
-
-OS7_Tibia <- OS.list$OS7.Tibia
-OS7_Lung  <- OS.list$OS7.Lung
 
 # Merge tibia and lung objects into a single Seurat object
-OS17_TL <- merge(OS17_Tibia,
-                 y = c(OS17_Lung),
+OS17_TL <- merge(OS.list$OS17.Tibia,
+                 y = c(OS.list$OS17.Lung),
                  add.cell.ids = c("OS17_Tibia",
                                   "OS17_Lung"),
-                 project = "Heterogeneity")
-t143b_TL <- merge(t143B_Tibia,
-               y = c(t143B_Lung),
-               add.cell.ids = c("t143b_Tibia",
-                                "t143b_Lung"),
-               project = "Heterogeneity")
-OS2_TL <- merge(OS2_Tibia,
-             y = c(OS2_Lung),
-             add.cell.ids = c("OS2_Tibia",
-                              "OS2_Lung"),
-             project = "Heterogeneity")
-OS7_TL <- merge(OS7_Tibia,
-             y = c(OS7_Lung),
-             add.cell.ids = c("OS7_Tibia",
-                              "OS7_Lung"),
-             project = "Heterogeneity")
+                 project = "Heterogeneity") %>%
+    ScaleData() %>%
+    FindVariableFeatures() %>%
+    RunPCA(npcs = 20) %>%
+    RunUMAP(reduction = "pca",
+            dims = 1:20) %>%
+    FindNeighbors(reduction = "pca",
+                  dims = 1:20) %>%
+    FindClusters(resolution = 0.3)
 
-# Process and cluster
+t143b_TL <- merge(OS.list$t143B.Tibia,
+                  y = c(OS.list$t143B.Lung),
+                  add.cell.ids = c("t143b_Tibia",
+                                   "t143b_Lung"),
+                  project = "Heterogeneity") %>%
+    ScaleData() %>%
+    FindVariableFeatures() %>%
+    RunPCA(npcs = 20) %>%
+    RunUMAP(reduction = "pca",
+            dims = 1:20) %>%
+    FindNeighbors(reduction = "pca",
+                  dims = 1:20) %>%
+    FindClusters(resolution = 0.3)
 
-#OS17
-OS17_TL <- RunPCA(OS17_TL,
-                  pc.genes = OS17_TL@var.genes,
-                  npcs = 20) %>%
-  RunUMAP(reduction = "pca",
-          dims = 1:20) %>%
-  FindNeighbors(reduction = "pca",
-                dims = 1:20) %>%
-  FindClusters(resolution = 0.3)
+OS2_TL <- merge(OS.list$OS2.Tibia,
+                y = c(OS.list$OS2.Lung),
+                add.cell.ids = c("OS2_Tibia",
+                                 "OS2_Lung"),
+                project = "Heterogeneity") %>%
+    ScaleData() %>%
+    FindVariableFeatures() %>%
+    RunPCA(npcs = 20) %>%
+    RunUMAP(reduction = "pca",
+            dims = 1:20) %>%
+    FindNeighbors(reduction = "pca",
+                  dims = 1:20) %>%
+    FindClusters(resolution = 0.3)
 
-#t143B
-t143b_TL <- RunPCA(t143b_TL,
-                pc.genes = t143b_TL@var.genes,
-                npcs = 20) %>%
-  RunUMAP(reduction = "pca",
-          dims = 1:20) %>%
-  FindNeighbors(reduction = "pca",
-                dims = 1:20) %>%
-  FindClusters(resolution = 0.3)
-
-#OS2
-OS2_TL <- RunPCA(OS2_TL,
-              pc.genes = OS2_TL@var.genes,
-              npcs = 20) %>%
-  RunUMAP(reduction = "pca",
-          dims = 1:20) %>%
-  FindNeighbors(reduction = "pca",
-                dims = 1:20) %>%
-  FindClusters(resolution = 0.3)
-
-#OS7
-OS7_TL <- RunPCA(OS7_TL,
-              pc.genes = OS7_TL@var.genes,
-              npcs = 20) %>%
-  RunUMAP(reduction = "pca",
-          dims = 1:20) %>%
-  FindNeighbors(reduction = "pca",
-                dims = 1:20) %>%
-  FindClusters(resolution = 0.3)
+OS7_TL <- merge(OS.list$OS7.Tibia,
+                y = c(OS.list$OS7.Lung),
+                add.cell.ids = c("OS7_Tibia",
+                                 "OS7_Lung"),
+                project = "Heterogeneity") %>%
+    ScaleData() %>%
+    FindVariableFeatures() %>%
+    RunPCA(npcs = 20) %>%
+    RunUMAP(reduction = "pca",
+            dims = 1:20) %>%
+    FindNeighbors(reduction = "pca",
+                  dims = 1:20) %>%
+    FindClusters(resolution = 0.3)
 
 # Cluster distribution in each sample
-# OS17
-table(Idents(OS17_TL),
-      OS17_TL$src)
-prop <- prop.table(table(Idents(OS17_TL),
-                         OS17_TL$src),
-                   margin = 2)*100
-colSums(prop)
-prop
-#     Tibia       Lung
-# 0   50.263250   46.577747
-# 1   43.453843   10.179010
-# 2   1.053001   39.698140
-# 3   5.229905   3.545104
-#t143b
-table(Idents(t143b_TL),
-      t143b_TL$src)
-prop <- prop.table(table(Idents(t143b_TL),
-                         t143b_TL$src),
-                   margin = 2)*100
-colSums(prop)
-prop
-#     Tibia        Lung
-# 0   97.8963771    2.2204908
-# 1   1.1492014   92.3061940
-# 2   0.4479938   3.3502143
-# 3   0.5064277   2.1231009
-# OS2
-table(Idents(OS2_TL),
-      OS2_TL$src)
-prop <- prop.table(table(Idents(OS2_TL),
-                         OS2_TL$src),
-                   margin = 2)*100
-colSums(prop)
-prop
-#     Tibia       Lung
-# 0   82.281553   20.327670
-# 1   5.339806    71.480583
-# 2   12.378641   8.191748
-# OS7
-table(Idents(OS7_TL),
-      OS7_TL$src)
-prop <- prop.table(table(Idents(OS7_TL),
-                         OS7_TL$src),
-                   margin = 2)*100
-colSums(prop)
-prop
-#     Tibia       Lung
-# 0    0.000000   71.013490
-# 1   59.425804    1.383604
-# 2   40.574196    1.176064
-# 3    0.000000   26.426842
+# proportion of cells in lung in each cluster
+lung_prop_tbl <- tibble()
+for (s_obj in c(OS17_TL, t143b_TL, OS2_TL, OS7_TL)) {
+    lung_prop_tbl <-
+        table(Idents(s_obj), s_obj$src) %>%
+        prop.table() %>%
+        as.data.frame() %>%
+        as_tibble() %>%
+        dplyr::rename(cluster = Var1,
+                      sample = Var2,
+                      lung_perc = Freq) %>%
+        dplyr::filter(grepl("Lung", sample)) %>%
+        mutate(lung_perc = lung_perc * 100,
+               sample = str_remove(sample, "_.+")) %>%
+        bind_rows(lung_prop_tbl)
+}
+
+write_tsv(lung_prop_tbl, "Data/Fig3d_lung_prop_tbl.tsv")
 
 #Modify data to account for optimal number of clusters using nRes and pSil functions
-OS17_TL.nRes <- nRes(OS17_TL, 
+OS17_TL.nRes <- nRes(OS17_TL,
                      res = seq(from = 0.1,
                                to = 0.2,
                                by = 0.05))
@@ -870,7 +826,7 @@ DimPlot(OS17_TL,
   NoAxes()
 
 #Modify data to account for optimal number of clusters using nRes and pSil functions
-t143b_TL.nRes <- nRes(t143b_TL, 
+t143b_TL.nRes <- nRes(t143b_TL,
                      res = seq(from = 0.1,
                                to = 0.4,
                                by = 0.05))
@@ -887,7 +843,7 @@ DimPlot(t143b_TL,
   coord_fixed()
 
 #Modify data to account for optimal number of clusters using nRes and pSil functions
-OS2_TL.nRes <- nRes(OS2_TL, 
+OS2_TL.nRes <- nRes(OS2_TL,
                      res = seq(from = 0.1,
                                to = 0.4,
                                by = 0.05))
@@ -960,185 +916,146 @@ dev.off()
 
 ## Figure 3D
 
-D) Metabolic heterogeneity in glycolysis activation. We used a pathway enrichment analysis for hallmark gene sets using genes differentially upregulated in each cluster relative to every other cluster within the same model. P values were adjusted for multiple comparisons. Boxes in grey identify non-significant pathway enrichments, whereas boxes in red identify statistically significant enrichments. Bar plot shows percentage of cells identified per cluster in lung metastases. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
+D) Metabolic heterogeneity in glycolysis activation. We used a pathway enrichment
+analysis for hallmark gene sets using genes differentially upregulated in each'
+cluster relative to every other cluster within the same model. P values were
+adjusted for multiple comparisons. Boxes in grey identify non-significant pathway
+enrichments, whereas boxes in red identify statistically significant enrichments.
+Bar plot shows percentage of cells identified per cluster in lung metastases.
+In B-D, samples subset to equal number of cells to allow inter-model comparison
+(n=1500 per condition).
 
 ### Processing
 
-```{r Fig3d_process, dependson='Fig3c', eval=F}
+```{r Fig3d_process, dependson='Fig3c'}
 library(data.table)
-library(pheatmap)
-#Create list of objects used in Figure 3 heatmap 
+#library(pheatmap)
+#Create list of objects used in Figure 3 heatmap
 B.list <- list(OS17 = OS17_TL,
                t143b = t143b_TL,
                OS2 = OS2_TL,
                OS7 = OS7_TL)
 # Use DGEA function to find hallmark pathway expression
 em.hm.list <- list()
-for (i in 1:length(B.list)) {
-  
-  em.hm.list[[i]] <- DGEA(B.list[[i]])
-  
+set.seed(1337)
+for (i in seq_len(length(B.list))) {
+  em.hm.list[[i]] <- DGEA(B.list[[i]]) %>%
+    setDT(keep.rownames = TRUE) %>%
+    as_tibble() %>%
+    rename_with(.cols = where(is.numeric), ~ str_c(names(B.list[i]), "_", .x))
 }
-for(i in 1:(length(em.hm.list))) {
-  em.hm.list[[i]] <- setDT(em.hm.list[[i]],
-                           keep.rownames = TRUE)[]
-  
-}
-temp1 <- em.hm.list[[1]]
-temp2 <- em.hm.list[[2]]
-temp3 <- em.hm.list[[3]]
-temp4 <- em.hm.list[[4]]
-cx <- inner_join(temp1, temp2, by = "rn")
-pd <- inner_join(temp3, temp4, by = "rn")
-cx.pd <- inner_join(cx, pd, by = "rn")
+
+cx.pd <- inner_join(inner_join(em.hm.list[[1]],
+                               em.hm.list[[2]],
+                               by = "rn"),
+                    inner_join(em.hm.list[[3]],
+                               em.hm.list[[4]],
+                               by = "rn"),
+                    by = "rn")
+
+# Make the "rn" column the rownames -Emily
+# cx.pd <- cx.pd %>%
+#     column_to_rownames("rn")
+
 head(cx.pd)
 ##Write table to edit rownames to easily convert to dataframe
-write.table(cx.pd, file=('Figure 3/cxpd.tsv'), quote=FALSE, sep='\t')
-cx.pd <- read.table(file = "Figure 3/cxpd.tsv", header=T)
-# Make the "rn" column the rownames -Emily
-cx.pd <- remove_rownames(cx.pd) %>%
-  column_to_rownames(var = "rn")
-#remove "HALLMARK_"
-c <- rownames(cx.pd)
-c <- gsub("HALLMARK_", "", c)
-#remove "_" by removing special characters
-c <- gsub("_", " ", c)
-rownames(cx.pd) <- c
-#log transform
-cx.pd.log <- -log10(cx.pd)
-cx.pd_transpose <- as.data.frame(t(cx.pd.log))
-df <- as.matrix(cx.pd_transpose)
-#Write table to print supplemental information
-write.table(df, file=('Figure 3/cxpd_plot.tsv'), quote=FALSE, sep='\t')
-subj<-c(paste0("A", 0:3),
-        paste0("B", 0:3),
-        paste0("C", 0:2),
-        paste0("D", 0:3))
-rownames(df)<-subj
-aka2 = data.frame(ID = factor(c(rep("OS17", 4),
-                                rep("t143B", 4),
-                                rep("OS2", 3),
-                                rep("OS7", 4)
-)))
-rownames(aka2)<-subj
-aka3 = list(ID = c(OS17 = "#E64B35FF",
-                   t143B = "#4DBBD5FF",
-                   OS2 = "#00A087FF",
-                   OS7 = "#3C5488FF"))
-library(ComplexHeatmap)
-color = colorRampPalette(rev(brewer.pal(n = 7, name =
-                                          "RdYlBu")))(100)
-#calculate percentage of cells in lung for each cluster
-aka4 <- data.frame (Lpercent = c(46.577747,
-                                 10.17901,
-                                 39.69814,
-                                 3.545104,
-                                 2.2204908,
-                                 92.306194,
-                                 3.3502143,
-                                 2.1231009,
-                                 20.32767,
-                                 71.480583,
-                                 8.191748,
-                                 71.01349,
-                                 1.383604,
-                                 1.176064,
-                                 26.426842))
-rownames(aka4) <- subj
-aka5 = (c(rep("OS17", 4),
-          rep("t143B", 4),
-          rep("OS2", 3),
-          rep("OS7", 4)))
-
-# cx.pd <- cx.pd[-(23:30),] #remove rows with names NA
-cx.pd.log <- -log10(cx.pd) #log transform
-library(pheatmap)   
-cx.pd_transpose <- as.data.frame(t(cx.pd.log))
-df <- as.matrix(cx.pd_transpose)
-subj <- c(paste0("A", 0:3),
-        paste0("B", 0:3),
-        paste0("C", 0:2),
-        paste0("D", 0:3))
-rownames(df) <- subj
-aka2 = data.frame(ID = factor(c(rep("OS17", 4),
-                                rep("t143B", 4),
-                                rep("OS2", 3),
-                                rep("OS7", 4)
-)))
-rownames(aka2)<-subj
-aka3 = list(ID = c(OS17 = "#E64B35FF",
-                   t143B = "#4DBBD5FF",
-                   OS2 = "#00A087FF",
-                   OS7 = "#3C5488FF"))
-# df[] <- lapply(df, gsub, pattern='HALLMARK_', replacement='')
-# df
+write_tsv(cx.pd, file = "Data/cxpd.tsv")
 ```
 
-### Heatmap
+### Code I gave to Sanjana at some point for Figure 3d
+I modified this from code she gave me to clean it up and get it working
 
-```{r Fig3d_heatmap, dependson='Fig3d_process', eval=F}
-# Pathway enrichment analysis 
-P1 <- df %>%
-  as.data.frame() %>%
-  rownames_to_column(var = "Sample") %>%
-  full_join(aka4 %>%
-              rownames_to_column(var = "Sample")) %>%
-  pivot_longer(c(-Sample,
-                 -Lpercent),
-               names_to = "Pathway",
-               values_to = "pval",
-               names_repair = "minimal") %>%
-  mutate(Signif = pval >= (-1 * log10(0.05)),
-         sample_order = str_remove(Sample,
-                                   "[0-9]") %>%
-           rank() * 1000 - Lpercent,
-         Sample = reorder(Sample,
-                          sample_order)) %>%
-  ggplot(.,
-         aes(x = Sample,
-             y = Pathway,
-             fill = Signif)) +
-  geom_tile() +
-  geom_text(aes(label = sprintf("%0.2f",
-                                pval))) +
-  scale_fill_manual(values = c("gray",
-                               "#CC3333")) +
-  scale_y_discrete(limits = rev) +
-  theme(legend.position = "none") +
-  ylab("")
-P2 <- aka4 %>%
-  rownames_to_column(var = "Sample") %>%
-  full_join(aka2 %>%
-              rownames_to_column(var = "Sample")) %>%
-  mutate(sample_order = str_remove(Sample,
-                                   "[0-9]") %>%
-           rank() * 1000 - Lpercent,
-         Sample = reorder(Sample,
-                          sample_order),
-         ID = reorder(ID, sample_order)) %>%
-  ggplot(.,
-         aes(x = Sample,
-             y = Lpercent,
-             fill = ID)) +
-  geom_bar(stat = "identity") +
-  ylab("Percent\nin lung") +
-  xlab("") +
-  theme_bw() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank()) +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())+
-  theme(legend.position = "top", ) +
-  labs(fill = "")
-# Plot combined bar plot (percentage of cells identified per cluster in lung metastases) and heatmap of hallmark pathway expressions
-pdf("figures/figure_3/figure_3d.pdf", height = 12, width = 12)
+The only data we need are the cs.pd object and the percent of lung cells per cluster
+which is entered here as aka4
+```{r, eval=FALSE}
+lung_percent <-
+    read_tsv("Data/Fig3d_lung_prop_tbl.tsv") %>%
+    mutate(sample = str_replace(sample, "NCHOS2", "NCH-OS-2") %>%
+           str_replace("NCHOS7", "NCH-OS-7") %>%
+           str_replace("t143b", "143B") %>%
+           str_replace("OS17", "OS-17"),
+           sample_order = rank(sample) * 1000 - lung_perc,
+           x_label = paste0(sample, " c", cluster) %>%
+                reorder(sample_order))
+
+cx.pd <-
+    read_tsv("Data/cxpd.tsv",
+             show_col_types = FALSE) %>%
+    pivot_longer(c(-rn),
+                 names_to = "sample",
+                 values_to = "pval") %>%
+    mutate(cluster = str_remove(sample, ".+_") %>%
+                as.numeric(),
+           sample = str_replace(sample, "OS2", "NCH-OS-2") %>%
+                str_replace("OS7", "NCH-OS-7") %>%
+                str_replace("t143b", "143B") %>%
+                str_replace("OS17", "OS-17") %>%
+                str_remove("_.+"),
+            rn = str_remove(rn, "HALLMARK_") %>%
+                str_replace("_", " ")) %>%
+    left_join(lung_percent) %>%
+    mutate(pval = -log10(pval),
+           sample_order = rank(sample) * 1000 - lung_perc,
+           signif = pval >= (-1 * log10(0.05)) %>%
+                str_replace("TRUE", "p-value < 0.05") %>%
+                str_replace("FALSE", "p-value > 0.05"))
+
+P1 <-
+  cx.pd %>%
+  ggplot(., aes(x = x_label, y = rn, fill = signif)) +
+    geom_tile() +
+    geom_text(aes(label = sprintf("%0.2f", pval)), size = 3) +
+    scale_fill_manual(values = c("gray", "red"), name = "") +
+    scale_y_discrete(limits = rev, position = "right") +
+    theme(panel.background = element_blank(),
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.margin = unit(c(0, 0, 0, 0), "cm"),
+          panel.border = element_rect(colour = "black", fill = NA),
+          axis.text.x = element_text(angle = 90,
+                                     hjust = 1,
+                                     vjust = 0.4,
+                                     size = 12),
+          axis.text.y = element_text(size = 12)) +
+    labs(x = "",
+         y = "") +
+    facet_grid(. ~ sample,
+               scales = "free_x",
+               space = "free")
+
+P2 <-
+  lung_percent %>%
+  ggplot(., aes(x = x_label, y = lung_perc, fill = sample)) +
+    geom_bar(stat = "identity") +
+    ylab("Percent\nin lung") +
+    xlab("") +
+    labs(fill = "Model",
+         y = "Percent in\nmetastases(%)") +
+    scale_fill_brewer(palette = "Set2") +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          panel.background = element_blank(),
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.margin = unit(c(0, 0, -0.2, 0), "cm"),
+          panel.border = element_rect(colour = "black", fill = NA)) +
+    facet_grid(. ~ sample,
+               scales = "free_x",
+               space = "free")
+
 cowplot::plot_grid(P2,
                    P1,
                    ncol = 1,
                    align = "v",
                    rel_heights = c(2, 10))
-dev.off()
+
+ggsave("figures/figure_3/figure_3d.png",
+       width = 15,
+       height = 8)
 ```
+
+
+
 
 # Figure 4 - Images
 
@@ -1537,4 +1454,6 @@ figure_5f
 
 ```{r session}
 sessionInfo()
+```
+o()
 ```
