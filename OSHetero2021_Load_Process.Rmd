@@ -64,7 +64,7 @@ OB <- subset(OB,
                percent.mt < 10)
 
 OB$src <- "OB"
-OB$cond <- "OB"
+OB$model <- "OB"
 ```
 
 ## Load OS17
@@ -81,7 +81,7 @@ os17.cx.raw <- subset(os17.cx.raw,
                         percent.mt < 15)
 
 os17.cx.raw$src <- "Culture"
-os17.cx.raw$cond <- "OS17"
+os17.cx.raw$model <- "OS17"
 
 ## Tibia
 os17.tib.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/filtered_feature_bc_matrix/",
@@ -92,7 +92,7 @@ os17.tib.raw <- subset(os17.tib.raw,
                          percent.mt < 18)
 
 os17.tib.raw$src <- "Tibia"
-os17.tib.raw$cond <- "OS17"
+os17.tib.raw$model <- "OS17"
 
 ## Lung
 ## double check usage throughout rest of code - Emily (fixed issue where coming from wrong file)
@@ -105,12 +105,12 @@ os17.lung.raw <- subset(os17.lung.raw,
                           percent.mt < 25)
 
 os17.lung.raw$src <- "Lung"
-os17.lung.raw$cond <- "OS17"
+os17.lung.raw$model <- "OS17"
 ```
 
 ### Process OS17 culture for Figure 1
 
-```{r Fig1a1_process}
+```{r Fig1a1_process, dependson='load_os17'}
 os17.cx <- NormalizeData(os17.cx.raw) %>%
   FindVariableFeatures(selection.method = "vst") %>%
   ScaleData() %>%
@@ -296,7 +296,7 @@ VlnPlot(t143b.cx.raw,
         ncol = 3)
 
 t143b.cx.raw$src <- "Culture"
-t143b.cx.raw$cond <- "t143b"
+t143b.cx.raw$model <- "t143b"
 
 ## Tibia
 t143b.tib.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0052/outs/filtered_feature_bc_matrix/",
@@ -313,7 +313,7 @@ VlnPlot(t143b.tib.raw,
         ncol = 3)
 
 t143b.tib.raw$src <- "Tibia"
-t143b.tib.raw$cond <- "t143b"
+t143b.tib.raw$model <- "t143b"
 
 # Lung
 t143b.lung.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0019-143B-lung/outs/filtered_feature_bc_matrix/",
@@ -331,7 +331,7 @@ VlnPlot(t143b.lung.raw,
         ncol = 3)
 
 t143b.lung.raw$src <- "Lung"
-t143b.lung.raw$cond <- "t143b"
+t143b.lung.raw$model <- "t143b"
 ```
 
 ## Load NCH-OS2
@@ -353,7 +353,7 @@ VlnPlot(OS2.cx.raw,
         ncol = 3)
 
 OS2.cx.raw$src <- "Flank"
-OS2.cx.raw$cond <- "NCHOS2"
+OS2.cx.raw$model <- "NCHOS2"
 
 ## Tibia
 OS2.tib.raw<- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0042/outs/filtered_feature_bc_matrix/",
@@ -371,7 +371,7 @@ VlnPlot(OS2.tib.raw,
         ncol = 3)
 
 OS2.tib.raw$src <- "Tibia"
-OS2.tib.raw$cond <- "NCHOS2"
+OS2.tib.raw$model <- "NCHOS2"
 
 ## Lung
 OS2.lung.raw<- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0041/outs/filtered_feature_bc_matrix/",
@@ -388,7 +388,7 @@ VlnPlot(OS2.lung.raw,
         ncol = 3)
 
 OS2.lung.raw$src <- "Lung"
-OS2.lung.raw$cond <- "NCHOS2"
+OS2.lung.raw$model <- "NCHOS2"
 ```
 
 ## Load NCH-OS7
@@ -410,7 +410,7 @@ VlnPlot(OS7.cx.raw,
         ncol = 3)
 
 OS7.cx.raw$src <- "Flank"
-OS7.cx.raw$cond <- "NCHOS7"
+OS7.cx.raw$model <- "NCHOS7"
 
 ## Tibia
 OS7.tib.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0034/outs/filtered_feature_bc_matrix/",
@@ -427,7 +427,7 @@ VlnPlot(OS7.tib.raw,
         ncol = 3)
 
 OS7.tib.raw$src <- "Tibia"
-OS7.tib.raw$cond <- "NCHOS7"
+OS7.tib.raw$model <- "NCHOS7"
 
 ## Lung
 OS7.lung.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0055/outs/filtered_feature_bc_matrix/",
@@ -443,12 +443,12 @@ VlnPlot(OS7.lung.raw,
         ncol = 3)
 
 OS7.lung.raw$src <- "Lung"
-OS7.lung.raw$cond <- "NCHOS7"
+OS7.lung.raw$model <- "NCHOS7"
 ```
 
 ### Process NCHS-OS7 flank for Figure 1
 
-```{r Fig1a3_process}
+```{r Fig1a3_process, dependson='load_nchos7'}
 OS7.cx <- NormalizeData(OS7.cx.raw) %>%
   FindVariableFeatures(selection.method = "vst") %>%
   ScaleData() %>%
@@ -507,7 +507,7 @@ save(OS7.cx,
 
 ## Save Raw Objects
 
-```{r save_raw}
+```{r save_raw, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7')}
 # Save raw objects
 
 # Make lists for easy loop saving
@@ -557,7 +557,7 @@ for (item in sample_names) {
 
 Merge objects, process, and cell cycle regress. 
 
-```{r mergeallobj}
+```{r mergeallobj, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7')}
 # Merge into a single Seurat object
 OS <- merge(OB, y = c(os17.cx.raw,
                       os17.tib.raw,
@@ -621,8 +621,8 @@ OS <- RunPCA(OS, pc.genes = OS@var.genes, npcs = 20) %>%
 save(OS,
      file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS_merged_postCCR.RData")
 
-OS$cond <- as.factor(OS$cond)
-OS$cond <- factor(as.factor(OS$cond),
+OS$model <- as.factor(OS$model)
+OS$model <- factor(as.factor(OS$model),
                   levels = c("OS17",
                              "t143b",
                              "NCHOS2",
@@ -632,11 +632,11 @@ OS$cond <- factor(as.factor(OS$cond),
 # Plot the data
 DimPlot(OS,
         reduction = "umap",
-        group.by = "cond",
+        group.by = "model",
         pt.size = 1,
         label = T) +
   coord_fixed() +
-  ggtitle("OS by Condition") +
+  ggtitle("OS by Model") +
     scale_color_npg(alpha = 1)
 
 DimPlot(OS,
@@ -658,10 +658,66 @@ DimPlot(OS,
 
 # List Objects and Process
 
-List objects, process, and cell cycle regress. Used in Figure 3 code.
+List objects, process, and cell cycle regress. Used in Figure 3B - ITH code.
 
-```{r listallobj}
-#Create List to compute ITH scores
+```{r listallobj1500, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7')}
+# Create List to compute ITH scores (subset to 1500 cells for each)
+OS.list_1500 <- list(OB = OB,
+                     OS17.cx = os17.cx.raw,
+                     OS17.Tibia = os17.tib.raw, 
+                     OS17.Lung = os17.lung.raw, 
+                     t143B.cx = t143b.cx.raw,
+                     t143B.Tibia = t143b.tib.raw, 
+                     t143B.Lung = t143b.lung.raw,
+                     OS2.Flank = OS2.cx.raw,
+                     OS2.Tibia = OS2.tib.raw, 
+                     OS2.Lung = OS2.lung.raw, 
+                     OS7.Flank= OS7.cx.raw,
+                     OS7.Tibia = OS7.tib.raw, 
+                     OS7.Lung = OS7.lung.raw) 
+
+for (i in 1: length(OS.list_1500)) {
+  OS.list_1500[[i]] <- NormalizeData(OS.list_1500[[i]]) %>%
+    FindVariableFeatures(selection.method = "vst") %>%
+    ScaleData() %>%
+    RunPCA(pc.genes = OS.list_1500[[i]]@var.genes, npcs = 20) %>%
+    RunUMAP(reduction = "pca", dims = 1:20) %>%
+    FindNeighbors(reduction = "pca", dims = 1:20) %>%
+    FindClusters(resolution = 0.3) %>%
+    subset(cells = sample(Cells(OS.list_1500[[i]]), 1500))
+}
+
+# CCR
+# Attempt to regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+
+for (i in 1: length(OS.list_1500)) {
+  OS.list_1500[[i]] <- CellCycleScoring(object = OS.list_1500[[i]],
+                                   s.features = s.genes,
+                                   g2m.features = g2m.genes,
+                                   set.ident = TRUE)
+  
+  OS.list_1500[[i]] <- ScaleData(object = OS.list_1500[[i]],
+                            vars.to.regress = c("S.Score",
+                                                "G2M.Score"),
+                            features = rownames(x = OS.list_1500[[i]]))
+  
+  OS.list_1500[[i]] <- RunPCA(OS.list_1500[[i]],
+                         pc.genes = OS.list_1500[[i]]@var.genes, npcs = 20) %>%
+    RunUMAP(reduction = "pca", dims = 1:20) %>%
+    FindNeighbors(reduction = "pca", dims = 1:20) %>%
+    FindClusters(resolution = 0.3)
+}
+
+save(OS.list_1500,
+     file = "OSlist_1500_CCR.RData")
+```
+
+List objects, process, and cell cycle regress. Used in Figure 3 C-D code.
+
+```{r listallobj, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7')}
+# Create list for usage in Figure 3
 OS.list <- list(OB = OB,
                 OS17.cx = os17.cx.raw,
                 OS17.Tibia = os17.tib.raw, 
@@ -683,8 +739,7 @@ for (i in 1: length(OS.list)) {
     RunPCA(pc.genes = OS.list[[i]]@var.genes, npcs = 20) %>%
     RunUMAP(reduction = "pca", dims = 1:20) %>%
     FindNeighbors(reduction = "pca", dims = 1:20) %>%
-    FindClusters(resolution = 0.3) %>%
-    subset(cells = sample(Cells(OS.list[[i]]), 1500))
+    FindClusters(resolution = 0.3)
 }
 
 # CCR
@@ -711,7 +766,7 @@ for (i in 1: length(OS.list)) {
 }
 
 save(OS.list,
-     file = "OS.listv3.CCR.RData")
+     file = "OSlist_CCR.RData")
 ```
 
 ```{r versions}
