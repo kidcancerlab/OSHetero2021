@@ -24,6 +24,8 @@ knitr::opts_chunk$set(
 )
 ```
 
+*Seurat object loading and processing code can be found in "OSHetero2021_Load_Process.Rmd". Object outputs from that code are loaded in the code below.*
+
 # Figure 1
 
 **Cell line and PDX models of osteosarcoma display transcriptional heterogeneity.**
@@ -65,7 +67,7 @@ library(perm)
 A) UMAP analysis of OS-17 cells (n = 3178) grown in cell culture. Cell cycle distribution of cells (n = 3178) is visualized as pie charts.
 
 ```{r Fig1a_OS17}
-load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/os17.cx_CCR.RData")
+load("Data/os17.cx_CCR.RData")
 
 # Culture plot
 figure1_a1 <- DimPlot(os17.cx,
@@ -134,7 +136,7 @@ dev.off()
 B) UMAP analysis of NCH-OS-7 cells (n = 1998) grown as subcutaneous flank tumor. Cell cycle distribution of cells is visualized as pie charts.
 
 ```{r Fig1b_NCHOS7}
-load(file ="/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS7.cx_CCR.RData")
+load(file ="Data/OS7.cx_CCR.RData")
 
 # Flank plots
 
@@ -372,14 +374,12 @@ Fig1 %>%
 
 Figure 2. Osteosarcoma cells adopt distinct transcriptional profiles as they colonize tibia and lung microenvironments. A) Schematic of study design depicting generation of orthotopic primary and metastatic tumors. Tumors were harvested for scRNA-seq when mice reached endpoint.
 
-*Seurat object loading and processing code can be found in "OSHetero2021_Load_Process.Rmd". Object outputs from that code are loaded in the code below.*
-
 ## Figure 2B
 
 B) Venn diagrams showing overlap of differentially expressed genes that are up- or down- regulated in primary or metastatic tumors relative to corresponding starting population of cells (cell line or PDX flank tumors). Region outlined in red identifies differentially expressed genes shared across at least three models.
 
 ```{r Fig2b, fig.height=10, fig.width=10}
-load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS_merged_postCCR.RData")
+load("Data/OS_merged_postCCR.RData")
 
 OS$model <- OS$model %>%
     stringr::str_replace("t143b", "143B") %>%
@@ -662,7 +662,7 @@ for (i in c(1:12)){
   write_excel_csv(file=paste("Data/ITH/",i,"test.csv"))
 }
 
-raw_ith <- read_pzfx("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/ITH_Scores_1500.pzfx",
+raw_ith <- read_pzfx("ITH_Scores_1500.pzfx",
                      table = 1)
 
 ith <- melt(raw_ith)
@@ -1073,12 +1073,12 @@ Figure 5. Lung colonization bottleneck enriches for clonal populations with a co
 source("scSeurat.R")
 
 # Load raw objects for lineage tag analysis
-load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/Raw/os17.cx.raw.RData")
-load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/Raw/os17.tib.raw.RData")
-load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/Raw/os17.lung.raw.RData")
+load("Data/Raw/os17.cx.raw.RData")
+load("Data/Raw/os17.tib.raw.RData")
+load("Data/Raw/os17.lung.raw.RData")
 
 # Load merged and cell cycle regressed OS17 object
-load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/os17.RData")
+load("Data/os17.RData")
 ```
 
 ## Figure 5B
@@ -1454,6 +1454,4 @@ figure_5f
 
 ```{r session}
 sessionInfo()
-```
-o()
 ```
