@@ -165,7 +165,6 @@ png("figures/figure_1/figure_1a_nchos7_pie.png",
 
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(1, 4)))
-
 for(i in 1:4){
   temp <- WhichCells(OS7.cx,
                      idents = cid[[i]]) 
@@ -184,10 +183,14 @@ for(i in 1:4){
     scale_fill_brewer(palette="Blues") +
     theme_minimal() +
     NoAxes() +
-    NoLegend() +
+    #NoLegend() +
     RestoreLegend(position = "right")
   ggtitle(paste("Cluster",
                 cid[[i]]))
+  if (i != 4) {
+    pie <- pie + NoLegend()
+    }
+
   print(pie,
         vp=vplayout(ceiling(i/4),
                     i))
@@ -524,58 +527,109 @@ C) Pathway enrichment analysis with adjusted p values for hallmark gene sets ass
 
 ```{r Fig2c, dependson = "Fig2b", fig.height=6, fig.width=10}
 ### Extract genes that are shared in these datasets
-#genes <- Lung.down
-#A = genes[[1]]
-#B = genes[[2]]
-#C = genes[[3]]
-#D = genes[[4]]
-# Preparing clusterProfiler to perform hypergeometric test on msigdb signatures m_t2g.c2 <-
-# msigdbr(species = 'Homo sapiens', category = 'C2') %>% dplyr::select(gs_name,
-# human_gene_symbol) m_t2g.c6 <- msigdbr(species = 'Homo sapiens', category = 'C6') %>%
-# dplyr::select(gs_name, human_gene_symbol)
-#m_t2g.h <- msigdbr(species = "Homo sapiens", category = "H") %>%
-#    dplyr::select(gs_name, human_gene_symbol)
-#m_t2n.h <- msigdbr(species = "Homo sapiens", category = "H") %>%
-#    dplyr::select(gs_id, gs_name)
-# m_t2g=rbind(m_t2g.c2,m_t2g.c6)
-# msigdb signature to use
-#msig.gene.set = m_t2g.h
-#msig.name = m_t2n.h
-#intersect <- c((intersect(intersect(intersect(A, B), C), D)),
-#               (intersect(intersect(A, B), C)),
-#               (intersect(intersect(A, B), D)),
-#               (intersect(intersect(A, D), C)),
-#               (intersect(intersect(B, D), C)))
-#tmp <- enricher(intersect,
-#                TERM2GENE = msig.gene.set,
-#                TERM2NAME = msig.name)
-#pvalue/p.adjust
-#em = tmp@result[, c("ID", "p.adjust")]
-#rownames(em) <- NULL
-#em <- em[1:10, ]
-#em[, 2] <- -log10(em[, 2])
+load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS_merged_postCCR.RData")
 
-#pathways <- list(NULL)
-#pathways[[4]] <- em
+data <- list(
+  os17 = subset(OS, cells = WhichCells(OS, expression = model == "OS-17")),
+  t143B = subset(OS, cells = WhichCells(OS, expression = model == "143B")),
+  NCHOS2 = subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-2")),
+  NCHOS7 = subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-7"))
+)
+
+# Rename "Flank" to "Culture" for NCHOS samples
+data$NCHOS2$src[grep("Flank", data$NCHOS2$src)] <- "Culture"
+data$NCHOS7$src[grep("Flank", data$NCHOS7$src)] <- "Culture"
+
+fig_2c_data <- tibble()
+
+for (tissue_name in c("Lung", "Tibia")) {
+    for (direction in c("up", "down")) {
+        de_genes <- list()
+        for (i in seq_len(length(data))) {
+            Idents(data[[i]]) <- data[[i]]$src
+            de_genes[[i]] <-
+                FindMarkers(data[[i]],
+                            ident.1 = tissue_name,
+                            ident.2 = "Culture",
+                            only.pos = FALSE,
+                            min.pct = 0.1)
+
+            # Select genes that change in the direction of interest
+            if (direction == "up") {
+                de_genes[[i]] <-
+                    de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
+                                  de_genes[[i]]$avg_log2FC > 0, ]
+            } else {
+                de_genes[[i]] <-
+                    de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
+                                  de_genes[[i]]$avg_log2FC < 0, ]
+            }
+        }
+
+        A <- rownames(de_genes[[1]])
+        B <- rownames(de_genes[[2]])
+        C <- rownames(de_genes[[3]])
+        D <- rownames(de_genes[[4]])
+
+        # Preparing clusterProfiler to perform hypergeometric test on msigdb signatures 
+        msig.gene.set <-
+            msigdbr(species = "Homo sapiens", category = "H") %>%
+            dplyr::select(gs_name, human_gene_symbol)
+        msig.name <-
+            msigdbr(species = "Homo sapiens", category = "H") %>%
+            dplyr::select(gs_id, gs_name)
+
+        # Getting middle "flower" of the Venn diagram
+        intersect <- c((intersect(intersect(intersect(A, B), C), D)),
+                    (intersect(intersect(A, B), C)),
+                    (intersect(intersect(A, B), D)),
+                    (intersect(intersect(A, D), C)),
+                    (intersect(intersect(B, D), C))) %>%
+            unique()
+
+        temp <-
+            enricher(intersect,
+                     TERM2GENE = msig.gene.set,
+                     TERM2NAME = msig.name)@result %>%
+            as_tibble() %>%
+            select(ID, p.adjust) %>%
+            dplyr::rename(pathway = ID) %>%
+            arrange(p.adjust) %>%
+            slice_head(n = 5) %>%
+            mutate(tissue = tissue_name,
+                   label_y = if_else(direction == "up", 1, -1),
+                   p.adjust = -log10(p.adjust),
+                   pathway = str_remove(pathway, "HALLMARK_") %>%
+                        str_replace_all("_", " "),
+                   order = seq_len(n()))
+
+        if (direction == "down") {
+            temp$p.adjust <- temp$p.adjust * -1
+        }
+
+        fig_2c_data <- bind_rows(fig_2c_data, temp)
+    }
+}
 
 ################ Two sided Barplot
-SanjanaPlots <- read.delim("SanjanaPlots.txt") %>%
-    mutate(Tissue = stringr::str_replace(Tissue,
+fig_2c_data <-
+    fig_2c_data %>%
+    mutate(tissue = stringr::str_replace(tissue,
                                 "Tibia",
                                 "Tibia Gene Sets") %>%
                 stringr::str_replace("Lung", "Lung Gene Sets"),
-            Pathway = stringr::str_wrap(Pathway, width = 25))
+           pathway = stringr::str_wrap(pathway, width = 25))
 
 figure_2c <-
     ggplot() +
-    geom_bar(data = SanjanaPlots,
-            aes(x = -1 * Order,
+    geom_bar(data = fig_2c_data,
+            aes(x = -1 * order,
                 y = p.adjust,
                 fill = p.adjust > 0),
             stat = "identity",
             alpha = 0.8) +
     coord_flip() +
-    facet_wrap(~Tissue,
+    facet_wrap(~tissue,
                 ncol = 1,
                 scales = "free") +
     geom_hline(yintercept = c(-1.5, 1.5),
@@ -585,17 +639,17 @@ figure_2c <-
     geom_hline(yintercept = 0,
                color = "black",
                size = 1) +
-    geom_text(data = SanjanaPlots,
-              aes(x = -1 * Order,
-                  y = Label_y * 3,
-                  label = Pathway)) +
-    geom_text(data = tibble(y = c(-2.5, 2.5, -2.5, 2.5),
+    geom_text(data = fig_2c_data,
+              aes(x = -1 * order,
+                  y = label_y * 4,
+                  label = pathway)) +
+    geom_text(data = tibble(y = c(-4, 4, -4, 4),
                             x = c(0.5, 0.5, 0.5, 0.5),
                             label = c("Downregulated\nduring tibia colonization",
                                       "Upregulated\nduring tibia colonization",
                                       "Downregulated\nduring lung colonization",
                                       "Upregulated\nduring lung colonization"),
-                            Tissue = c("Tibia Gene Sets",
+                            tissue = c("Tibia Gene Sets",
                                        "Tibia Gene Sets",
                                        "Lung Gene Sets",
                                        "Lung Gene Sets")),
@@ -617,7 +671,7 @@ figure_2c <-
     labs(title = "Tibia Gene Sets",
          y = "",
          x = "") +
-    ylim(-5, 5) +
+    ylim(-7, 7) +
     xlim(-5.5, 1)
 
 ggsave("figures/figure_2/figure_2c.png",
@@ -724,87 +778,8 @@ for(i in seq_along(comps$ctl)) {
 
 C) UMAP analysis for merged primary and metastatic samples in each of the four models. Cells in grey represent remaining cells in merged sample. Cluster enrichment analysis shows distribution of cells in each cluster in the two microenvironment conditions (tibia, lung). While some cells in the primary and metastatic lesions adopted shared phenotypes, others adopted distinct phenotypes.
 
-```{r Fig3c, dependson='Fig3_load'}
-load("Data/OSlist_CCR.RData")
-
-# Isolate tibia and lung Seurat objects from the OS.list of Seurat objects
-
-# Merge tibia and lung objects into a single Seurat object
-OS17_TL <- merge(OS.list$OS17.Tibia,
-                 y = c(OS.list$OS17.Lung),
-                 add.cell.ids = c("OS17_Tibia",
-                                  "OS17_Lung"),
-                 project = "Heterogeneity") %>%
-    ScaleData() %>%
-    FindVariableFeatures() %>%
-    RunPCA(npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-
-t143b_TL <- merge(OS.list$t143B.Tibia,
-                  y = c(OS.list$t143B.Lung),
-                  add.cell.ids = c("t143b_Tibia",
-                                   "t143b_Lung"),
-                  project = "Heterogeneity") %>%
-    ScaleData() %>%
-    FindVariableFeatures() %>%
-    RunPCA(npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-
-OS2_TL <- merge(OS.list$OS2.Tibia,
-                y = c(OS.list$OS2.Lung),
-                add.cell.ids = c("OS2_Tibia",
-                                 "OS2_Lung"),
-                project = "Heterogeneity") %>%
-    ScaleData() %>%
-    FindVariableFeatures() %>%
-    RunPCA(npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-
-OS7_TL <- merge(OS.list$OS7.Tibia,
-                y = c(OS.list$OS7.Lung),
-                add.cell.ids = c("OS7_Tibia",
-                                 "OS7_Lung"),
-                project = "Heterogeneity") %>%
-    ScaleData() %>%
-    FindVariableFeatures() %>%
-    RunPCA(npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-
-# Cluster distribution in each sample
-# proportion of cells in lung in each cluster
-lung_prop_tbl <- tibble()
-for (s_obj in c(OS17_TL, t143b_TL, OS2_TL, OS7_TL)) {
-    lung_prop_tbl <-
-        table(Idents(s_obj), s_obj$src) %>%
-        prop.table() %>%
-        as.data.frame() %>%
-        as_tibble() %>%
-        dplyr::rename(cluster = Var1,
-                      sample = Var2,
-                      lung_perc = Freq) %>%
-        dplyr::filter(grepl("Lung", sample)) %>%
-        mutate(lung_perc = lung_perc * 100,
-               sample = str_remove(sample, "_.+")) %>%
-        bind_rows(lung_prop_tbl)
-}
-
-write_tsv(lung_prop_tbl, "Data/Fig3d_lung_prop_tbl.tsv")
+```{r Fig3c, dependson='Fig3_load', eval=F}
+load("Data/OS_list_CCR.RData")
 
 #Modify data to account for optimal number of clusters using nRes and pSil functions
 OS17_TL.nRes <- nRes(OS17_TL,
@@ -877,10 +852,35 @@ DimPlot(OS7_TL,
   NoLegend() +
   NoAxes()
 
-OS17_TL <- OS17_TL %>% FindClusters(resolution = 0.2)
-t143b_TL <- t143b_TL %>% FindClusters(resolution = 0.15)
-OS2_TL <- OS2_TL %>% FindClusters(resolution = 0.15)
-OS7_TL <- OS7_TL %>% FindClusters(resolution = 0.2)
+OS_list$`OS-17_TL` <- OS_list$`OS-17_TL` %>%
+    FindClusters(resolution = 0.2)
+OS_list$`143B_TL` <- OS_list$`143B_TL` %>%
+    FindClusters(resolution = 0.15)
+OS_list$`NCH-OS-2_TL` <- OS_list$`NCH-OS-2_TL` %>%
+    FindClusters(resolution = 0.15)
+OS_list$`NCH-OS-7_TL` <- OS_list$`NCH-OS-7_TL` %>%
+    FindClusters(resolution = 0.2)
+
+# Cluster distribution in each sample
+# proportion of cells in lung in each cluster
+lung_prop_tbl <- tibble()
+for (s_obj in c(OS_list$`OS-17_TL`,
+                OS_list$`143B_TL`,
+                OS_list$`NCH-OS-2_TL`,
+                OS_list$`NCH-OS-7_TL`)) {
+    lung_prop_tbl <-
+        s_obj@meta.data %>%
+        as_tibble() %>%
+        select(model, src, seurat_clusters) %>%
+        group_by(model, seurat_clusters) %>%
+        summarize(lung_perc = sum(grepl("Lung", src)) / n() * 100,
+                  .groups = "drop") %>%
+        dplyr::rename(sample = model,
+                      cluster = seurat_clusters) %>%
+        bind_rows(lung_prop_tbl)
+}
+
+write_tsv(lung_prop_tbl, "Data/Fig3d_lung_prop_tbl.tsv")
 
 # Generate PDF files for the Figure 3 plots
 # Previous code used a subset of 3000 (contrary to description of 1500 cells for Figure 3 in paper)
@@ -931,10 +931,11 @@ In B-D, samples subset to equal number of cells to allow inter-model comparison
 library(data.table)
 #library(pheatmap)
 #Create list of objects used in Figure 3 heatmap
-B.list <- list(OS17 = OS17_TL,
-               t143b = t143b_TL,
-               OS2 = OS2_TL,
-               OS7 = OS7_TL)
+B.list <- list(OS17 = OS_list$`OS-17_TL`,
+               t143b = OS_list$`143B_TL`,
+               OS2 = OS_list$`NCH-OS-2_TL`,
+               OS7 = OS_list$`NCH-OS-7_TL`)
+
 # Use DGEA function to find hallmark pathway expression
 em.hm.list <- list()
 set.seed(1337)
@@ -970,11 +971,7 @@ which is entered here as aka4
 ```{r, eval=FALSE}
 lung_percent <-
     read_tsv("Data/Fig3d_lung_prop_tbl.tsv") %>%
-    mutate(sample = str_replace(sample, "NCHOS2", "NCH-OS-2") %>%
-           str_replace("NCHOS7", "NCH-OS-7") %>%
-           str_replace("t143b", "143B") %>%
-           str_replace("OS17", "OS-17"),
-           sample_order = rank(sample) * 1000 - lung_perc,
+    mutate(sample_order = rank(sample) * 1000 - lung_perc,
            x_label = paste0(sample, " c", cluster) %>%
                 reorder(sample_order))
 
@@ -996,16 +993,15 @@ cx.pd <-
     left_join(lung_percent) %>%
     mutate(pval = -log10(pval),
            sample_order = rank(sample) * 1000 - lung_perc,
-           signif = pval >= (-1 * log10(0.05)) %>%
-                str_replace("TRUE", "p-value < 0.05") %>%
-                str_replace("FALSE", "p-value > 0.05"))
+           signif_bool = pval >= (-1 * log10(0.05)),
+           signif = if_else(signif_bool == TRUE, "p-value < 0.05", "p-value > 0.05"))
 
 P1 <-
   cx.pd %>%
   ggplot(., aes(x = x_label, y = rn, fill = signif)) +
     geom_tile() +
     geom_text(aes(label = sprintf("%0.2f", pval)), size = 3) +
-    scale_fill_manual(values = c("gray", "red"), name = "") +
+    scale_fill_manual(values = c("red", "gray"), name = "") +
     scale_y_discrete(limits = rev, position = "right") +
     theme(panel.background = element_blank(),
           strip.background = element_blank(),
