@@ -163,7 +163,6 @@ png("figures/figure_1/figure_1a_nchos7_pie.png",
 
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(1, 4)))
-
 for(i in 1:4){
   temp <- WhichCells(OS7.cx,
                      idents = cid[[i]]) 
@@ -182,10 +181,14 @@ for(i in 1:4){
     scale_fill_brewer(palette="Blues") +
     theme_minimal() +
     NoAxes() +
-    NoLegend() +
+    #NoLegend() +
     RestoreLegend(position = "right")
   ggtitle(paste("Cluster",
                 cid[[i]]))
+  if (i != 4) {
+    pie <- pie + NoLegend()
+    }
+
   print(pie,
         vp=vplayout(ceiling(i/4),
                     i))
@@ -522,31 +525,66 @@ C) Pathway enrichment analysis with adjusted p values for hallmark gene sets ass
 
 ```{r Fig2c, dependson = "Fig2b", fig.height=6, fig.width=10}
 ### Extract genes that are shared in these datasets
-#genes <- Lung.down
-#A = genes[[1]]
-#B = genes[[2]]
-#C = genes[[3]]
-#D = genes[[4]]
-# Preparing clusterProfiler to perform hypergeometric test on msigdb signatures m_t2g.c2 <-
-# msigdbr(species = 'Homo sapiens', category = 'C2') %>% dplyr::select(gs_name,
-# human_gene_symbol) m_t2g.c6 <- msigdbr(species = 'Homo sapiens', category = 'C6') %>%
-# dplyr::select(gs_name, human_gene_symbol)
-#m_t2g.h <- msigdbr(species = "Homo sapiens", category = "H") %>%
-#    dplyr::select(gs_name, human_gene_symbol)
-#m_t2n.h <- msigdbr(species = "Homo sapiens", category = "H") %>%
-#    dplyr::select(gs_id, gs_name)
-# m_t2g=rbind(m_t2g.c2,m_t2g.c6)
-# msigdb signature to use
-#msig.gene.set = m_t2g.h
-#msig.name = m_t2n.h
-#intersect <- c((intersect(intersect(intersect(A, B), C), D)),
-#               (intersect(intersect(A, B), C)),
-#               (intersect(intersect(A, B), D)),
-#               (intersect(intersect(A, D), C)),
-#               (intersect(intersect(B, D), C)))
-#tmp <- enricher(intersect,
-#                TERM2GENE = msig.gene.set,
-#                TERM2NAME = msig.name)
+load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS_merged_postCCR.RData")
+
+data <- list(
+  os17 = subset(OS, cells = WhichCells(OS, expression = model == "OS-17")),
+  t143B = subset(OS, cells = WhichCells(OS, expression = model == "143B")),
+  NCHOS2 = subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-2")),
+  NCHOS7 = subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-7"))
+)
+
+# Rename "Flank" to "Culture" for NCHOS samples
+data$NCHOS2$src[grep("Flank", data$NCHOS2$src)] <- "Culture"
+data$NCHOS7$src[grep("Flank", data$NCHOS7$src)] <- "Culture"
+
+for (tissue_name in c("Lung", "Tibia")) {
+    for (direction in c("up", "down")) {
+        de_genes <- list()
+        for (i in seq_len(length(data))) {
+            Idents(data[[i]]) <- data[[i]]$src
+            x <-
+                FindMarkers(data[[i]],
+                            ident.1 = tissue_name,
+                            ident.2 = "Culture",
+                            only.pos = FALSE,
+                            min.pct = 0.1)
+
+            # Select genes that change in the direction of interest
+            if (direction == "up") {
+                x <- x[x$p_val_adj < 0.05 & x$avg_log2FC > 0, ]
+            } else {
+                x <- x[x$p_val_adj < 0.05 & x$avg_log2FC < 0, ]
+            }
+
+            #Lung.down[[names(data)[i]]] <- rownames(x)
+        }
+
+        A <- Lung.down[[1]]
+        B <- Lung.down[[2]]
+        C <- Lung.down[[3]]
+        D <- Lung.down[[4]]
+
+        # Preparing clusterProfiler to perform hypergeometric test on msigdb signatures 
+        m_t2g.h <-
+            msigdbr(species = "Homo sapiens", category = "H") %>%
+            dplyr::select(gs_name, human_gene_symbol)
+        m_t2n.h <-
+            msigdbr(species = "Homo sapiens", category = "H") %>%
+            dplyr::select(gs_id, gs_name)
+        # msigdb signature to use
+        msig.gene.set <- m_t2g.h
+        msig.name <- m_t2n.h
+        intersect <- c((intersect(intersect(intersect(A, B), C), D)),
+                    (intersect(intersect(A, B), C)),
+                    (intersect(intersect(A, B), D)),
+                    (intersect(intersect(A, D), C)),
+                    (intersect(intersect(B, D), C)))
+        tmp <- enricher(intersect,
+                    TERM2GENE = msig.gene.set,
+                    TERM2NAME = msig.name)
+    }
+}
 #pvalue/p.adjust
 #em = tmp@result[, c("ID", "p.adjust")]
 #rownames(em) <- NULL
@@ -635,7 +673,7 @@ save(figure_2c, file = "figures/figure_2/figure_2c.RData")
 Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
 
 ```{r Fig3_load}
-load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS.listv3.CCR.RData")
+#load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS.listv3.CCR.RData")
 ```
 
 ## Figure 3B
@@ -720,7 +758,7 @@ for(i in seq_along(comps$ctl)) {
 C) UMAP analysis for merged primary and metastatic samples in each of the four models. Cells in grey represent remaining cells in merged sample. Cluster enrichment analysis shows distribution of cells in each cluster in the two microenvironment conditions (tibia, lung). While some cells in the primary and metastatic lesions adopted shared phenotypes, others adopted distinct phenotypes.
 
 ```{r Fig3c, dependson='Fig3_load', eval=F}
-load("Data/OS.listv3.CCR.RData")
+load("Data/OSlist_CCR_v1.RData")
 
 # Isolate tibia and lung Seurat objects from the OS.list of Seurat objects
 
