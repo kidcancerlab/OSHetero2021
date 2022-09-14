@@ -584,7 +584,8 @@ for (tissue_name in c("Lung", "Tibia")) {
                     (intersect(intersect(A, D), C)),
                     (intersect(intersect(B, D), C))) %>%
             unique()
-        fig_2c_data <-
+
+        temp <-
             enricher(intersect,
                      TERM2GENE = msig.gene.set,
                      TERM2NAME = msig.name)@result %>%
@@ -596,11 +597,15 @@ for (tissue_name in c("Lung", "Tibia")) {
             mutate(tissue = tissue_name,
                    label_y = if_else(direction == "up", 1, -1),
                    p.adjust = -log10(p.adjust),
-                   p.adjust = if_else(direction[1] == "up", p.adjust, -p.adjust),
                    pathway = str_remove(pathway, "HALLMARK_") %>%
                         str_replace_all("_", " "),
-                   order = seq_len(n())) %>%
-            bind_rows(fig_2c_data)
+                   order = seq_len(n()))
+
+        if (direction == "down") {
+            temp$p.adjust <- temp$p.adjust * -1
+        }
+
+        fig_2c_data <- bind_rows(fig_2c_data, temp)
     }
 }
 
@@ -634,9 +639,9 @@ figure_2c <-
                size = 1) +
     geom_text(data = fig_2c_data,
               aes(x = -1 * order,
-                  y = label_y * 3,
+                  y = label_y * 4,
                   label = pathway)) +
-    geom_text(data = tibble(y = c(-2.5, 2.5, -2.5, 2.5),
+    geom_text(data = tibble(y = c(-4, 4, -4, 4),
                             x = c(0.5, 0.5, 0.5, 0.5),
                             label = c("Downregulated\nduring tibia colonization",
                                       "Upregulated\nduring tibia colonization",
@@ -664,7 +669,7 @@ figure_2c <-
     labs(title = "Tibia Gene Sets",
          y = "",
          x = "") +
-    ylim(-5, 5) +
+    ylim(-7, 7) +
     xlim(-5.5, 1)
 
 ggsave("figures/figure_2/figure_2c.png",
