@@ -538,12 +538,14 @@ data <- list(
 data$NCHOS2$src[grep("Flank", data$NCHOS2$src)] <- "Culture"
 data$NCHOS7$src[grep("Flank", data$NCHOS7$src)] <- "Culture"
 
+fig_2c_data <- tibble()
+
 for (tissue_name in c("Lung", "Tibia")) {
     for (direction in c("up", "down")) {
         de_genes <- list()
         for (i in seq_len(length(data))) {
             Idents(data[[i]]) <- data[[i]]$src
-            x <-
+            de_genes[[i]] <-
                 FindMarkers(data[[i]],
                             ident.1 = tissue_name,
                             ident.2 = "Culture",
@@ -552,66 +554,75 @@ for (tissue_name in c("Lung", "Tibia")) {
 
             # Select genes that change in the direction of interest
             if (direction == "up") {
-                x <- x[x$p_val_adj < 0.05 & x$avg_log2FC > 0, ]
+                de_genes[[i]] <-
+                    de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
+                                  de_genes[[i]]$avg_log2FC > 0, ]
             } else {
-                x <- x[x$p_val_adj < 0.05 & x$avg_log2FC < 0, ]
+                de_genes[[i]] <-
+                    de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
+                                  de_genes[[i]]$avg_log2FC < 0, ]
             }
-
-            #Lung.down[[names(data)[i]]] <- rownames(x)
         }
 
-        A <- Lung.down[[1]]
-        B <- Lung.down[[2]]
-        C <- Lung.down[[3]]
-        D <- Lung.down[[4]]
+        A <- rownames(de_genes[[1]])
+        B <- rownames(de_genes[[2]])
+        C <- rownames(de_genes[[3]])
+        D <- rownames(de_genes[[4]])
 
         # Preparing clusterProfiler to perform hypergeometric test on msigdb signatures 
-        m_t2g.h <-
+        msig.gene.set <-
             msigdbr(species = "Homo sapiens", category = "H") %>%
             dplyr::select(gs_name, human_gene_symbol)
-        m_t2n.h <-
+        msig.name <-
             msigdbr(species = "Homo sapiens", category = "H") %>%
             dplyr::select(gs_id, gs_name)
-        # msigdb signature to use
-        msig.gene.set <- m_t2g.h
-        msig.name <- m_t2n.h
+
+        # Getting middle "flower" of the Venn diagram
         intersect <- c((intersect(intersect(intersect(A, B), C), D)),
                     (intersect(intersect(A, B), C)),
                     (intersect(intersect(A, B), D)),
                     (intersect(intersect(A, D), C)),
-                    (intersect(intersect(B, D), C)))
-        tmp <- enricher(intersect,
-                    TERM2GENE = msig.gene.set,
-                    TERM2NAME = msig.name)
+                    (intersect(intersect(B, D), C))) %>%
+            unique()
+        fig_2c_data <-
+            enricher(intersect,
+                     TERM2GENE = msig.gene.set,
+                     TERM2NAME = msig.name)@result %>%
+            as_tibble() %>%
+            select(ID, p.adjust) %>%
+            dplyr::rename(pathway = ID) %>%
+            arrange(p.adjust) %>%
+            slice_head(n = 5) %>%
+            mutate(tissue = tissue_name,
+                   label_y = if_else(direction == "up", 1, -1),
+                   p.adjust = -log10(p.adjust),
+                   p.adjust = if_else(direction[1] == "up", p.adjust, -p.adjust),
+                   pathway = str_remove(pathway, "HALLMARK_") %>%
+                        str_replace_all("_", " "),
+                   order = seq_len(n())) %>%
+            bind_rows(fig_2c_data)
     }
 }
-#pvalue/p.adjust
-#em = tmp@result[, c("ID", "p.adjust")]
-#rownames(em) <- NULL
-#em <- em[1:10, ]
-#em[, 2] <- -log10(em[, 2])
-
-#pathways <- list(NULL)
-#pathways[[4]] <- em
 
 ################ Two sided Barplot
-SanjanaPlots <- read.delim("SanjanaPlots.txt") %>%
-    mutate(Tissue = stringr::str_replace(Tissue,
+fig_2c_data <-
+    fig_2c_data %>%
+    mutate(tissue = stringr::str_replace(tissue,
                                 "Tibia",
                                 "Tibia Gene Sets") %>%
                 stringr::str_replace("Lung", "Lung Gene Sets"),
-            Pathway = stringr::str_wrap(Pathway, width = 25))
+           pathway = stringr::str_wrap(pathway, width = 25))
 
 figure_2c <-
     ggplot() +
-    geom_bar(data = SanjanaPlots,
-            aes(x = -1 * Order,
+    geom_bar(data = fig_2c_data,
+            aes(x = -1 * order,
                 y = p.adjust,
                 fill = p.adjust > 0),
             stat = "identity",
             alpha = 0.8) +
     coord_flip() +
-    facet_wrap(~Tissue,
+    facet_wrap(~tissue,
                 ncol = 1,
                 scales = "free") +
     geom_hline(yintercept = c(-1.5, 1.5),
@@ -621,17 +632,17 @@ figure_2c <-
     geom_hline(yintercept = 0,
                color = "black",
                size = 1) +
-    geom_text(data = SanjanaPlots,
-              aes(x = -1 * Order,
-                  y = Label_y * 3,
-                  label = Pathway)) +
+    geom_text(data = fig_2c_data,
+              aes(x = -1 * order,
+                  y = label_y * 3,
+                  label = pathway)) +
     geom_text(data = tibble(y = c(-2.5, 2.5, -2.5, 2.5),
                             x = c(0.5, 0.5, 0.5, 0.5),
                             label = c("Downregulated\nduring tibia colonization",
                                       "Upregulated\nduring tibia colonization",
                                       "Downregulated\nduring lung colonization",
                                       "Upregulated\nduring lung colonization"),
-                            Tissue = c("Tibia Gene Sets",
+                            tissue = c("Tibia Gene Sets",
                                        "Tibia Gene Sets",
                                        "Lung Gene Sets",
                                        "Lung Gene Sets")),
@@ -972,16 +983,15 @@ cx.pd <-
     left_join(lung_percent) %>%
     mutate(pval = -log10(pval),
            sample_order = rank(sample) * 1000 - lung_perc,
-           signif = pval >= (-1 * log10(0.05)) %>%
-                str_replace("TRUE", "p-value < 0.05") %>%
-                str_replace("FALSE", "p-value > 0.05"))
+           signif_bool = pval >= (-1 * log10(0.05)),
+           signif = if_else(signif_bool == TRUE, "p-value < 0.05", "p-value > 0.05"))
 
 P1 <-
   cx.pd %>%
   ggplot(., aes(x = x_label, y = rn, fill = signif)) +
     geom_tile() +
     geom_text(aes(label = sprintf("%0.2f", pval)), size = 3) +
-    scale_fill_manual(values = c("gray", "red"), name = "") +
+    scale_fill_manual(values = c("red", "gray"), name = "") +
     scale_y_discrete(limits = rev, position = "right") +
     theme(panel.background = element_blank(),
           strip.background = element_blank(),
