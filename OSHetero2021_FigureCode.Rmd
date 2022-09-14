@@ -758,86 +758,7 @@ for(i in seq_along(comps$ctl)) {
 C) UMAP analysis for merged primary and metastatic samples in each of the four models. Cells in grey represent remaining cells in merged sample. Cluster enrichment analysis shows distribution of cells in each cluster in the two microenvironment conditions (tibia, lung). While some cells in the primary and metastatic lesions adopted shared phenotypes, others adopted distinct phenotypes.
 
 ```{r Fig3c, dependson='Fig3_load', eval=F}
-load("Data/OSlist_CCR_v1.RData")
-
-# Isolate tibia and lung Seurat objects from the OS.list of Seurat objects
-
-# Merge tibia and lung objects into a single Seurat object
-OS17_TL <- merge(OS.list$OS17.Tibia,
-                 y = c(OS.list$OS17.Lung),
-                 add.cell.ids = c("OS17_Tibia",
-                                  "OS17_Lung"),
-                 project = "Heterogeneity") %>%
-    ScaleData() %>%
-    FindVariableFeatures() %>%
-    RunPCA(npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-
-t143b_TL <- merge(OS.list$t143B.Tibia,
-                  y = c(OS.list$t143B.Lung),
-                  add.cell.ids = c("t143b_Tibia",
-                                   "t143b_Lung"),
-                  project = "Heterogeneity") %>%
-    ScaleData() %>%
-    FindVariableFeatures() %>%
-    RunPCA(npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-
-OS2_TL <- merge(OS.list$OS2.Tibia,
-                y = c(OS.list$OS2.Lung),
-                add.cell.ids = c("OS2_Tibia",
-                                 "OS2_Lung"),
-                project = "Heterogeneity") %>%
-    ScaleData() %>%
-    FindVariableFeatures() %>%
-    RunPCA(npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-
-OS7_TL <- merge(OS.list$OS7.Tibia,
-                y = c(OS.list$OS7.Lung),
-                add.cell.ids = c("OS7_Tibia",
-                                 "OS7_Lung"),
-                project = "Heterogeneity") %>%
-    ScaleData() %>%
-    FindVariableFeatures() %>%
-    RunPCA(npcs = 20) %>%
-    RunUMAP(reduction = "pca",
-            dims = 1:20) %>%
-    FindNeighbors(reduction = "pca",
-                  dims = 1:20) %>%
-    FindClusters(resolution = 0.3)
-
-# Cluster distribution in each sample
-# proportion of cells in lung in each cluster
-lung_prop_tbl <- tibble()
-for (s_obj in c(OS17_TL, t143b_TL, OS2_TL, OS7_TL)) {
-    lung_prop_tbl <-
-        table(Idents(s_obj), s_obj$src) %>%
-        prop.table() %>%
-        as.data.frame() %>%
-        as_tibble() %>%
-        dplyr::rename(cluster = Var1,
-                      sample = Var2,
-                      lung_perc = Freq) %>%
-        dplyr::filter(grepl("Lung", sample)) %>%
-        mutate(lung_perc = lung_perc * 100,
-               sample = str_remove(sample, "_.+")) %>%
-        bind_rows(lung_prop_tbl)
-}
-
-write_tsv(lung_prop_tbl, "Data/Fig3d_lung_prop_tbl.tsv")
+load("Data/OS_list_CCR.RData")
 
 #Modify data to account for optimal number of clusters using nRes and pSil functions
 OS17_TL.nRes <- nRes(OS17_TL,
@@ -910,10 +831,35 @@ DimPlot(OS7_TL,
   NoLegend() +
   NoAxes()
 
-OS17_TL <- OS17_TL %>% FindClusters(resolution = 0.2)
-t143b_TL <- t143b_TL %>% FindClusters(resolution = 0.15)
-OS2_TL <- OS2_TL %>% FindClusters(resolution = 0.15)
-OS7_TL <- OS7_TL %>% FindClusters(resolution = 0.2)
+OS_list$`OS-17_TL` <- OS_list$`OS-17_TL` %>%
+    FindClusters(resolution = 0.2)
+OS_list$`143B_TL` <- OS_list$`143B_TL` %>%
+    FindClusters(resolution = 0.15)
+OS_list$`NCH-OS-2_TL` <- OS_list$`NCH-OS-2_TL` %>%
+    FindClusters(resolution = 0.15)
+OS_list$`NCH-OS-7_TL` <- OS_list$`NCH-OS-7_TL` %>%
+    FindClusters(resolution = 0.2)
+
+# Cluster distribution in each sample
+# proportion of cells in lung in each cluster
+lung_prop_tbl <- tibble()
+for (s_obj in c(OS_list$`OS-17_TL`,
+                OS_list$`143B_TL`,
+                OS_list$`NCH-OS-2_TL`,
+                OS_list$`NCH-OS-7_TL`)) {
+    lung_prop_tbl <-
+        s_obj@meta.data %>%
+        as_tibble() %>%
+        select(model, src, seurat_clusters) %>%
+        group_by(model, seurat_clusters) %>%
+        summarize(lung_perc = sum(grepl("Lung", src)) / n() * 100,
+                  .groups = "drop") %>%
+        dplyr::rename(sample = model,
+                      cluster = seurat_clusters) %>%
+        bind_rows(lung_prop_tbl)
+}
+
+write_tsv(lung_prop_tbl, "Data/Fig3d_lung_prop_tbl.tsv")
 
 # Generate PDF files for the Figure 3 plots
 # Previous code used a subset of 3000 (contrary to description of 1500 cells for Figure 3 in paper)
@@ -964,10 +910,11 @@ In B-D, samples subset to equal number of cells to allow inter-model comparison
 library(data.table)
 #library(pheatmap)
 #Create list of objects used in Figure 3 heatmap
-B.list <- list(OS17 = OS17_TL,
-               t143b = t143b_TL,
-               OS2 = OS2_TL,
-               OS7 = OS7_TL)
+B.list <- list(OS17 = OS_list$`OS-17_TL`,
+               t143b = OS_list$`143B_TL`,
+               OS2 = OS_list$`NCH-OS-2_TL`,
+               OS7 = OS_list$`NCH-OS-7_TL`)
+
 # Use DGEA function to find hallmark pathway expression
 em.hm.list <- list()
 set.seed(1337)
@@ -1003,11 +950,7 @@ which is entered here as aka4
 ```{r, eval=FALSE}
 lung_percent <-
     read_tsv("Data/Fig3d_lung_prop_tbl.tsv") %>%
-    mutate(sample = str_replace(sample, "NCHOS2", "NCH-OS-2") %>%
-           str_replace("NCHOS7", "NCH-OS-7") %>%
-           str_replace("t143b", "143B") %>%
-           str_replace("OS17", "OS-17"),
-           sample_order = rank(sample) * 1000 - lung_perc,
+    mutate(sample_order = rank(sample) * 1000 - lung_perc,
            x_label = paste0(sample, " c", cluster) %>%
                 reorder(sample_order))
 
