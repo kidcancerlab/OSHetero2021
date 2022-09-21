@@ -823,7 +823,8 @@ DimPlot(OS17_TL,
         split.by = "src") +
   coord_fixed() +
   NoLegend() +
-  NoAxes()
+  NoAxes() +
+  scale_color_npg(alpha = 1)
 
 #Modify data to account for optimal number of clusters using nRes and pSil functions
 t143b_TL.nRes <- nRes(t143b_TL,
@@ -840,7 +841,8 @@ DimPlot(t143b_TL,
         pt.size = 1,
         label = T,
         split.by = "src") +
-  coord_fixed()
+  coord_fixed() +
+  scale_color_npg(alpha = 1)
 
 #Modify data to account for optimal number of clusters using nRes and pSil functions
 OS2_TL.nRes <- nRes(OS2_TL,
@@ -856,7 +858,8 @@ DimPlot(OS2_TL,
         split.by = "src") +
   coord_fixed() +
   NoLegend() +
-  NoAxes()
+  NoAxes() +
+  scale_color_npg(alpha = 1)
 
 #Modify data to account for optimal number of clusters using nRes and pSil functions
 OS7_TL.nRes <- nRes(OS7_TL,
@@ -875,7 +878,8 @@ DimPlot(OS7_TL,
         split.by = "src") +
   coord_fixed() +
   NoLegend() +
-  NoAxes()
+  NoAxes() +
+  scale_color_npg(alpha = 1)
 
 OS17_TL <- OS17_TL %>% FindClusters(resolution = 0.2)
 t143b_TL <- t143b_TL %>% FindClusters(resolution = 0.15)
@@ -887,14 +891,14 @@ OS7_TL <- OS7_TL %>% FindClusters(resolution = 0.2)
 pdf("figures/figure_3/OS17_TL_fig3.pdf", width = 5, height = 5)
 OS17_TL %>% FindClusters(resolution = 0.2) %>% 
   DimPlot(reduction = "umap", pt.size = 1, label = T, split.by = "src") + 
-  coord_fixed() + NoLegend() + NoAxes()+
+  coord_fixed() + NoLegend() + NoAxes() +
   scale_color_npg(alpha = 1)
 dev.off()
 
 pdf("figures/figure_3/t143b_fig3.pdf", width = 5, height = 5)
 t143b_TL %>% FindClusters(resolution = 0.15) %>% 
   DimPlot(reduction = "umap", pt.size = 1, label = T, split.by = "src") + 
-  coord_fixed() + NoLegend() + NoAxes()+
+  coord_fixed() + NoLegend() + NoAxes() +
   scale_color_npg(alpha = 1)
 dev.off()
 
