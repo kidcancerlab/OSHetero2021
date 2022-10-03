@@ -82,6 +82,13 @@ figure1_a1 <- DimPlot(os17.cx,
 # View Culture plot in Rmd
 figure1_a1
 
+ggsave("figures/figure_1/figure_1a_os17.pdf",
+       plot = figure1_a1,
+       width = 5,
+       height = 5,
+       units = "in",
+       device = "pdf")
+
 # Cell cycle distribution of clusters
 cid <- sort(unique(os17.cx@active.ident))
 
@@ -89,11 +96,9 @@ vplayout <- function(x, y) viewport(layout.pos.row = x,
                                     layout.pos.col = y)
 
 
-png("figures/figure_1/figure_1a_os17_pie.png",
-    units = "in",
-    width = 15,
-    height = 15,
-    res = 300)
+pdf("figures/figure_1/figure_1a_os17_pie.pdf",
+    width = 6,
+    height = 2)
 
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(1, 4)))
@@ -115,7 +120,7 @@ for(i in 1:3){
                 start = 0) +
     scale_fill_brewer(palette ="Blues") +
     theme_minimal() +
-    NoAxes() +
+    NoAxes() + NoLegend() +
     ggtitle(paste("Cluster",
                   cid[[i]]))
   print(pie,
@@ -123,10 +128,6 @@ for(i in 1:3){
                       i))
 }
 dev.off()
-#Total number of cells
-# table(Idents(os17.cx)) %>%
-# sum()
-# [1] 3178
 ```
 
 ## Figure 1B
@@ -140,7 +141,7 @@ load(file ="Data/OS7.cx_CCR.RData")
 
 # Flank plots
 
-figure1_a1 <- DimPlot(OS7.cx,
+figure_1b <- DimPlot(OS7.cx,
                       reduction = "umap",
                       pt.size = 1,
                       label = T) + 
@@ -150,18 +151,23 @@ figure1_a1 <- DimPlot(OS7.cx,
   scale_color_npg(alpha = 1)
 
 # View in Rmd
-figure1_a1
+figure_1b
+
+ggsave("figures/figure_1/figure_1b_nchos7.pdf",
+       plot = figure_1b,
+       width = 5,
+       height = 5,
+       units = "in",
+       device = "pdf")
 
 # Cell cycle distribution of clusters
 cid <- sort(unique(OS7.cx@active.ident))
 
 vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
 
-png("figures/figure_1/figure_1a_nchos7_pie.png",
-    units = "in",
-    width = 15,
-    height = 15,
-    res = 300)
+pdf("figures/figure_1/figure_1b_nchos7_pie.pdf",
+    width = 6,
+    height = 2)
 
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(1, 4)))
@@ -183,13 +189,9 @@ for(i in 1:4){
     scale_fill_brewer(palette="Blues") +
     theme_minimal() +
     NoAxes() +
-    #NoLegend() +
-    RestoreLegend(position = "right")
+    NoLegend() +
   ggtitle(paste("Cluster",
                 cid[[i]]))
-  if (i != 4) {
-    pie <- pie + NoLegend()
-    }
 
   print(pie,
         vp=vplayout(ceiling(i/4),
@@ -287,92 +289,6 @@ cx.pd.log %>%
   ylab("")
 ```
 
-```{r Fig1_heatmaptake2}
-#ComplexHeatmap
-# Fig1.txv from above code (previously called cxpd.tsv in Sanjana's files)
-cx.pd <- read.delim("Fig1.tsv", row.names = "rn")
-#remove "HALLMARK_"
-c <- rownames(cx.pd)
-c <- gsub("HALLMARK_", "", c)
-#remove "_" by removing special characters
-c <- gsub("_", " ", c)
-rownames(cx.pd) <- c
-cx.pd.log <- -log10(cx.pd[,-1]) #log transform
-
-cx.pd_transpose <- as.data.frame(t(cx.pd.log))
-df <- as.matrix(cx.pd_transpose)
-subj <- c(paste0("A", 0:3),
-          paste0("B", 0:3),
-          paste0("C", 0:2),
-          paste0("D", 0:3))
-#rownames(df) <- subj
-aka2 = data.frame(ID = factor(c(rep("OS17", 4),
-                                rep("t143B", 4),
-                                rep("OS2", 3),
-                                rep("OS7", 4)
-)))
-rownames(aka2)<-subj
-aka3 = list(ID = c(OS17 = "#E64B35FF",
-                   t143B = "#4DBBD5FF",
-                   OS2 = "#00A087FF",
-                   OS7 = "#3C5488FF"))
-#Include percentage of cells in lung for each cluster
-aka4 <- data.frame (Lpercent = c(46.577747,
-                                 10.17901,
-                                 39.69814,
-                                 3.545104,
-                                 2.2204908,
-                                 92.306194,
-                                 3.3502143,
-                                 2.1231009,
-                                 20.32767,
-                                 71.480583,
-                                 8.191748,
-                                 71.01349,
-                                 1.383604,
-                                 1.176064,
-                                 26.426842))
-rownames(aka4) <- subj
-aka5 = (c(rep("OS17", 4),
-          rep("t143B", 4),
-          rep("OS2", 3),
-          rep("OS7", 4)))
-# Plot heatmap
-Fig1 <- read_delim("Fig1.txt", 
-                   delim = "\t", 
-                   col_names = TRUE)
-colnames(Fig1) <- c("Pathway",
-                    "A0",
-                    "A1",
-                    "A2",
-                    "A3",
-                    "B0",
-                    "B1",
-                    "B2",
-                    "B3")
-Fig1 %>%
-  column_to_rownames(var = "Pathway") %>%
-  t() %>%
-  as.data.frame() %>%
-  rownames_to_column(var = "Sample") %>%
-  left_join(aka4 %>% rownames_to_column(var = "Sample")) %>%
-  pivot_longer(c(-Sample, -Lpercent),
-               names_to = "Pathway",
-               values_to = "pval",
-               names_repair = "minimal") %>%
-  mutate(Signif = pval >= (-1 * log10(0.05))) %>%
-  ggplot(., aes(x = Sample, y = Pathway, fill = Signif)) + 
-  geom_tile() +
-  geom_text(aes(label = sprintf("%0.2f", pval))) +
-  scale_fill_manual(values = c("gray", "red")) +
-  scale_y_discrete(limits = rev) +
-  theme(legend.position = "right",
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.ticks.x = element_blank()) +
-  ylab("") 
-```
-
 # Figure 2
 
 Figure 2. Osteosarcoma cells adopt distinct transcriptional profiles as they colonize tibia and lung microenvironments. A) Schematic of study design depicting generation of orthotopic primary and metastatic tumors. Tumors were harvested for scRNA-seq when mice reached endpoint.
@@ -383,11 +299,9 @@ B) Venn diagrams showing overlap of differentially expressed genes that are up- 
 
 ```{r Fig2b, fig.height=10, fig.width=10}
 load("Data/OS_merged_postCCR.RData")
+# Set seed before subsetting and DE analysis to ensure consistent results
+set.seed(100)
 
-OS$model <- OS$model %>%
-    stringr::str_replace("t143b", "143B") %>%
-    stringr::str_replace("NCHOS2", "NCH-OS-2") %>%
-    stringr::str_replace("NCHOS7", "NCH-OS-7")
 OS$tissue <- OS$src %>%
     stringr::str_replace("Flank", "Culture")
 
@@ -395,8 +309,9 @@ OS <- subset(OS, subset = model != "OB")
 
 Idents(OS) <- OS$tissue
 
+
 de_out <- list()
-for (tissue_name in c("Lung", "Tibia")) {
+for (tissue_name in c("Tibia", "Lung")) {
     for (cl_name in unique(OS$model)) {
         message(tissue_name, " ", cl_name)
         temp_seurat <- subset(OS, subset = (tissue == tissue_name |
@@ -424,7 +339,7 @@ for (tissue_name in c("Lung", "Tibia")) {
 }
 
 figure_2b <- list()
-for (tissue_name in c("Lung", "Tibia")) {
+for (tissue_name in c("Tibia", "Lung")) {
     for (direction in c("up", "down")) {
         figure_2b[[paste0(tissue_name,
                           " - ",
@@ -434,36 +349,38 @@ for (tissue_name in c("Lung", "Tibia")) {
                                           "#EFC000FF",
                                           "#868686FF",
                                           "#CD534CFF"),
-                           stroke_size = 0.9,
-                           set_name_size = 5,
-                           text_size = 2.5,
+                           stroke_size = 0.1,
+                           set_name_size = 2,
+                           text_size = 1.3,
                            show_percentage = TRUE) +
             ggtitle(paste0(tissue_name,
                            " - ",
                            direction)) +
             theme(plot.title = element_text(hjust = 0.5,
-                                            vjust = -15,
-                                            size = 20,
+                                            vjust = -8,
+                                            size = 10,
                                             face = "bold"),
-                  plot.margin = margin(-3, 0, -3, 0, "cm"))
+                  plot.margin = margin(-2, 0, -2, 0, "cm"))
 
         # Fix the position of the bottom two set names
         figure_2b[[paste0(tissue_name,
                           " - ",
-                          direction)]]$layers[[3]]$data$x <-
-            c(-1, -0.8, 0.8, 1)
+                          direction)]]$layers[[3]]$data$x <- c(-1, -0.8, 0.8, 1)
     }
 }
 
 # Put all four plots into one image
 figure_2b_merged <-
     gridExtra::grid.arrange(grobs = figure_2b,
-                            vp = viewport(width = 1, height = 0.9))
+                            vp = viewport(width = 1.0, height = 0.9))
 # Save plot
-ggsave("figures/figure_2/figure_2b.png",
+ggsave("figures/figure_2/figure_2b.pdf",
        plot = figure_2b_merged,
-       width = 10,
-       height = 10)
+       width = 4,
+       height = 4,
+       units = "in",
+       dpi = 500,
+       device = "pdf")
 
 # Save RData obj
 save(figure_2b, file = "figures/figure_2/figure_2b.RData")
@@ -527,7 +444,9 @@ C) Pathway enrichment analysis with adjusted p values for hallmark gene sets ass
 
 ```{r Fig2c, dependson = "Fig2b", fig.height=6, fig.width=10}
 ### Extract genes that are shared in these datasets
-load("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/Data/OS_merged_postCCR.RData")
+load("Data/OS_merged_postCCR.RData")
+# Set seed before subsetting and DE analysis to ensure consistent results
+set.seed(100)
 
 data <- list(
   os17 = subset(OS, cells = WhichCells(OS, expression = model == "OS-17")),
@@ -542,7 +461,7 @@ data$NCHOS7$src[grep("Flank", data$NCHOS7$src)] <- "Culture"
 
 fig_2c_data <- tibble()
 
-for (tissue_name in c("Lung", "Tibia")) {
+for (tissue_name in c("Tibia", "Lung")) {
     for (direction in c("up", "down")) {
         de_genes <- list()
         for (i in seq_len(length(data))) {
@@ -612,13 +531,32 @@ for (tissue_name in c("Lung", "Tibia")) {
 }
 
 ################ Two sided Barplot
-fig_2c_data <-
-    fig_2c_data %>%
+# Properly name and order tissue types
+fig_2c_data <- fig_2c_data %>%
     mutate(tissue = stringr::str_replace(tissue,
                                 "Tibia",
                                 "Tibia Gene Sets") %>%
-                stringr::str_replace("Lung", "Lung Gene Sets"),
+                stringr::str_replace("Lung",
+                                     "Lung Gene Sets"),
            pathway = stringr::str_wrap(pathway, width = 25))
+
+ fig_2c_data$tissue <- factor(as.factor(fig_2c_data$tissue),
+                             levels = c("Tibia Gene Sets",
+                                        "Lung Gene Sets"))
+
+# Create tibble that is properly ordered to use in proper plotting of tibia and lung data
+lab4plot <- tibble(y = c(-4, 4, -4, 4),
+        x = c(0.5, 0.5, 0.5, 0.5),
+        label = as.factor(c("Downregulated\nduring tibia colonization",
+                  "Upregulated\nduring tibia colonization",
+                  "Downregulated\nduring lung colonization",
+                  "Upregulated\nduring lung colonization")),
+        tissue = factor(as.factor(c("Tibia Gene Sets",
+                                      "Tibia Gene Sets",
+                                      "Lung Gene Sets",
+                                      "Lung Gene Sets")),
+                                levels = c("Tibia Gene Sets",
+                                           "Lung Gene Sets")))
 
 figure_2c <-
     ggplot() +
@@ -643,16 +581,7 @@ figure_2c <-
               aes(x = -1 * order,
                   y = label_y * 4,
                   label = pathway)) +
-    geom_text(data = tibble(y = c(-4, 4, -4, 4),
-                            x = c(0.5, 0.5, 0.5, 0.5),
-                            label = c("Downregulated\nduring tibia colonization",
-                                      "Upregulated\nduring tibia colonization",
-                                      "Downregulated\nduring lung colonization",
-                                      "Upregulated\nduring lung colonization"),
-                            tissue = c("Tibia Gene Sets",
-                                       "Tibia Gene Sets",
-                                       "Lung Gene Sets",
-                                       "Lung Gene Sets")),
+    geom_text(data = lab4plot,
             aes(x = x,
                 y = y,
                 label = label),
@@ -668,22 +597,20 @@ figure_2c <-
           axis.line.x = element_line(color = "black"),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank()) +
-    labs(title = "Tibia Gene Sets",
+    labs(title = "",
          y = "",
          x = "") +
     ylim(-7, 7) +
     xlim(-5.5, 1)
 
-ggsave("figures/figure_2/figure_2c.png",
+figure_2c
+
+ggsave("figures/figure_2/figure_2c.pdf",
        plot = figure_2c,
        width = 6,
        height = 9)
 
 save(figure_2c, file = "figures/figure_2/figure_2c.RData")
-```
-
-```{r assembleFig2}
-#patchwork stuff
 ```
 
 # Figure 3
@@ -696,11 +623,10 @@ Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive ch
 
 B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown in cell culture (####p <0.001). Within model comparison, identified increase in ITH scores as cells colonize tibia and lung microenvironments, with the exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák multiple comparisons test.
 
-```{r Fig3_load}
-load("Data/OSlist_1500_CCR.RData")
-```
-
 ```{r Fig3b, dependson='Fig3_load'}
+# Load OS data that was subsetted to be equal cell numbers across 
+load("Data/OSlist_1500_CCR.RData")
+
 ITH.score <- list()
 for (i in 1:length(OS.list_1500)) {
   z <- (Embeddings(OS.list_1500[[i]], reduction = "pca")[, 1:20])
@@ -757,104 +683,67 @@ comps <- tribble(
   11, 12,
   11, 13
 )
+# Calculate Mann-Whitney test (in figure, p-value)
+stats <- matrix(nrow = 13, ncol = 2)
 mwu <- matrix(nrow = 13, ncol = 13)
 for(i in seq_along(comps$ctl)) {
   s <- wilcox.test(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]])
+  #P-value of comparison group (column)
+  #correlated with its respective proper control (row)
   mwu[comps$ctl[i], comps$comp[i]] <- s$p.value
+  #P-value for each group given proper comparison to respective controls
+  stats[comps$comp[i]] <- s$p.value
 }
+# Calculate effect size (in figure)
 efs <- matrix(nrow = 13, ncol = 13)
 for(i in seq_along(comps$ctl)) {
   s <- cohen.d(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]])
+  #Effect size of comparison group (column)
+  #correlated with its respective proper control (row)
   efs[comps$ctl[i], comps$comp[i]] <- s$estimate
+  #Effect size for each group given proper comparison to respective controls
+  stats[comps$comp[i], 2] <- s$estimate
 }
-per <- matrix(nrow = 13, ncol = 13)
-for(i in seq_along(comps$ctl)) {
-  s <- permTS(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]], alternative = "two.sided")
-  per[comps$ctl[i], comps$comp[i]] <- s$p.value
-}
+# Other statistical test - permutation
+#per <- matrix(nrow = 13, ncol = 13)
+#for(i in seq_along(comps$ctl)) {
+#  s <- permTS(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]], alternative = "two.sided")
+#  per[comps$ctl[i], comps$comp[i]] <- s$p.value
+#}
+
+# Save table of comparison group (column) correlated with its proper control (row)
+as.data.frame(mwu) %>%
+ write_excel_csv(file="Data/ITH/mwu.csv")
+as.data.frame(efs) %>%
+ write_excel_csv(file="Data/ITH/efs.csv")
+
+# Correlate p-values with Sample name
+stats <- as.data.frame(stats)
+stats$Sample <- base::unique(ith[["Sample"]]) %>%
+                        as.vector()
+stats <- stats[-1,]
+
+# Plot with p-values superimposed for each sample
+figure_3b <- rplot + geom_text(data=stats,
+                  aes(x=1.9, y=Sample),
+                  label = paste0("p=", format(stats$V1, digits=3, trim=TRUE),
+                                  ", effect size=", format(stats$V2, digits=3, trim=TRUE), "\n"),
+                  size = 3)
+figure_3b
+
+ggsave("figures/figure_3/figure_3b.pdf",
+       plot = figure_3b,
+       width = 8,
+       height = 8,
+       device = "pdf")
 ```
 
 ## Figure 3C
 
 C) UMAP analysis for merged primary and metastatic samples in each of the four models. Cells in grey represent remaining cells in merged sample. Cluster enrichment analysis shows distribution of cells in each cluster in the two microenvironment conditions (tibia, lung). While some cells in the primary and metastatic lesions adopted shared phenotypes, others adopted distinct phenotypes.
 
-```{r Fig3c, dependson='Fig3_load', eval=F}
+```{r Fig3c}
 load("Data/OS_list_CCR.RData")
-
-#Modify data to account for optimal number of clusters using nRes and pSil functions
-OS17_TL.nRes <- nRes(OS17_TL,
-                     res = seq(from = 0.1,
-                               to = 0.2,
-                               by = 0.05))
-OS17_TL.nRes
-plot <- pSil(OS17_TL.nRes,
-             0.15)
-OS17_TL <- FindClusters(OS17_TL,
-                        resolution = 0.20)
-DimPlot(OS17_TL,
-        reduction = "umap",
-        pt.size = 1,
-        label = T,
-        split.by = "src") +
-  coord_fixed() +
-  NoLegend() +
-  NoAxes() +
-  scale_color_npg(alpha = 1)
-
-#Modify data to account for optimal number of clusters using nRes and pSil functions
-t143b_TL.nRes <- nRes(t143b_TL,
-                     res = seq(from = 0.1,
-                               to = 0.4,
-                               by = 0.05))
-t143b_TL.nRes
-plot <- pSil(t143b_TL.nRes,
-             0.15)
-t143b_TL <- FindClusters(t143b_TL,
-                      resolution = 0.15)
-DimPlot(t143b_TL,
-        reduction = "umap",
-        pt.size = 1,
-        label = T,
-        split.by = "src") +
-  coord_fixed() +
-  scale_color_npg(alpha = 1)
-
-#Modify data to account for optimal number of clusters using nRes and pSil functions
-OS2_TL.nRes <- nRes(OS2_TL,
-                     res = seq(from = 0.1,
-                               to = 0.4,
-                               by = 0.05))
-plot <- pSil(OS2_TL.nRes, 0.15)
-OS2_TL <- FindClusters(OS2_TL, resolution = 0.15)
-DimPlot(OS2_TL,
-        reduction = "umap",
-        pt.size = 1,
-        label = T,
-        split.by = "src") +
-  coord_fixed() +
-  NoLegend() +
-  NoAxes() +
-  scale_color_npg(alpha = 1)
-
-#Modify data to account for optimal number of clusters using nRes and pSil functions
-OS7_TL.nRes <- nRes(OS7_TL,
-                 res = seq(from = 0.1,
-                           to = 0.2,
-                           by = 0.05))
-OS7_TL.nRes
-plot <- pSil(OS7_TL.nRes,
-             0.1)
-OS7_TL <- FindClusters(OS7_TL,
-                    resolution = 0.1)
-DimPlot(OS7_TL,
-        reduction = "umap",
-        pt.size = 1,
-        label = T,
-        split.by = "src") +
-  coord_fixed() +
-  NoLegend() +
-  NoAxes() +
-  scale_color_npg(alpha = 1)
 
 OS_list$`OS-17_TL` <- OS_list$`OS-17_TL` %>%
     FindClusters(resolution = 0.2)
@@ -872,6 +761,7 @@ for (s_obj in c(OS_list$`OS-17_TL`,
                 OS_list$`143B_TL`,
                 OS_list$`NCH-OS-2_TL`,
                 OS_list$`NCH-OS-7_TL`)) {
+    s_obj$model <- factor(s_obj$model, levels = c("Tibia", "Lung"))
     lung_prop_tbl <-
         s_obj@meta.data %>%
         as_tibble() %>%
@@ -886,42 +776,93 @@ for (s_obj in c(OS_list$`OS-17_TL`,
 
 write_tsv(lung_prop_tbl, "Data/Fig3d_lung_prop_tbl.tsv")
 
-# Generate PDF files for the Figure 3 plots
-# Previous code used a subset of 3000 (contrary to description of 1500 cells for Figure 3 in paper)
-pdf("figures/figure_3/OS17_TL_fig3.pdf", width = 5, height = 5)
-OS17_TL %>% FindClusters(resolution = 0.2) %>% 
-  DimPlot(reduction = "umap", pt.size = 1, label = T, split.by = "src") + 
-  coord_fixed() + NoLegend() + NoAxes() +
-  scale_color_npg(alpha = 1)
-dev.off()
+# UMAP Plots 
+sample_names <- c("OS-17_TL",
+                  "143B_TL",
+                  "NCH-OS-2_TL",
+                  "NCH-OS-7_TL")
 
-pdf("figures/figure_3/t143b_fig3.pdf", width = 5, height = 5)
-t143b_TL %>% FindClusters(resolution = 0.15) %>% 
-  DimPlot(reduction = "umap", pt.size = 1, label = T, split.by = "src") + 
-  coord_fixed() + NoLegend() + NoAxes() +
-  scale_color_npg(alpha = 1)
-dev.off()
+for (s_obj in sample_names) {
+  # Tibia plot with lung-derived cells greyed out
+  temp_obj <- OS_list[[s_obj]]
+  lung <- vector(mode = "character")
+  temp <- WhichCells(temp_obj,
+                     expression = src == "Lung")
+  lung <- append(lung, temp)
+  Idents(temp_obj, cells = lung) <- " "
 
-pdf("figures/figure_3/OS2_fig3.pdf", width = 5, height = 5)
-OS2_TL %>% FindClusters(resolution = 0.15) %>% 
-  DimPlot(reduction = "umap", pt.size = 1, label = T, split.by = "src") + 
-  coord_fixed() + NoLegend() + NoAxes()+
-  scale_color_npg(alpha = 1)
-dev.off()
+  tibia_plot <- DimPlot(temp_obj, reduction = "umap", pt.size = 1, label = T,
+                cols = c("light grey", "#E64B35FF",  "#4DBBD5FF", "#00A087FF", "#3C5488FF"), order = T) + 
+                coord_fixed() + NoLegend() + NoAxes() +
+                ggtitle("Tibia") + theme(plot.title = element_text(hjust = 0.5))
+  
+  # Lung plot with lung-derived cells greyed out
+  temp_obj2 <- OS_list[[s_obj]]
+  tib <- vector(mode = "character")
+  temp <- WhichCells(temp_obj2,
+                     expression = src == "Tibia")
+  tib <- append(tib, temp)
+  Idents(temp_obj2, cells = tib) <- " "
 
-pdf("figures/figure_3/OS7_fig3.pdf", width = 10, height = 10)
-OS7_TL %>% FindClusters(resolution = 0.2) %>% 
-  DimPlot(reduction = "umap", pt.size = 1, label = T, split.by = "src") +
-  ggtitle("OS7")+
-  coord_fixed() + NoLegend() + NoAxes()+
-  scale_color_npg(alpha = 1)
-dev.off()
+  lung_plot <- DimPlot(temp_obj2, reduction = "umap", pt.size = 1, label = T,
+                cols = c("light grey", "#E64B35FF",  "#4DBBD5FF", "#00A087FF", "#3C5488FF"), order = T) + 
+                coord_fixed() + NoLegend() + NoAxes() +
+                ggtitle("Lung") + theme(plot.title = element_text(hjust = 0.5))
+
+  combined_plot <- tibia_plot + lung_plot
+
+  ggsave(paste0("figures/figure_3/figure_3c1_",
+                s_obj,
+                ".pdf"),
+       plot = combined_plot,
+       width = 5,
+       height = 3,
+       device = "pdf")
+}
+
+# Bar plots
+objlist <- c(OS_list$`OS-17_TL`,
+                OS_list$`143B_TL`,
+                OS_list$`NCH-OS-2_TL`,
+                OS_list$`NCH-OS-7_TL`)
+
+for (sobj in objlist) {
+  tident <- table(Idents(sobj),
+                  sobj$src,
+                  dnn = c("cluster",
+                          "tissue")) %>%
+             as.data.frame() %>%
+            group_by(tissue) %>%
+            mutate(perc = Freq / sum(Freq) * 100)
+
+  tident$cluster <- as.character(tident$cluster)
+
+  figure_3c2 <- ggplot(tident, aes(x = tissue, y = perc, fill = cluster)) +
+    theme_bw(base_size = 5) +
+    geom_col(position = "fill", width = 0.5) +
+    xlab("Tissue") +
+    ylab("Proportion") +
+    scale_fill_npg(alpha = 1) + 
+    NoLegend() + NoAxes() +
+    #scale_fill_manual(values = c("#E64B35FF","#00A087FF","#4DBBD5FF",)
+    theme(legend.title = element_blank())
+
+    # Save plot
+  ggsave(paste0("figures/figure_3/figure_3c2_",
+                head(sobj$model,1),
+                head(sobj$src, 1),
+                ".pdf"),
+       plot = figure_3c2,
+       width = 2,
+       height = 5,
+       device = "pdf")
+}
 ```
 
 ## Figure 3D
 
 D) Metabolic heterogeneity in glycolysis activation. We used a pathway enrichment
-analysis for hallmark gene sets using genes differentially upregulated in each'
+analysis for hallmark gene sets using genes differentially upregulated in each
 cluster relative to every other cluster within the same model. P values were
 adjusted for multiple comparisons. Boxes in grey identify non-significant pathway
 enrichments, whereas boxes in red identify statistically significant enrichments.
@@ -972,7 +913,7 @@ I modified this from code she gave me to clean it up and get it working
 
 The only data we need are the cs.pd object and the percent of lung cells per cluster
 which is entered here as aka4
-```{r, eval=FALSE}
+```{r Fig3d, eval=F}
 lung_percent <-
     read_tsv("Data/Fig3d_lung_prop_tbl.tsv") %>%
     mutate(sample_order = rank(sample) * 1000 - lung_perc,
@@ -1043,19 +984,18 @@ P2 <-
                scales = "free_x",
                space = "free")
 
-cowplot::plot_grid(P2,
+figure_3d <- cowplot::plot_grid(P2,
                    P1,
                    ncol = 1,
                    align = "v",
                    rel_heights = c(2, 10))
+figure_3d
 
-ggsave("figures/figure_3/figure_3d.png",
+ggsave("figures/figure_3/figure_3d.pdf",
+       plot = figure_3d,
        width = 15,
        height = 8)
 ```
-
-
-
 
 # Figure 4 - Images
 
@@ -1077,6 +1017,17 @@ load("Data/Raw/os17.cx.raw.RData")
 load("Data/Raw/os17.tib.raw.RData")
 load("Data/Raw/os17.lung.raw.RData")
 
+# Subset all to 2800 cells in each condition
+os17.cx.raw <- subset(os17.cx.raw,
+                  cells = sample(Cells(os17.cx.raw),
+                                 2800))
+os17.tib.raw <- subset(os17.tib.raw,
+                   cells = sample(Cells(os17.tib.raw),
+                                  2800))
+os17.lung.raw <- subset(os17.lung.raw,
+                    cells = sample(Cells(os17.lung.raw),
+                                   2800))
+
 # Load merged and cell cycle regressed OS17 object
 load("Data/os17.RData")
 ```
@@ -1091,18 +1042,26 @@ Idents(os17) <- os17$RNA_snn_res.0.3
 
 # Plot os17
 set.seed(100)
-cell.ids <- sample(colnames(os17))
+os17$src <- factor(os17$src, levels = c("Culture", "Tibia", "Lung"))
 figure_5b <- DimPlot(os17,
                      reduction = "umap",
                      group.by = "src",
                      pt.size = 1,
-                     label = F,
-                     order = cell.ids) +
+                     label = T,
+                     order = T) +
   coord_fixed() +
-  ggtitle("OS17 by Source") +
+  ggtitle(" ") +
   scale_color_npg()
 
 figure_5b
+
+ggsave("figures/figure_5/figure_5b.pdf",
+        plot = figure_5b,
+        width = 8,
+        height = 4,
+        units = "in",
+        device = "pdf")
+
 ```
 
 ## Figure 5C
@@ -1121,6 +1080,13 @@ figure_5c1 <- processLTBC(os17.cx.raw,
                           col.fill = "#E64B35FF",
                           relative = T)
 
+ggsave("figures/figure_5/figure_5c1.pdf",
+        plot = figure_5c1,
+        width = 8,
+        height = 2,
+        units = "in",
+        device = "pdf")
+
 figure_5c2 <- processLTBC(os17.tib.raw,
                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
                           cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
@@ -1131,6 +1097,13 @@ figure_5c2 <- processLTBC(os17.tib.raw,
                           col.fill = "#00A087FF",
                           relative = T)
 
+ggsave("figures/figure_5/figure_5c2.pdf",
+        plot = figure_5c2,
+        width = 8,
+        height = 2,
+        units = "in",
+        device = "pdf")
+
 figure_5c3 <- processLTBC(os17.lung.raw,
                           lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
                           cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
@@ -1139,6 +1112,13 @@ figure_5c3 <- processLTBC(os17.lung.raw,
                           title = "Lung, Top 40 Clones",
                           ymax = 1.75,
                           relative = T)
+
+ggsave("figures/figure_5/figure_5c3.pdf",
+        plot = figure_5c3,
+        width = 8,
+        height = 2,
+        units = "in",
+        device = "pdf")
 ```
 
 Determine number of unique clones for each tissue.
@@ -1167,8 +1147,8 @@ D) Overlay of cells sharing a common ancestor onto the dimensional reduction plo
 ```{r Fig5d_processing, dependson="Fig5load"}
 # Extract the barcode frequency lists
 cx.lt.list <- processLTBC(os17.cx.raw,
-                          lt.loc = "/gpfs0/home/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/lt.fq",
-                          cid.loc = "/gpfs0/home/gdrobertslab/rsexf001/OSHetero2021/S0016-zymo/cid.fq",
+                          lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
+                          cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
                           ret.list = TRUE)
 
 tib.lt.list <- processLTBC(os17.tib.raw,
@@ -1198,6 +1178,20 @@ for (i in 1:nrow(cx.lt.list)) {
 cx.tagged <- subset(cx.sub,
                     cells = Culture.LTcells)
 
+figure_5c1_umap <- DimPlot(cx.tagged,
+        group.by = "src") +
+        coord_fixed() +
+        scale_color_npg(alpha = 1) +
+        ggtitle(" ") +
+        NoLegend() + NoAxes()
+figure_5c1_umap
+
+ggsave("figures/figure_5/figure_5c1_umap.pdf",
+        plot = figure_5c1_umap,
+        width = 3,
+        height = 3,
+        device = "pdf")
+
 # Tibia
 # Remove outlier cells (names may vary in different runs of the code)
 tib.sub <- subset(tib.sub,
@@ -1214,6 +1208,20 @@ for (i in 1:nrow(tib.lt.list)) {
 }
 tib.tagged <- subset(tib.sub,
                      cells = tib.LTcells)
+
+figure_5c2_umap <- DimPlot(tib.tagged,
+        group.by = "src",
+        cols = "#00A087FF") +
+        coord_fixed() +
+        ggtitle(" ") +
+        NoLegend() + NoAxes()
+figure_5c2_umap
+
+ggsave("figures/figure_5/figure_5c2_umap.pdf",
+        plot = figure_5c2_umap,
+        width = 3,
+        height = 3,
+        device = "pdf")
 
 # Lung
 # Remove outlier cells (names may vary in different runs of the code)
@@ -1232,6 +1240,21 @@ for (i in 1:nrow(lung.lt.list)) {
 }
 lung.tagged <- subset(lung.sub,
                       cells = lung.LTcells)
+
+figure_5c3_umap <- DimPlot(lung.tagged,
+        group.by = "src",
+        cols = "#4DBBD5FF") +
+        coord_fixed() +
+        ggtitle(" ") +
+        NoLegend() + NoAxes()
+figure_5c3_umap
+
+ggsave("figures/figure_5/figure_5c3_umap.pdf",
+        plot = figure_5c3_umap,
+        width = 3,
+        height = 3,
+        device = "pdf")
+
 ```
 
 
@@ -1242,11 +1265,9 @@ lung.tagged <- subset(lung.sub,
 vplayout <- function(x,y) viewport(layout.pos.row = x,
                                    layout.pos.col = y)
 
-png("figures/figure_5/figure_5d1_grid_culture.png",
-    units = "in",
+pdf("figures/figure_5/figure_5d1_grid_culture.pdf",
     width = 10,
-    height = 6,
-    res = 300)
+    height = 6)
 
 grid.newpage()
 
@@ -1279,11 +1300,9 @@ dev.off()
 vplayout <- function(x,y) viewport(layout.pos.row = x,
                                    layout.pos.col = y)
 
-png("figures/figure_5/figure_5d2_grid_tibia.png",
-    units = "in",
+pdf("figures/figure_5/figure_5d2_grid_tibia.pdf",
     width = 10,
-    height = 6,
-    res = 300)
+    height = 6)
 
 grid.newpage()
 
@@ -1316,11 +1335,9 @@ dev.off()
 vplayout <- function(x,y) viewport(layout.pos.row = x,
                                    layout.pos.col = y)
 
-png("figures/figure_5/figure_5d3_grid_lung.png",
-    units = "in",
+pdf("figures/figure_5/figure_5d3_grid_lung.pdf",
     width = 10,
-    height = 6,
-    res = 300)
+    height = 6)
 
 grid.newpage()
 
@@ -1381,6 +1398,12 @@ figure_5e <- DimPlot(lung.sub,
                        labels = c("Unselected" = "Non-enriched clones",
                                   "Group_1" = "Enriched clones"))
 figure_5e
+
+ggsave("figures/figure_5/figure_5e.pdf",
+        plot = figure_5e,
+        width = 6,
+        height = 5,
+        device = "pdf")
 ```
 
 ## Figure 5F
@@ -1407,6 +1430,7 @@ lung.sub.enr <- RenameIdents(lung.sub.enr,
 B.list <- list(OS17 = lung.sub.enr)
 
 # Perform differential gene expression analysis for hallmark pathways
+set.seed(100)
 em.hm.list <- list()
 for (i in 1:length(B.list)) {
   em.hm.list[[i]] <- DGEA(B.list[[i]])
@@ -1444,12 +1468,20 @@ figure_5f <- ggplot(temp1,
                     aes(x = pvalue,
                         y = Pathway)) +
   geom_bar(stat = "identity") +
-  scale_fill_brewer(type = "qual",
-                    palette = "Set1") +
   theme_bw() +
-  ylab("")
+  ylab("") +
+  xlab("-log10(p-value)") +
+  geom_vline(xintercept = 1.5,
+               color = "gray",
+               linetype = 2,
+               size = 1)
 
 figure_5f
+
+ggsave("figures/figure_5/figure_5f.pdf",
+        width = 8,
+        height = 3,
+        device = "pdf")
 ```
 
 ```{r session}
