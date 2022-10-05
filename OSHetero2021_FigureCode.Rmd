@@ -82,12 +82,13 @@ figure1_a1 <- DimPlot(os17.cx,
 # View Culture plot in Rmd
 figure1_a1
 
-ggsave("figures/figure_1/figure_1a_os17.pdf",
-       plot = figure1_a1,
-       width = 5,
-       height = 5,
-       units = "in",
-       device = "pdf")
+# Save as pdf
+pdf("figures/figure_1/figure_1a_os17.pdf",
+    width = 5,
+    height = 5)
+figure1_a1
+dev.off()
+
 
 # Cell cycle distribution of clusters
 cid <- sort(unique(os17.cx@active.ident))
@@ -153,12 +154,12 @@ figure_1b <- DimPlot(OS7.cx,
 # View in Rmd
 figure_1b
 
-ggsave("figures/figure_1/figure_1b_nchos7.pdf",
-       plot = figure_1b,
-       width = 5,
-       height = 5,
-       units = "in",
-       device = "pdf")
+# Save as pdf
+pdf("figures/figure_1/figure_1b_nchos7.pdf",
+    width = 5,
+    height = 5)
+figure_1b
+dev.off()
 
 # Cell cycle distribution of clusters
 cid <- sort(unique(OS7.cx@active.ident))
@@ -198,11 +199,6 @@ for(i in 1:4){
                     i))
 }
 dev.off()
-
-#Total number of cells
-# table(Idents(OS7.cx)) %>%
-# sum()
-# [1] 1998
 ```
 
 ## Figure 1C
@@ -263,7 +259,7 @@ colnames(cx.pd.log) <- c("A0",
 # To prevent values that show up as -0.00, we take the absolute values
 cx.pd.log <- abs(cx.pd.log)
 
-cx.pd.log %>%
+figure_1c <- cx.pd.log %>%
   t() %>%
   as.data.frame() %>%
   rownames_to_column(var = "Sample") %>%
@@ -287,6 +283,14 @@ cx.pd.log %>%
         panel.grid.minor = element_blank(),
         axis.ticks.x = element_blank()) +
   ylab("")
+figure_1c
+
+#Save as PDF
+pdf("figures/figure_1/figure_1c.pdf",
+    width = 8,
+    height = 8)
+figure_1c
+dev.off()
 ```
 
 # Figure 2
@@ -308,7 +312,6 @@ OS$tissue <- OS$src %>%
 OS <- subset(OS, subset = model != "OB")
 
 Idents(OS) <- OS$tissue
-
 
 de_out <- list()
 for (tissue_name in c("Tibia", "Lung")) {
@@ -373,14 +376,14 @@ for (tissue_name in c("Tibia", "Lung")) {
 figure_2b_merged <-
     gridExtra::grid.arrange(grobs = figure_2b,
                             vp = viewport(width = 1.0, height = 0.9))
-# Save plot
-ggsave("figures/figure_2/figure_2b.pdf",
-       plot = figure_2b_merged,
-       width = 4,
-       height = 4,
-       units = "in",
-       dpi = 500,
-       device = "pdf")
+figure_2b_merged
+
+#Save as PDF
+pdf("figures/figure_2/figure_2b.pdf",
+    width = 4,
+    height = 4)
+figure_2b_merged
+dev.off()
 
 # Save RData obj
 save(figure_2b, file = "figures/figure_2/figure_2b.RData")
@@ -605,10 +608,13 @@ figure_2c <-
 
 figure_2c
 
-ggsave("figures/figure_2/figure_2c.pdf",
-       plot = figure_2c,
+# Save as PDF
+pdf("figures/figure_2/figure_2c.pdf",
        width = 6,
        height = 9)
+figure_2c
+dev.off()
+
 
 save(figure_2c, file = "figures/figure_2/figure_2c.RData")
 ```
@@ -623,7 +629,7 @@ Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive ch
 
 B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown in cell culture (####p <0.001). Within model comparison, identified increase in ITH scores as cells colonize tibia and lung microenvironments, with the exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák multiple comparisons test.
 
-```{r Fig3b, dependson='Fig3_load'}
+```{r Fig3b}
 # Load OS data that was subsetted to be equal cell numbers across 
 load("Data/OSlist_1500_CCR.RData")
 
@@ -731,11 +737,12 @@ figure_3b <- rplot + geom_text(data=stats,
                   size = 3)
 figure_3b
 
-ggsave("figures/figure_3/figure_3b.pdf",
-       plot = figure_3b,
+# Save as PDF
+pdf("figures/figure_3/figure_3b.pdf",
        width = 8,
-       height = 8,
-       device = "pdf")
+       height = 8)
+figure_3b
+dev.off()
 ```
 
 ## Figure 3C
@@ -761,7 +768,7 @@ for (s_obj in c(OS_list$`OS-17_TL`,
                 OS_list$`143B_TL`,
                 OS_list$`NCH-OS-2_TL`,
                 OS_list$`NCH-OS-7_TL`)) {
-    s_obj$model <- factor(s_obj$model, levels = c("Tibia", "Lung"))
+    s_obj$src <- factor(s_obj$src, levels = c("Tibia", "Lung"))
     lung_prop_tbl <-
         s_obj@meta.data %>%
         as_tibble() %>%
@@ -811,13 +818,14 @@ for (s_obj in sample_names) {
 
   combined_plot <- tibia_plot + lung_plot
 
-  ggsave(paste0("figures/figure_3/figure_3c1_",
+  pdf(paste0("figures/figure_3/figure_3c1_",
                 s_obj,
                 ".pdf"),
-       plot = combined_plot,
        width = 5,
-       height = 3,
-       device = "pdf")
+       height = 3)
+  combined_plot
+  dev.off()
+
 }
 
 # Bar plots
@@ -846,16 +854,17 @@ for (sobj in objlist) {
     NoLegend() + NoAxes() +
     #scale_fill_manual(values = c("#E64B35FF","#00A087FF","#4DBBD5FF",)
     theme(legend.title = element_blank())
-
-    # Save plot
-  ggsave(paste0("figures/figure_3/figure_3c2_",
+  plot(figure_3c2)
+  
+    # Save plot as PDF
+  pdf(paste0("figures/figure_3/figure_3c2_",
                 head(sobj$model,1),
                 head(sobj$src, 1),
                 ".pdf"),
-       plot = figure_3c2,
        width = 2,
-       height = 5,
-       device = "pdf")
+       height = 5)
+  figure_3c2
+  dev.off()
 }
 ```
 
@@ -913,7 +922,7 @@ I modified this from code she gave me to clean it up and get it working
 
 The only data we need are the cs.pd object and the percent of lung cells per cluster
 which is entered here as aka4
-```{r Fig3d, eval=F}
+```{r Fig3d}
 lung_percent <-
     read_tsv("Data/Fig3d_lung_prop_tbl.tsv") %>%
     mutate(sample_order = rank(sample) * 1000 - lung_perc,
@@ -991,10 +1000,11 @@ figure_3d <- cowplot::plot_grid(P2,
                    rel_heights = c(2, 10))
 figure_3d
 
-ggsave("figures/figure_3/figure_3d.pdf",
-       plot = figure_3d,
+pdf("figures/figure_3/figure_3d.pdf",
        width = 15,
        height = 8)
+figure_3d
+dev.off()
 ```
 
 # Figure 4 - Images
@@ -1055,13 +1065,12 @@ figure_5b <- DimPlot(os17,
 
 figure_5b
 
-ggsave("figures/figure_5/figure_5b.pdf",
-        plot = figure_5b,
+# Save as PDF
+pdf("figures/figure_5/figure_5b.pdf",
         width = 8,
-        height = 4,
-        units = "in",
-        device = "pdf")
-
+        height = 4)
+figure_5b
+dev.off()
 ```
 
 ## Figure 5C
@@ -1080,12 +1089,12 @@ figure_5c1 <- processLTBC(os17.cx.raw,
                           col.fill = "#E64B35FF",
                           relative = T)
 
-ggsave("figures/figure_5/figure_5c1.pdf",
-        plot = figure_5c1,
+# Save as PDF
+pdf("figures/figure_5/figure_5c1.pdf",
         width = 8,
-        height = 2,
-        units = "in",
-        device = "pdf")
+        height = 2)
+figure_5c1
+dev.off()
 
 figure_5c2 <- processLTBC(os17.tib.raw,
                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
@@ -1097,12 +1106,12 @@ figure_5c2 <- processLTBC(os17.tib.raw,
                           col.fill = "#00A087FF",
                           relative = T)
 
-ggsave("figures/figure_5/figure_5c2.pdf",
-        plot = figure_5c2,
+# Save as PDF
+pdf("figures/figure_5/figure_5c2.pdf",
         width = 8,
-        height = 2,
-        units = "in",
-        device = "pdf")
+        height = 2)
+figure_5c2
+dev.off()
 
 figure_5c3 <- processLTBC(os17.lung.raw,
                           lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
@@ -1113,12 +1122,12 @@ figure_5c3 <- processLTBC(os17.lung.raw,
                           ymax = 1.75,
                           relative = T)
 
-ggsave("figures/figure_5/figure_5c3.pdf",
-        plot = figure_5c3,
+# Save as PDF
+pdf("figures/figure_5/figure_5c3.pdf",
         width = 8,
-        height = 2,
-        units = "in",
-        device = "pdf")
+        height = 2)
+figure_5c3
+dev.off()
 ```
 
 Determine number of unique clones for each tissue.
@@ -1186,11 +1195,12 @@ figure_5c1_umap <- DimPlot(cx.tagged,
         NoLegend() + NoAxes()
 figure_5c1_umap
 
-ggsave("figures/figure_5/figure_5c1_umap.pdf",
-        plot = figure_5c1_umap,
+# Save as PDF
+pdf("figures/figure_5/figure_5c1_umap.pdf",
         width = 3,
-        height = 3,
-        device = "pdf")
+        height = 3)
+figure_5c1_umap
+dev.off()
 
 # Tibia
 # Remove outlier cells (names may vary in different runs of the code)
@@ -1217,11 +1227,12 @@ figure_5c2_umap <- DimPlot(tib.tagged,
         NoLegend() + NoAxes()
 figure_5c2_umap
 
-ggsave("figures/figure_5/figure_5c2_umap.pdf",
-        plot = figure_5c2_umap,
+# Save as PDF
+pdf("figures/figure_5/figure_5c2_umap.pdf",
         width = 3,
-        height = 3,
-        device = "pdf")
+        height = 3)
+figure_5c2_umap
+dev.off()
 
 # Lung
 # Remove outlier cells (names may vary in different runs of the code)
@@ -1249,12 +1260,12 @@ figure_5c3_umap <- DimPlot(lung.tagged,
         NoLegend() + NoAxes()
 figure_5c3_umap
 
-ggsave("figures/figure_5/figure_5c3_umap.pdf",
-        plot = figure_5c3_umap,
+# Save as PDF
+pdf("figures/figure_5/figure_5c3_umap.pdf",
         width = 3,
-        height = 3,
-        device = "pdf")
-
+        height = 3)
+figure_5c3_umap
+dev.off()
 ```
 
 
@@ -1399,11 +1410,11 @@ figure_5e <- DimPlot(lung.sub,
                                   "Group_1" = "Enriched clones"))
 figure_5e
 
-ggsave("figures/figure_5/figure_5e.pdf",
-        plot = figure_5e,
+pdf("figures/figure_5/figure_5e.pdf",
         width = 6,
-        height = 5,
-        device = "pdf")
+        height = 5)
+figure_5e
+dev.off()
 ```
 
 ## Figure 5F
@@ -1478,10 +1489,11 @@ figure_5f <- ggplot(temp1,
 
 figure_5f
 
-ggsave("figures/figure_5/figure_5f.pdf",
+pdf("figures/figure_5/figure_5f.pdf",
         width = 8,
-        height = 3,
-        device = "pdf")
+        height = 3)
+figure_5f
+dev.off()
 ```
 
 ```{r session}
