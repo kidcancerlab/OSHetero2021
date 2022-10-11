@@ -355,7 +355,7 @@ for (tissue_name in c("Tibia", "Lung")) {
                                     "#CD534CFF"),
                      stroke_size = 0.1,
                      set_name_size = 2,
-                     text_size = 1.3,
+                     text_size = 1.2,
                      show_percentage = TRUE) +
       ggtitle(paste0(tissue_name,
                      " - ",
@@ -516,29 +516,32 @@ figure_2c <-
            stat = "identity",
            alpha = 0.8) +
   coord_flip() +
-  facet_wrap(~tissue,
+  facet_wrap(~ tissue,
              ncol = 1,
              scales = "free") +
   geom_hline(yintercept = c(-1.5, 1.5),
              color = "gray",
              linetype = 2,
-             size = 1) +
+             size = 0.5) +
   geom_hline(yintercept = 0,
              color = "black",
-             size = 1) +
+             size = 0.5) +
   geom_text(data = fig_2c_data,
             aes(x = -1 * order,
                 y = label_y * 4,
-                label = pathway)) +
+                label = pathway),
+            size = 1) +
   geom_text(data = lab4plot,
             aes(x = x,
                 y = y,
                 label = label),
-            fontface = "bold") +
+            fontface = "bold",
+            size = 1) +
   scale_fill_manual(values = c("#377eb8", "#e41a1c")) +
   theme_bw() +
   theme(strip.background = element_rect(color = "white", fill = "white"),
-        strip.text.x = element_text(size = 20, face = "bold"),
+        strip.text.x = element_text(size = 5, face = "bold"),
+        axis.text.x = element_text(size = 3),
         legend.position = "none",
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -563,9 +566,38 @@ pdf("figures/figure_2/figure_2c.pdf",
 figure_2c
 dev.off()
 
-
 save(figure_2c, file = "figures/figure_2/figure_2c.RData")
 ```
+
+## Paneling figure 2
+
+```{r panelFig2, eval = TRUE}
+load("figures/figure_2/figure_2b.RData")
+load("figures/figure_2/figure_2c.RData")
+
+layout_matrix <- matrix(c(1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5,
+                          1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5,
+                          1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5,
+                          1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5,
+                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5,
+                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5,
+                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5,
+                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5),
+                        nrow = 8,
+                        byrow = TRUE)
+
+pdf("figures/figure_2/figure_2.pdf",
+    width = 6,
+    height = 4)
+gridExtra::grid.arrange(grobs = list(figure_2b$`Tibia - down`,
+                                     figure_2b$`Tibia - up`,
+                                     figure_2b$`Lung - down`,
+                                     figure_2b$`Lung - up`,
+                                     figure_2c),
+                        layout_matrix = layout_matrix)
+dev.off()
+```
+
 
 # Figure 3
 
