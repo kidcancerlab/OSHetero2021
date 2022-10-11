@@ -143,9 +143,9 @@ load(file ="Data/OS7.cx_CCR.RData")
 # Flank plots
 
 figure_1b <- DimPlot(OS7.cx,
-                      reduction = "umap",
-                      pt.size = 1,
-                      label = T) + 
+                     reduction = "umap",
+                     pt.size = 1,
+                     label = T) + 
   coord_fixed() + 
   ggtitle("NCHOS7 in Flank") +
   NoAxes() +
@@ -191,9 +191,9 @@ for(i in 1:4){
     theme_minimal() +
     NoAxes() +
     NoLegend() +
-  ggtitle(paste("Cluster",
-                cid[[i]]))
-
+    ggtitle(paste("Cluster",
+                  cid[[i]]))
+  
   print(pie,
         vp=vplayout(ceiling(i/4),
                     i))
@@ -277,7 +277,8 @@ figure_1c <- cx.pd.log %>%
                                 pval))) + 
   scale_fill_manual(values = c("gray",
                                "red")) +
-  scale_y_discrete(limits = rev) +
+  scale_y_discrete(limits = rev,
+                   position = "right") +
   theme(legend.position = "right",
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -307,7 +308,7 @@ load("Data/OS_merged_postCCR.RData")
 set.seed(100)
 
 OS$tissue <- OS$src %>%
-    stringr::str_replace("Flank", "Culture")
+  stringr::str_replace("Flank", "Culture")
 
 OS <- subset(OS, subset = model != "OB")
 
@@ -315,130 +316,75 @@ Idents(OS) <- OS$tissue
 
 de_out <- list()
 for (tissue_name in c("Tibia", "Lung")) {
-    for (cl_name in unique(OS$model)) {
-        message(tissue_name, " ", cl_name)
-        temp_seurat <- subset(OS, subset = (tissue == tissue_name |
-                                    tissue == "Culture") &
-                                    model == cl_name)
-        temp_de_out <-
-            FindMarkers(temp_seurat,
-                        ident.1 = tissue_name,
-                        ident.2 = "Culture",
-                        min.pct = 0.1) %>%
-            filter(p_val_adj <= 0.05)
-
-        de_out[[tissue_name]][["up"]][[cl_name]] <-
-            temp_de_out %>%
-            filter(avg_log2FC > 0) %>%
-            rownames()
-
-        de_out[[tissue_name]][["down"]][[cl_name]] <-
-            temp_de_out %>%
-            filter(avg_log2FC < 0) %>%
-            rownames()
-
-        rm(temp_seurat, temp_de_out)
-    }
+  for (cl_name in unique(OS$model)) {
+    message(tissue_name, " ", cl_name)
+    temp_seurat <- subset(OS, subset = (tissue == tissue_name |
+                                          tissue == "Culture") &
+                            model == cl_name)
+    temp_de_out <-
+      FindMarkers(temp_seurat,
+                  ident.1 = tissue_name,
+                  ident.2 = "Culture",
+                  min.pct = 0.1) %>%
+      filter(p_val_adj <= 0.05)
+    
+    de_out[[tissue_name]][["up"]][[cl_name]] <-
+      temp_de_out %>%
+      filter(avg_log2FC > 0) %>%
+      rownames()
+    
+    de_out[[tissue_name]][["down"]][[cl_name]] <-
+      temp_de_out %>%
+      filter(avg_log2FC < 0) %>%
+      rownames()
+    
+    rm(temp_seurat, temp_de_out)
+  }
 }
 
 figure_2b <- list()
 for (tissue_name in c("Tibia", "Lung")) {
-    for (direction in c("up", "down")) {
-        figure_2b[[paste0(tissue_name,
-                          " - ",
-                          direction)]] <-
-            ggvenn::ggvenn(de_out[[tissue_name]][[direction]],
-                           fill_color = c("#0073C2FF",
-                                          "#EFC000FF",
-                                          "#868686FF",
-                                          "#CD534CFF"),
-                           stroke_size = 0.1,
-                           set_name_size = 2,
-                           text_size = 1.3,
-                           show_percentage = TRUE) +
-            ggtitle(paste0(tissue_name,
-                           " - ",
-                           direction)) +
-            theme(plot.title = element_text(hjust = 0.5,
-                                            vjust = -8,
-                                            size = 10,
-                                            face = "bold"),
-                  plot.margin = margin(-2, 0, -2, 0, "cm"))
-
-        # Fix the position of the bottom two set names
-        figure_2b[[paste0(tissue_name,
-                          " - ",
-                          direction)]]$layers[[3]]$data$x <- c(-1, -0.8, 0.8, 1)
-    }
+  for (direction in c("up", "down")) {
+    figure_2b[[paste0(tissue_name,
+                      " - ",
+                      direction)]] <-
+      ggvenn::ggvenn(de_out[[tissue_name]][[direction]],
+                     fill_color = c("#0073C2FF",
+                                    "#EFC000FF",
+                                    "#868686FF",
+                                    "#CD534CFF"),
+                     stroke_size = 0.1,
+                     set_name_size = 2,
+                     text_size = 1.3,
+                     show_percentage = TRUE) +
+      ggtitle(paste0(tissue_name,
+                     " - ",
+                     direction)) +
+      theme(plot.title = element_text(hjust = 0.5,
+                                      vjust = -8,
+                                      size = 10,
+                                      face = "bold"),
+            plot.margin = margin(-2, 0, -2, 0, "cm"))
+    
+    # Fix the position of the bottom two set names
+    figure_2b[[paste0(tissue_name,
+                      " - ",
+                      direction)]]$layers[[3]]$data$x <- 
+      c(-1, -0.8, 0.8, 1)
+  }
 }
-
-# Put all four plots into one image
-figure_2b_merged <-
-    gridExtra::grid.arrange(grobs = figure_2b,
-                            vp = viewport(width = 1.0, height = 0.9))
-figure_2b_merged
 
 #Save as PDF
 pdf("figures/figure_2/figure_2b.pdf",
     width = 4,
     height = 4)
-figure_2b_merged
+# Put all four plots into one image
+gridExtra::grid.arrange(grobs = figure_2b,
+                        vp = viewport(width = 1.0, height = 0.9))
 dev.off()
 
 # Save RData obj
 save(figure_2b, file = "figures/figure_2/figure_2b.RData")
-```
-
-```{r Fig2b_all, dependson="Fig2b", eval=F}
-### Commented out in previous code, but possible combination plot of all Venn diagrams
-# ggVennDiagram(x[1:4], label_alpha = 0.7, label = 'count', category.names = c('OS17', '143B',
-# 'NCHOS2', 'NCHOS7')) + scale_fill_gradient(low = '#F4FAFE', high = '#4981BF')+
-# theme(legend.title = element_text(color = 'black'), legend.position = 'right')
-### Extract genes that are shared in these datasets
-genes <- Lung.down
-A = genes[[1]]
-B = genes[[2]]
-C = genes[[3]]
-D = genes[[4]]
-# Preparing clusterProfiler to perform hypergeometric test on msigdb signatures m_t2g.c2 <-
-# msigdbr(species = 'Homo sapiens', category = 'C2') %>% dplyr::select(gs_name,
-# human_gene_symbol) m_t2g.c6 <- msigdbr(species = 'Homo sapiens', category = 'C6') %>%
-# dplyr::select(gs_name, human_gene_symbol)
-m_t2g.h <- msigdbr(species = "Homo sapiens", category = "H") %>%
-    dplyr::select(gs_name, human_gene_symbol)
-m_t2n.h <- msigdbr(species = "Homo sapiens", category = "H") %>%
-    dplyr::select(gs_id, gs_name)
-# m_t2g=rbind(m_t2g.c2,m_t2g.c6)
-# msigdb signature to use
-msig.gene.set = m_t2g.h
-msig.name = m_t2n.h
-intersect <- c((intersect(intersect(intersect(A, B), C), D)), (intersect(intersect(A, B), C)), (intersect(intersect(A,
-    B), D)), (intersect(intersect(A, D), C)), (intersect(intersect(B, D), C)))
-tmp <- enricher(intersect, TERM2GENE = msig.gene.set, TERM2NAME = msig.name)
-em = tmp@result[, c("ID", "p.adjust")]  #pvalue/p.adjust
-rownames(em) <- NULL
-em <- em[1:10, ]
-em[, 2] <- -log10(em[, 2])
-# barplot(em)
-pathways <- list(NULL)
-pathways[[4]] <- em
-# write.xlsx(pathways, file
-# ='R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/pathways.xlsx', col.names = TRUE,
-# row.names = TRUE, append = FALSE) save.image(file
-# ='R:/RESRoberts/Bioinformatics/Analysis/Sanjana/2020/AllpseudoBulk_Venn.RData')
-# write.xlsx(pathways, file ='pathways.xlsx', col.names = TRUE, row.names = TRUE, append =
-# FALSE) save.image(file ='AllpseudoBulk_Venn.RData')
-#################### Intersection of deferentially regulated genes between Bone colonization
-#################### and Lung colonization total <- list( Tibia.up = Tibia.up, Tibia.down =
-#################### Tibia.down, Lung.up = Lung.up, Lung.down = Lung.down ) all.genes <-
-#################### list(NULL) for (i in 1:4) { genes <- total[[i]] A = genes[[1]] B =
-#################### genes[[2]] C = genes[[3]] D = genes[[4]] intersect <-
-#################### intersect(intersect(intersect(A,B),C),D) all.genes[[i]] <- intersect } x
-#################### <- list( A = all.genes[[1]], B = all.genes[[2]], C = all.genes[[3]], D =
-#################### all.genes[[4]] ) pdf('TibiaUpdown_Lungupdown.pdf', width = 5, height = 5)
-#################### plot <- ggvenn( x, fill_color = c('#0073C2FF', '#EFC000FF', '#868686FF',
-#################### '#CD534CFF'), stroke_size = 0.9, set_name_size = 4, show_percentage =
-#################### TRUE ) plot dev.off()
 ```
 
 ## Figure 2C
@@ -465,153 +411,155 @@ data$NCHOS7$src[grep("Flank", data$NCHOS7$src)] <- "Culture"
 fig_2c_data <- tibble()
 
 for (tissue_name in c("Tibia", "Lung")) {
-    for (direction in c("up", "down")) {
-        de_genes <- list()
-        for (i in seq_len(length(data))) {
-            Idents(data[[i]]) <- data[[i]]$src
-            de_genes[[i]] <-
-                FindMarkers(data[[i]],
-                            ident.1 = tissue_name,
-                            ident.2 = "Culture",
-                            only.pos = FALSE,
-                            min.pct = 0.1)
-
-            # Select genes that change in the direction of interest
-            if (direction == "up") {
-                de_genes[[i]] <-
-                    de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
-                                  de_genes[[i]]$avg_log2FC > 0, ]
-            } else {
-                de_genes[[i]] <-
-                    de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
-                                  de_genes[[i]]$avg_log2FC < 0, ]
-            }
-        }
-
-        A <- rownames(de_genes[[1]])
-        B <- rownames(de_genes[[2]])
-        C <- rownames(de_genes[[3]])
-        D <- rownames(de_genes[[4]])
-
-        # Preparing clusterProfiler to perform hypergeometric test on msigdb signatures 
-        msig.gene.set <-
-            msigdbr(species = "Homo sapiens", category = "H") %>%
-            dplyr::select(gs_name, human_gene_symbol)
-        msig.name <-
-            msigdbr(species = "Homo sapiens", category = "H") %>%
-            dplyr::select(gs_id, gs_name)
-
-        # Getting middle "flower" of the Venn diagram
-        intersect <- c((intersect(intersect(intersect(A, B), C), D)),
-                    (intersect(intersect(A, B), C)),
-                    (intersect(intersect(A, B), D)),
-                    (intersect(intersect(A, D), C)),
-                    (intersect(intersect(B, D), C))) %>%
-            unique()
-
-        temp <-
-            enricher(intersect,
-                     TERM2GENE = msig.gene.set,
-                     TERM2NAME = msig.name)@result %>%
-            as_tibble() %>%
-            select(ID, p.adjust) %>%
-            dplyr::rename(pathway = ID) %>%
-            arrange(p.adjust) %>%
-            slice_head(n = 5) %>%
-            mutate(tissue = tissue_name,
-                   label_y = if_else(direction == "up", 1, -1),
-                   p.adjust = -log10(p.adjust),
-                   pathway = str_remove(pathway, "HALLMARK_") %>%
-                        str_replace_all("_", " "),
-                   order = seq_len(n()))
-
-        if (direction == "down") {
-            temp$p.adjust <- temp$p.adjust * -1
-        }
-
-        fig_2c_data <- bind_rows(fig_2c_data, temp)
+  for (direction in c("up", "down")) {
+    de_genes <- list()
+    for (i in seq_len(length(data))) {
+      Idents(data[[i]]) <- data[[i]]$src
+      de_genes[[i]] <-
+        FindMarkers(data[[i]],
+                    ident.1 = tissue_name,
+                    ident.2 = "Culture",
+                    only.pos = FALSE,
+                    min.pct = 0.1)
+      
+      # Select genes that change in the direction of interest
+      if (direction == "up") {
+        de_genes[[i]] <-
+          de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
+                          de_genes[[i]]$avg_log2FC > 0, ]
+      } else {
+        de_genes[[i]] <-
+          de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
+                          de_genes[[i]]$avg_log2FC < 0, ]
+      }
     }
+    
+    A <- rownames(de_genes[[1]])
+    B <- rownames(de_genes[[2]])
+    C <- rownames(de_genes[[3]])
+    D <- rownames(de_genes[[4]])
+    
+    # Preparing clusterProfiler to perform hypergeometric test on msigdb signatures 
+    msig.gene.set <-
+      msigdbr(species = "Homo sapiens", category = "H") %>%
+      dplyr::select(gs_name, human_gene_symbol)
+    msig.name <-
+      msigdbr(species = "Homo sapiens", category = "H") %>%
+      dplyr::select(gs_id, gs_name)
+    
+    # Getting middle "flower" of the Venn diagram
+    intersect <- c((intersect(intersect(intersect(A, B), C), D)),
+                   (intersect(intersect(A, B), C)),
+                   (intersect(intersect(A, B), D)),
+                   (intersect(intersect(A, D), C)),
+                   (intersect(intersect(B, D), C))) %>%
+      unique()
+    
+    temp <-
+      enricher(intersect,
+               TERM2GENE = msig.gene.set,
+               TERM2NAME = msig.name)@result %>%
+      as_tibble() %>%
+      select(ID, p.adjust) %>%
+      dplyr::rename(pathway = ID) %>%
+      arrange(p.adjust) %>%
+      slice_head(n = 5) %>%
+      mutate(tissue = tissue_name,
+             label_y = if_else(direction == "up", 1, -1),
+             p.adjust = -log10(p.adjust),
+             pathway = str_remove(pathway, "HALLMARK_") %>%
+               str_replace_all("_", " "),
+             order = seq_len(n()))
+    
+    if (direction == "down") {
+      temp$p.adjust <- temp$p.adjust * -1
+    }
+    
+    fig_2c_data <- bind_rows(fig_2c_data, temp)
+  }
 }
 
 ################ Two sided Barplot
 # Properly name and order tissue types
 fig_2c_data <- fig_2c_data %>%
-    mutate(tissue = stringr::str_replace(tissue,
-                                "Tibia",
-                                "Tibia Gene Sets") %>%
-                stringr::str_replace("Lung",
-                                     "Lung Gene Sets"),
-           pathway = stringr::str_wrap(pathway, width = 25))
+  mutate(tissue = stringr::str_replace(tissue,
+                                       "Tibia",
+                                       "Tibia Gene Sets") %>%
+           stringr::str_replace("Lung",
+                                "Lung Gene Sets"),
+         pathway = stringr::str_wrap(pathway, width = 25))
 
- fig_2c_data$tissue <- factor(as.factor(fig_2c_data$tissue),
+fig_2c_data$tissue <- factor(as.factor(fig_2c_data$tissue),
                              levels = c("Tibia Gene Sets",
                                         "Lung Gene Sets"))
 
 # Create tibble that is properly ordered to use in proper plotting of tibia and lung data
 lab4plot <- tibble(y = c(-4, 4, -4, 4),
-        x = c(0.5, 0.5, 0.5, 0.5),
-        label = as.factor(c("Downregulated\nduring tibia colonization",
-                  "Upregulated\nduring tibia colonization",
-                  "Downregulated\nduring lung colonization",
-                  "Upregulated\nduring lung colonization")),
-        tissue = factor(as.factor(c("Tibia Gene Sets",
-                                      "Tibia Gene Sets",
-                                      "Lung Gene Sets",
-                                      "Lung Gene Sets")),
-                                levels = c("Tibia Gene Sets",
-                                           "Lung Gene Sets")))
+                   x = c(0.5, 0.5, 0.5, 0.5),
+                   label = as.factor(c("Downregulated\nduring tibia colonization",
+                                       "Upregulated\nduring tibia colonization",
+                                       "Downregulated\nduring lung colonization",
+                                       "Upregulated\nduring lung colonization")),
+                   tissue = factor(as.factor(c("Tibia Gene Sets",
+                                               "Tibia Gene Sets",
+                                               "Lung Gene Sets",
+                                               "Lung Gene Sets")),
+                                   levels = c("Tibia Gene Sets",
+                                              "Lung Gene Sets")))
 
 figure_2c <-
-    ggplot() +
-    geom_bar(data = fig_2c_data,
+  ggplot() +
+  geom_bar(data = fig_2c_data,
+           aes(x = -1 * order,
+               y = p.adjust,
+               fill = p.adjust > 0),
+           stat = "identity",
+           alpha = 0.8) +
+  coord_flip() +
+  facet_wrap(~tissue,
+             ncol = 1,
+             scales = "free") +
+  geom_hline(yintercept = c(-1.5, 1.5),
+             color = "gray",
+             linetype = 2,
+             size = 1) +
+  geom_hline(yintercept = 0,
+             color = "black",
+             size = 1) +
+  geom_text(data = fig_2c_data,
             aes(x = -1 * order,
-                y = p.adjust,
-                fill = p.adjust > 0),
-            stat = "identity",
-            alpha = 0.8) +
-    coord_flip() +
-    facet_wrap(~tissue,
-                ncol = 1,
-                scales = "free") +
-    geom_hline(yintercept = c(-1.5, 1.5),
-               color = "gray",
-               linetype = 2,
-               size = 1) +
-    geom_hline(yintercept = 0,
-               color = "black",
-               size = 1) +
-    geom_text(data = fig_2c_data,
-              aes(x = -1 * order,
-                  y = label_y * 4,
-                  label = pathway)) +
-    geom_text(data = lab4plot,
+                y = label_y * 4,
+                label = pathway)) +
+  geom_text(data = lab4plot,
             aes(x = x,
                 y = y,
                 label = label),
             fontface = "bold") +
-    scale_fill_manual(values = c("#377eb8", "#e41a1c")) +
-    theme_bw() +
-    theme(strip.background = element_rect(color = "white", fill = "white"),
-          strip.text.x = element_text(size = 20, face = "bold"),
-          legend.position = "none",
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.border = element_blank(),
-          axis.line.x = element_line(color = "black"),
-          axis.text.y = element_blank(),
-          axis.ticks.y = element_blank()) +
-    labs(title = "",
-         y = "",
-         x = "") +
-    ylim(-7, 7) +
-    xlim(-5.5, 1)
+  scale_fill_manual(values = c("#377eb8", "#e41a1c")) +
+  theme_bw() +
+  theme(strip.background = element_rect(color = "white", fill = "white"),
+        strip.text.x = element_text(size = 20, face = "bold"),
+        legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line.x = element_line(color = "black"),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(title = "",
+       y = "",
+       x = "") +
+  ylim(-7, 7) +
+  xlim(-5.5, 1)
+# Take a moment to ensure reset to null device
+dev.off()
 
 figure_2c
 
 # Save as PDF
 pdf("figures/figure_2/figure_2c.pdf",
-       width = 6,
-       height = 9)
+    width = 6,
+    height = 9)
 figure_2c
 dev.off()
 
@@ -752,22 +700,22 @@ C) UMAP analysis for merged primary and metastatic samples in each of the four m
 ```{r Fig3c}
 load("Data/OS_list_CCR.RData")
 
-OS_list$`OS-17_TL` <- OS_list$`OS-17_TL` %>%
+OS_list$OS17_TL <- OS_list$OS17_TL %>%
     FindClusters(resolution = 0.2)
 OS_list$`143B_TL` <- OS_list$`143B_TL` %>%
     FindClusters(resolution = 0.15)
-OS_list$`NCH-OS-2_TL` <- OS_list$`NCH-OS-2_TL` %>%
+OS_list$NCHOS2_TL <- OS_list$NCHOS2_TL %>%
     FindClusters(resolution = 0.15)
-OS_list$`NCH-OS-7_TL` <- OS_list$`NCH-OS-7_TL` %>%
+OS_list$NCHOS7_TL <- OS_list$NCHOS7_TL %>%
     FindClusters(resolution = 0.2)
 
 # Cluster distribution in each sample
 # proportion of cells in lung in each cluster
 lung_prop_tbl <- tibble()
-for (s_obj in c(OS_list$`OS-17_TL`,
+for (s_obj in c(OS_list$OS17_TL,
                 OS_list$`143B_TL`,
-                OS_list$`NCH-OS-2_TL`,
-                OS_list$`NCH-OS-7_TL`)) {
+                OS_list$NCHOS2_TL,
+                OS_list$NCHOS7_TL)) {
     s_obj$src <- factor(s_obj$src, levels = c("Tibia", "Lung"))
     lung_prop_tbl <-
         s_obj@meta.data %>%
@@ -829,10 +777,10 @@ for (s_obj in sample_names) {
 }
 
 # Bar plots
-objlist <- c(OS_list$`OS-17_TL`,
+objlist <- c(OS_list$OS17_TL,
                 OS_list$`143B_TL`,
-                OS_list$`NCH-OS-2_TL`,
-                OS_list$`NCH-OS-7_TL`)
+                OS_list$NCHOS2_TL,
+                OS_list$NCHOS7_TL)
 
 for (sobj in objlist) {
   tident <- table(Idents(sobj),
@@ -885,10 +833,10 @@ In B-D, samples subset to equal number of cells to allow inter-model comparison
 library(data.table)
 #library(pheatmap)
 #Create list of objects used in Figure 3 heatmap
-B.list <- list(OS17 = OS_list$`OS-17_TL`,
+B.list <- list(OS17 = OS_list$`OS17_TL`,
                t143b = OS_list$`143B_TL`,
-               OS2 = OS_list$`NCH-OS-2_TL`,
-               OS7 = OS_list$`NCH-OS-7_TL`)
+               OS2 = OS_list$`NCHOS2_TL`,
+               OS7 = OS_list$`NCHOS7_TL`)
 
 # Use DGEA function to find hallmark pathway expression
 em.hm.list <- list()
@@ -1028,6 +976,7 @@ load("Data/Raw/os17.tib.raw.RData")
 load("Data/Raw/os17.lung.raw.RData")
 
 # Subset all to 2800 cells in each condition
+set.seed(108)
 os17.cx.raw <- subset(os17.cx.raw,
                   cells = sample(Cells(os17.cx.raw),
                                  2800))
