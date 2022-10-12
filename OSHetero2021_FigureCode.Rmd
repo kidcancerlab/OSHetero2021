@@ -723,6 +723,8 @@ pdf("figures/figure_3/figure_3b.pdf",
     height = 8)
 figure_3b
 dev.off()
+
+save(figure_3b, file = "figures/figure_3/figure_3b.RData")
 ```
 
 ## Figure 3C
@@ -733,12 +735,16 @@ C) UMAP analysis for merged primary and metastatic samples in each of the four m
 load("Data/OS_list_CCR.RData")
 
 OS_list$OS17_TL <- OS_list$OS17_TL %>%
+  FindNeighbors() %>%
   FindClusters(resolution = 0.2)
 OS_list$`143B_TL` <- OS_list$`143B_TL` %>%
+  FindNeighbors() %>%
   FindClusters(resolution = 0.15)
 OS_list$NCHOS2_TL <- OS_list$NCHOS2_TL %>%
+  FindNeighbors() %>%
   FindClusters(resolution = 0.15)
 OS_list$NCHOS7_TL <- OS_list$NCHOS7_TL %>%
+  FindNeighbors() %>%
   FindClusters(resolution = 0.2)
 
 # Cluster distribution in each sample
@@ -771,6 +777,7 @@ sample_names <- c("OS17_TL",
                   "NCHOS2_TL",
                   "NCHOS7_TL")
 
+figure_3c_umaps <- list()
 for (s_obj in sample_names) {
   # Tibia plot with lung-derived cells greyed out
   temp_obj <- OS_list[[s_obj]]
@@ -817,25 +824,29 @@ for (s_obj in sample_names) {
     coord_fixed() +
     NoLegend() +
     NoAxes() +
-    ggtitle("", subtitle ="Lung") +
+    ggtitle("", subtitle = "Lung") +
     theme(plot.title = element_text(hjust = 0.5))
   
-  combined <- tibia_plot + lung_plot
+  figure_3c_umaps[[s_obj]] <- tibia_plot + lung_plot
   
   pdf(paste0("figures/figure_3/figure_3c1_",
              s_obj,
              ".pdf"),
       width = 5,
       height = 5)
-  print(combined)
+  print(figure_3c_umaps[[s_obj]])
   dev.off()
 }
+
+save(figure_3c_umaps, file = "figures/figure_3/figure_3c_umaps.RData")
 
 #### Bar plots ####
 objlist <- c(OS_list$OS17_TL,
              OS_list$`143B_TL`,
              OS_list$NCHOS2_TL,
              OS_list$NCHOS7_TL)
+
+figure_3c_barplots <- list()
 
 for (sobj in objlist) {
   tident <- table(Idents(sobj),
@@ -848,29 +859,31 @@ for (sobj in objlist) {
   
   tident$cluster <- as.character(tident$cluster)
   tident$tissue <- factor(tident$tissue, levels = c("Tibia", "Lung"))
-  figure_3c2 <- ggplot(tident,
-                       aes(x = tissue,
-                           y = perc,
-                           fill = cluster)) +
+  figure_3c_barplots[[sobj$model[1]]] <-
+    ggplot(tident,
+           aes(x = tissue,
+               y = perc,
+               fill = cluster)) +
     theme_bw(base_size = 5) +
     geom_col(position = "fill", width = 0.5) +
     xlab("Tissue") +
     ylab("Proportion") +
     scale_fill_npg(alpha = 1) +
+    theme_minimal() +
     NoLegend() +
-    NoAxes() +
-    #scale_fill_manual(values = c("#E64B35FF","#00A087FF","#4DBBD5FF",)
-    theme(legend.title = element_blank())
+    theme(panel.grid = element_blank())
   
   # Save plot as PDF
   pdf(paste0("figures/figure_3/figure_3c2_",
-             head(sobj$model,1),
+             head(sobj$model, 1),
              ".pdf"),
       width = 1,
       height = 2)
-  print(figure_3c2)
+  print(figure_3c_barplots[[sobj$model[1]]])
   dev.off()
 }
+
+save(figure_3c_barplots, file = "figures/figure_3/figure_3c_barplots.RData")
 
 # For Rmd visual
 figure_3c2 <- ggplot(tident,
@@ -1017,11 +1030,23 @@ figure_3d <- cowplot::plot_grid(P2,
                                 rel_heights = c(2, 10))
 figure_3d
 
+save(figure_3d, file = "figures/figure_3/figure_3d.RData")
+
 pdf("figures/figure_3/figure_3d.pdf",
     width = 15,
     height = 8)
 figure_3d
 dev.off()
+```
+
+```{r assemblingFig3, eval=TRUE}
+load("figures/figure_3/figure_3b.RData")
+load("figures/figure_3/figure_3c_umaps.RData")
+load("figures/figure_3/figure_3c_barplots.RData")
+load("figures/figure_3/figure_3d.RData")
+
+
+
 ```
 
 # Figure 4 - Images
