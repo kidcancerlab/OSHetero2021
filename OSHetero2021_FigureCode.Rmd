@@ -593,7 +593,7 @@ for (i in 1:length(OS.list_1500)) {
 #library(xlsx)
 for (i in c(1:12)){
   as.data.frame(ITH.score[i]) %>%
-  write_excel_csv(file=paste("Data/ITH/",i,"test.csv"))
+    write_excel_csv(file=paste("Data/ITH/",i,"test.csv"))
 }
 
 raw_ith <- read_pzfx("ITH_Scores_1500.pzfx",
@@ -667,28 +667,28 @@ for(i in seq_along(comps$ctl)) {
 
 # Save table of comparison group (column) correlated with its proper control (row)
 as.data.frame(mwu) %>%
- write_excel_csv(file="Data/ITH/mwu.csv")
+  write_excel_csv(file="Data/ITH/mwu.csv")
 as.data.frame(efs) %>%
- write_excel_csv(file="Data/ITH/efs.csv")
+  write_excel_csv(file="Data/ITH/efs.csv")
 
 # Correlate p-values with Sample name
 stats <- as.data.frame(stats)
 stats$Sample <- base::unique(ith[["Sample"]]) %>%
-                        as.vector()
+  as.vector()
 stats <- stats[-1,]
 
 # Plot with p-values superimposed for each sample
 figure_3b <- rplot + geom_text(data=stats,
-                  aes(x=1.9, y=Sample),
-                  label = paste0("p=", format(stats$V1, digits=3, trim=TRUE),
-                                  ", effect size=", format(stats$V2, digits=3, trim=TRUE), "\n"),
-                  size = 3)
+                               aes(x=1.9, y=Sample),
+                               label = paste0("p=", format(stats$V1, digits=3, trim=TRUE),
+                                              ", effect size=", format(stats$V2, digits=3, trim=TRUE), "\n"),
+                               size = 3)
 figure_3b
 
 # Save as PDF
 pdf("figures/figure_3/figure_3b.pdf",
-       width = 8,
-       height = 8)
+    width = 8,
+    height = 8)
 figure_3b
 dev.off()
 ```
@@ -701,13 +701,13 @@ C) UMAP analysis for merged primary and metastatic samples in each of the four m
 load("Data/OS_list_CCR.RData")
 
 OS_list$OS17_TL <- OS_list$OS17_TL %>%
-    FindClusters(resolution = 0.2)
+  FindClusters(resolution = 0.2)
 OS_list$`143B_TL` <- OS_list$`143B_TL` %>%
-    FindClusters(resolution = 0.15)
+  FindClusters(resolution = 0.15)
 OS_list$NCHOS2_TL <- OS_list$NCHOS2_TL %>%
-    FindClusters(resolution = 0.15)
+  FindClusters(resolution = 0.15)
 OS_list$NCHOS7_TL <- OS_list$NCHOS7_TL %>%
-    FindClusters(resolution = 0.2)
+  FindClusters(resolution = 0.2)
 
 # Cluster distribution in each sample
 # proportion of cells in lung in each cluster
@@ -716,26 +716,28 @@ for (s_obj in c(OS_list$OS17_TL,
                 OS_list$`143B_TL`,
                 OS_list$NCHOS2_TL,
                 OS_list$NCHOS7_TL)) {
-    s_obj$src <- factor(s_obj$src, levels = c("Tibia", "Lung"))
-    lung_prop_tbl <-
-        s_obj@meta.data %>%
-        as_tibble() %>%
-        select(model, src, seurat_clusters) %>%
-        group_by(model, seurat_clusters) %>%
-        summarize(lung_perc = sum(grepl("Lung", src)) / n() * 100,
-                  .groups = "drop") %>%
-        dplyr::rename(sample = model,
-                      cluster = seurat_clusters) %>%
-        bind_rows(lung_prop_tbl)
+  s_obj$src <- factor(s_obj$src,
+                      levels = c("Tibia",
+                                 "Lung"))
+  lung_prop_tbl <-
+    s_obj@meta.data %>%
+    as_tibble() %>%
+    select(model, src, seurat_clusters) %>%
+    group_by(model, seurat_clusters) %>%
+    summarize(lung_perc = sum(grepl("Lung", src)) / n() * 100,
+              .groups = "drop") %>%
+    dplyr::rename(sample = model,
+                  cluster = seurat_clusters) %>%
+    bind_rows(lung_prop_tbl)
 }
 
 write_tsv(lung_prop_tbl, "Data/Fig3d_lung_prop_tbl.tsv")
 
-# UMAP Plots 
-sample_names <- c("OS-17_TL",
+#### UMAP Plots ####
+sample_names <- c("OS17_TL",
                   "143B_TL",
-                  "NCH-OS-2_TL",
-                  "NCH-OS-7_TL")
+                  "NCHOS2_TL",
+                  "NCHOS7_TL")
 
 for (s_obj in sample_names) {
   # Tibia plot with lung-derived cells greyed out
@@ -745,11 +747,22 @@ for (s_obj in sample_names) {
                      expression = src == "Lung")
   lung <- append(lung, temp)
   Idents(temp_obj, cells = lung) <- " "
-
-  tibia_plot <- DimPlot(temp_obj, reduction = "umap", pt.size = 1, label = T,
-                cols = c("light grey", "#E64B35FF",  "#4DBBD5FF", "#00A087FF", "#3C5488FF"), order = T) + 
-                coord_fixed() + NoLegend() + NoAxes() +
-                ggtitle("Tibia") + theme(plot.title = element_text(hjust = 0.5))
+  
+  tibia_plot <- DimPlot(temp_obj,
+                        reduction = "umap",
+                        pt.size = 1,
+                        label = T,
+                        cols = c("light grey",
+                                 "#E64B35FF",
+                                 "#4DBBD5FF",
+                                 "#00A087FF",
+                                 "#3C5488FF"),
+                        order = T) +
+    coord_fixed() +
+    NoLegend() +
+    NoAxes() +
+    ggtitle(s_obj, subtitle = "Tibia") +
+    theme(plot.title = element_text(hjust = 0.5))
   
   # Lung plot with lung-derived cells greyed out
   temp_obj2 <- OS_list[[s_obj]]
@@ -758,62 +771,86 @@ for (s_obj in sample_names) {
                      expression = src == "Tibia")
   tib <- append(tib, temp)
   Idents(temp_obj2, cells = tib) <- " "
-
-  lung_plot <- DimPlot(temp_obj2, reduction = "umap", pt.size = 1, label = T,
-                cols = c("light grey", "#E64B35FF",  "#4DBBD5FF", "#00A087FF", "#3C5488FF"), order = T) + 
-                coord_fixed() + NoLegend() + NoAxes() +
-                ggtitle("Lung") + theme(plot.title = element_text(hjust = 0.5))
-
-  combined_plot <- tibia_plot + lung_plot
-
+  
+  lung_plot <- DimPlot(temp_obj2,
+                       reduction = "umap",
+                       pt.size = 1,
+                       label = T,
+                       cols = c("light grey",
+                                "#E64B35FF",
+                                "#4DBBD5FF",
+                                "#00A087FF",
+                                "#3C5488FF"),
+                       order = T) +
+    coord_fixed() +
+    NoLegend() +
+    NoAxes() +
+    ggtitle("", subtitle ="Lung") +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  combined <- tibia_plot + lung_plot
+  
   pdf(paste0("figures/figure_3/figure_3c1_",
-                s_obj,
-                ".pdf"),
-       width = 5,
-       height = 3)
-  combined_plot
+             s_obj,
+             ".pdf"),
+      width = 5,
+      height = 5)
+  print(combined)
   dev.off()
-
 }
 
-# Bar plots
+#### Bar plots ####
 objlist <- c(OS_list$OS17_TL,
-                OS_list$`143B_TL`,
-                OS_list$NCHOS2_TL,
-                OS_list$NCHOS7_TL)
+             OS_list$`143B_TL`,
+             OS_list$NCHOS2_TL,
+             OS_list$NCHOS7_TL)
 
 for (sobj in objlist) {
   tident <- table(Idents(sobj),
                   sobj$src,
                   dnn = c("cluster",
                           "tissue")) %>%
-             as.data.frame() %>%
-            group_by(tissue) %>%
-            mutate(perc = Freq / sum(Freq) * 100)
-
+    as.data.frame() %>%
+    group_by(tissue) %>%
+    mutate(perc = Freq / sum(Freq) * 100)
+  
   tident$cluster <- as.character(tident$cluster)
-
-  figure_3c2 <- ggplot(tident, aes(x = tissue, y = perc, fill = cluster)) +
+  tident$tissue <- factor(tident$tissue, levels = c("Tibia", "Lung"))
+  figure_3c2 <- ggplot(tident,
+                       aes(x = tissue,
+                           y = perc,
+                           fill = cluster)) +
     theme_bw(base_size = 5) +
     geom_col(position = "fill", width = 0.5) +
     xlab("Tissue") +
     ylab("Proportion") +
-    scale_fill_npg(alpha = 1) + 
-    NoLegend() + NoAxes() +
+    scale_fill_npg(alpha = 1) +
+    NoLegend() +
+    NoAxes() +
     #scale_fill_manual(values = c("#E64B35FF","#00A087FF","#4DBBD5FF",)
     theme(legend.title = element_blank())
-  plot(figure_3c2)
   
-    # Save plot as PDF
+  # Save plot as PDF
   pdf(paste0("figures/figure_3/figure_3c2_",
-                head(sobj$model,1),
-                head(sobj$src, 1),
-                ".pdf"),
-       width = 2,
-       height = 5)
-  figure_3c2
+             head(sobj$model,1),
+             ".pdf"),
+      width = 1,
+      height = 2)
+  print(figure_3c2)
   dev.off()
 }
+
+# For Rmd visual
+figure_3c2 <- ggplot(tident,
+                     aes(x = tissue,
+                         y = perc,
+                         fill = cluster)) +
+  theme_bw(base_size = 5) +
+  geom_col(position = "fill", width = 0.5) +
+  xlab("Tissue") +
+  ylab("Proportion") +
+  scale_fill_npg(alpha = 1)
+figure_3c2
 ```
 
 ## Figure 3D
@@ -872,85 +909,85 @@ The only data we need are the cs.pd object and the percent of lung cells per clu
 which is entered here as aka4
 ```{r Fig3d}
 lung_percent <-
-    read_tsv("Data/Fig3d_lung_prop_tbl.tsv") %>%
-    mutate(sample_order = rank(sample) * 1000 - lung_perc,
-           x_label = paste0(sample, " c", cluster) %>%
-                reorder(sample_order))
+  read_tsv("Data/Fig3d_lung_prop_tbl.tsv") %>%
+  mutate(sample_order = rank(sample) * 1000 - lung_perc,
+         x_label = paste0(sample, " c", cluster) %>%
+           reorder(sample_order))
 
 cx.pd <-
-    read_tsv("Data/cxpd.tsv",
-             show_col_types = FALSE) %>%
-    pivot_longer(c(-rn),
-                 names_to = "sample",
-                 values_to = "pval") %>%
-    mutate(cluster = str_remove(sample, ".+_") %>%
-                as.numeric(),
-           sample = str_replace(sample, "OS2", "NCH-OS-2") %>%
-                str_replace("OS7", "NCH-OS-7") %>%
-                str_replace("t143b", "143B") %>%
-                str_replace("OS17", "OS-17") %>%
-                str_remove("_.+"),
-            rn = str_remove(rn, "HALLMARK_") %>%
-                str_replace("_", " ")) %>%
-    left_join(lung_percent) %>%
-    mutate(pval = -log10(pval),
-           sample_order = rank(sample) * 1000 - lung_perc,
-           signif_bool = pval >= (-1 * log10(0.05)),
-           signif = if_else(signif_bool == TRUE, "p-value < 0.05", "p-value > 0.05"))
+  read_tsv("Data/cxpd.tsv",
+           show_col_types = FALSE) %>%
+  pivot_longer(c(-rn),
+               names_to = "sample",
+               values_to = "pval") %>%
+  mutate(cluster = str_remove(sample, ".+_") %>%
+           as.numeric(),
+         sample = str_replace(sample, "OS2", "NCH-OS-2") %>%
+           str_replace("OS7", "NCH-OS-7") %>%
+           str_replace("t143b", "143B") %>%
+           str_replace("OS17", "OS-17") %>%
+           str_remove("_.+"),
+         rn = str_remove(rn, "HALLMARK_") %>%
+           str_replace("_", " ")) %>%
+  left_join(lung_percent) %>%
+  mutate(pval = -log10(pval),
+         sample_order = rank(sample) * 1000 - lung_perc,
+         signif_bool = pval >= (-1 * log10(0.05)),
+         signif = if_else(signif_bool == TRUE, "p-value < 0.05", "p-value > 0.05"))
 
 P1 <-
   cx.pd %>%
   ggplot(., aes(x = x_label, y = rn, fill = signif)) +
-    geom_tile() +
-    geom_text(aes(label = sprintf("%0.2f", pval)), size = 3) +
-    scale_fill_manual(values = c("red", "gray"), name = "") +
-    scale_y_discrete(limits = rev, position = "right") +
-    theme(panel.background = element_blank(),
-          strip.background = element_blank(),
-          strip.text.x = element_blank(),
-          plot.margin = unit(c(0, 0, 0, 0), "cm"),
-          panel.border = element_rect(colour = "black", fill = NA),
-          axis.text.x = element_text(angle = 90,
-                                     hjust = 1,
-                                     vjust = 0.4,
-                                     size = 12),
-          axis.text.y = element_text(size = 12)) +
-    labs(x = "",
-         y = "") +
-    facet_grid(. ~ sample,
-               scales = "free_x",
-               space = "free")
+  geom_tile() +
+  geom_text(aes(label = sprintf("%0.2f", pval)), size = 3) +
+  scale_fill_manual(values = c("red", "gray"), name = "") +
+  scale_y_discrete(limits = rev, position = "right") +
+  theme(panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0, 0, 0, 0), "cm"),
+        panel.border = element_rect(colour = "black", fill = NA),
+        axis.text.x = element_text(angle = 90,
+                                   hjust = 1,
+                                   vjust = 0.4,
+                                   size = 12),
+        axis.text.y = element_text(size = 12)) +
+  labs(x = "",
+       y = "") +
+  facet_grid(. ~ sample,
+             scales = "free_x",
+             space = "free")
 
 P2 <-
   lung_percent %>%
   ggplot(., aes(x = x_label, y = lung_perc, fill = sample)) +
-    geom_bar(stat = "identity") +
-    ylab("Percent\nin lung") +
-    xlab("") +
-    labs(fill = "Model",
-         y = "Percent in\nmetastases(%)") +
-    scale_fill_brewer(palette = "Set2") +
-    theme(axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          panel.background = element_blank(),
-          strip.background = element_blank(),
-          strip.text.x = element_blank(),
-          plot.margin = unit(c(0, 0, -0.2, 0), "cm"),
-          panel.border = element_rect(colour = "black", fill = NA)) +
-    facet_grid(. ~ sample,
-               scales = "free_x",
-               space = "free")
+  geom_bar(stat = "identity") +
+  ylab("Percent\nin lung") +
+  xlab("") +
+  labs(fill = "Model",
+       y = "Percent in\nlung (%)") +
+  scale_fill_brewer(palette = "Set2") +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        plot.margin = unit(c(0, 0, -0.2, 0), "cm"),
+        panel.border = element_rect(colour = "black", fill = NA)) +
+  facet_grid(. ~ sample,
+             scales = "free_x",
+             space = "free")
 
 figure_3d <- cowplot::plot_grid(P2,
-                   P1,
-                   ncol = 1,
-                   align = "v",
-                   rel_heights = c(2, 10))
+                                P1,
+                                ncol = 1,
+                                align = "v",
+                                rel_heights = c(2, 10))
 figure_3d
 
 pdf("figures/figure_3/figure_3d.pdf",
-       width = 15,
-       height = 8)
+    width = 15,
+    height = 8)
 figure_3d
 dev.off()
 ```
@@ -978,14 +1015,14 @@ load("Data/Raw/os17.lung.raw.RData")
 # Subset all to 2800 cells in each condition
 set.seed(108)
 os17.cx.raw <- subset(os17.cx.raw,
-                  cells = sample(Cells(os17.cx.raw),
-                                 2800))
+                      cells = sample(Cells(os17.cx.raw),
+                                     2800))
 os17.tib.raw <- subset(os17.tib.raw,
-                   cells = sample(Cells(os17.tib.raw),
-                                  2800))
+                       cells = sample(Cells(os17.tib.raw),
+                                      2800))
 os17.lung.raw <- subset(os17.lung.raw,
-                    cells = sample(Cells(os17.lung.raw),
-                                   2800))
+                        cells = sample(Cells(os17.lung.raw),
+                                       2800))
 
 # Load merged and cell cycle regressed OS17 object
 load("Data/os17.RData")
@@ -1016,8 +1053,8 @@ figure_5b
 
 # Save as PDF
 pdf("figures/figure_5/figure_5b.pdf",
-        width = 8,
-        height = 4)
+    width = 8,
+    height = 4)
 figure_5b
 dev.off()
 ```
@@ -1040,8 +1077,8 @@ figure_5c1 <- processLTBC(os17.cx.raw,
 
 # Save as PDF
 pdf("figures/figure_5/figure_5c1.pdf",
-        width = 8,
-        height = 2)
+    width = 8,
+    height = 2)
 figure_5c1
 dev.off()
 
@@ -1057,8 +1094,8 @@ figure_5c2 <- processLTBC(os17.tib.raw,
 
 # Save as PDF
 pdf("figures/figure_5/figure_5c2.pdf",
-        width = 8,
-        height = 2)
+    width = 8,
+    height = 2)
 figure_5c2
 dev.off()
 
@@ -1073,8 +1110,8 @@ figure_5c3 <- processLTBC(os17.lung.raw,
 
 # Save as PDF
 pdf("figures/figure_5/figure_5c3.pdf",
-        width = 8,
-        height = 2)
+    width = 8,
+    height = 2)
 figure_5c3
 dev.off()
 ```
@@ -1137,17 +1174,17 @@ cx.tagged <- subset(cx.sub,
                     cells = Culture.LTcells)
 
 figure_5c1_umap <- DimPlot(cx.tagged,
-        group.by = "src") +
-        coord_fixed() +
-        scale_color_npg(alpha = 1) +
-        ggtitle(" ") +
-        NoLegend() + NoAxes()
+                           group.by = "src") +
+  coord_fixed() +
+  scale_color_npg(alpha = 1) +
+  ggtitle(" ") +
+  NoLegend() + NoAxes()
 figure_5c1_umap
 
 # Save as PDF
 pdf("figures/figure_5/figure_5c1_umap.pdf",
-        width = 3,
-        height = 3)
+    width = 3,
+    height = 3)
 figure_5c1_umap
 dev.off()
 
@@ -1169,17 +1206,17 @@ tib.tagged <- subset(tib.sub,
                      cells = tib.LTcells)
 
 figure_5c2_umap <- DimPlot(tib.tagged,
-        group.by = "src",
-        cols = "#00A087FF") +
-        coord_fixed() +
-        ggtitle(" ") +
-        NoLegend() + NoAxes()
+                           group.by = "src",
+                           cols = "#00A087FF") +
+  coord_fixed() +
+  ggtitle(" ") +
+  NoLegend() + NoAxes()
 figure_5c2_umap
 
 # Save as PDF
 pdf("figures/figure_5/figure_5c2_umap.pdf",
-        width = 3,
-        height = 3)
+    width = 3,
+    height = 3)
 figure_5c2_umap
 dev.off()
 
@@ -1202,17 +1239,17 @@ lung.tagged <- subset(lung.sub,
                       cells = lung.LTcells)
 
 figure_5c3_umap <- DimPlot(lung.tagged,
-        group.by = "src",
-        cols = "#4DBBD5FF") +
-        coord_fixed() +
-        ggtitle(" ") +
-        NoLegend() + NoAxes()
+                           group.by = "src",
+                           cols = "#4DBBD5FF") +
+  coord_fixed() +
+  ggtitle(" ") +
+  NoLegend() + NoAxes()
 figure_5c3_umap
 
 # Save as PDF
 pdf("figures/figure_5/figure_5c3_umap.pdf",
-        width = 3,
-        height = 3)
+    width = 3,
+    height = 3)
 figure_5c3_umap
 dev.off()
 ```
@@ -1247,7 +1284,7 @@ for (i in 1:4) {
                   cx.lt.list[[i,1]])) +
     NoLegend() +
     NoAxes()
-
+  
   print(p, vp = vplayout(ceiling(i/4), i))
 }
 dev.off()
@@ -1360,8 +1397,8 @@ figure_5e <- DimPlot(lung.sub,
 figure_5e
 
 pdf("figures/figure_5/figure_5e.pdf",
-        width = 6,
-        height = 5)
+    width = 6,
+    height = 5)
 figure_5e
 dev.off()
 ```
@@ -1432,15 +1469,15 @@ figure_5f <- ggplot(temp1,
   ylab("") +
   xlab("-log10(p-value)") +
   geom_vline(xintercept = 1.5,
-               color = "gray",
-               linetype = 2,
-               size = 1)
+             color = "gray",
+             linetype = 2,
+             size = 1)
 
 figure_5f
 
 pdf("figures/figure_5/figure_5f.pdf",
-        width = 8,
-        height = 3)
+    width = 8,
+    height = 3)
 figure_5f
 dev.off()
 ```
