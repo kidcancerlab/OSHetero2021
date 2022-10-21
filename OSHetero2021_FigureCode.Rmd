@@ -602,6 +602,11 @@ dev.off()
 # Figure 3
 
 Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
+```{r eval=FALSE}
+f3_axis_text_size <- 6
+f3_axis_title_size <- 6
+
+```
 
 ## Figure 3B
 
@@ -648,7 +653,9 @@ rplot <- ggplot(ith, aes(x = logITH, y = Sample, fill = Sample)) +
   theme_ridges() +
   xlab("log[ITH Score]") +
   theme(legend.position = "none",
-        axis.title.x = element_text(hjust = 0.5),
+        axis.text.y = element_text(size = f3_axis_text_size),
+        axis.text.x = element_text(size = f3_axis_text_size),
+        axis.title.x = element_text(hjust = 0.5, size = f3_axis_title_size),
         axis.title.y = element_blank())
 
 rplot
@@ -710,11 +717,16 @@ stats$Sample <- base::unique(ith[["Sample"]]) %>%
 stats <- stats[-1,]
 
 # Plot with p-values superimposed for each sample
-figure_3b <- rplot + geom_text(data=stats,
-                               aes(x=1.9, y=Sample),
-                               label = paste0("p=", format(stats$V1, digits=3, trim=TRUE),
-                                              ", effect size=", format(stats$V2, digits=3, trim=TRUE), "\n"),
-                               size = 3)
+figure_3b <-
+    rplot +
+    geom_text(data = stats,
+              aes(x = 1.75, y = Sample),
+              label = paste0("p=",
+                             format(stats$V1, digits = 3, trim = TRUE),
+                            ", eff. size=",
+                            format(stats$V2, digits = 3, trim = TRUE),
+                            "\n"),
+              size = 2)
 figure_3b
 
 # Save as PDF
@@ -786,23 +798,33 @@ for (s_obj in sample_names) {
                      expression = src == "Lung")
   lung <- append(lung, temp)
   Idents(temp_obj, cells = lung) <- " "
-  
-  tibia_plot <- DimPlot(temp_obj,
-                        reduction = "umap",
-                        pt.size = 1,
-                        label = T,
-                        cols = c("light grey",
-                                 "#E64B35FF",
-                                 "#4DBBD5FF",
-                                 "#00A087FF",
-                                 "#3C5488FF"),
-                        order = T) +
+
+  cust_dim_plot <- function(x_obj, title, subtitle) {
+      DimPlot(x_obj,
+              reduction = "umap",
+              pt.size = 0.1,
+              label = T,
+              label.size = 1,
+              cols = c("light grey",
+                       "#E64B35FF",
+                       "#4DBBD5FF",
+                       "#00A087FF",
+                       "#3C5488FF"),
+              order = T) +
     coord_fixed() +
     NoLegend() +
     NoAxes() +
-    ggtitle(s_obj, subtitle = "Tibia") +
-    theme(plot.title = element_text(hjust = 0.5))
-  
+    ggtitle(title, subtitle = subtitle) +
+    theme(plot.title = element_text(hjust = 0.5, size = 7),
+          plot.subtitle = element_text(hjust = 0.5, size = 6),
+          plot.margin = unit(c(0, 0, 0, 0), "pt"))
+  }
+
+  tibia_plot <-
+    cust_dim_plot(temp_obj,
+                  title = s_obj,
+                  subtitle = "Tibia")
+
   # Lung plot with lung-derived cells greyed out
   temp_obj2 <- OS_list[[s_obj]]
   tib <- vector(mode = "character")
@@ -810,25 +832,15 @@ for (s_obj in sample_names) {
                      expression = src == "Tibia")
   tib <- append(tib, temp)
   Idents(temp_obj2, cells = tib) <- " "
-  
-  lung_plot <- DimPlot(temp_obj2,
-                       reduction = "umap",
-                       pt.size = 1,
-                       label = T,
-                       cols = c("light grey",
-                                "#E64B35FF",
-                                "#4DBBD5FF",
-                                "#00A087FF",
-                                "#3C5488FF"),
-                       order = T) +
-    coord_fixed() +
-    NoLegend() +
-    NoAxes() +
-    ggtitle("", subtitle = "Lung") +
-    theme(plot.title = element_text(hjust = 0.5))
-  
+
+  lung_plot <-
+    cust_dim_plot(temp_obj2,
+                  title = "",
+                  subtitle = "Lung")
+
   figure_3c_umaps[[s_obj]] <- tibia_plot + lung_plot
-  
+
+
   pdf(paste0("figures/figure_3/figure_3c1_",
              s_obj,
              ".pdf"),
@@ -856,7 +868,7 @@ for (sobj in objlist) {
     as.data.frame() %>%
     group_by(tissue) %>%
     mutate(perc = Freq / sum(Freq) * 100)
-  
+
   tident$cluster <- as.character(tident$cluster)
   tident$tissue <- factor(tident$tissue, levels = c("Tibia", "Lung"))
   figure_3c_barplots[[sobj$model[1]]] <-
@@ -871,8 +883,14 @@ for (sobj in objlist) {
     scale_fill_npg(alpha = 1) +
     theme_minimal() +
     NoLegend() +
-    theme(panel.grid = element_blank())
-  
+    theme(panel.grid = element_blank(),
+          axis.text.y = element_text(size = 5),
+          axis.text.x = element_text(size = 5,
+                                     angle = 45,
+                                     hjust = 1),
+          axis.title.x = element_text(size = 6),
+          axis.title.y = element_text(size = 6))
+
   # Save plot as PDF
   pdf(paste0("figures/figure_3/figure_3c2_",
              head(sobj$model, 1),
@@ -984,8 +1002,9 @@ P1 <-
   cx.pd %>%
   ggplot(., aes(x = x_label, y = rn, fill = signif)) +
   geom_tile() +
-  geom_text(aes(label = sprintf("%0.2f", pval)), size = 3) +
-  scale_fill_manual(values = c("red", "gray"), name = "") +
+  geom_text(aes(label = sprintf("%0.2f", pval)), size = 2.2) +
+  scale_fill_manual(values = c("red", "gray"),
+                    name = "") +
   scale_y_discrete(limits = rev, position = "right") +
   theme(panel.background = element_blank(),
         strip.background = element_blank(),
@@ -995,13 +1014,18 @@ P1 <-
         axis.text.x = element_text(angle = 90,
                                    hjust = 1,
                                    vjust = 0.4,
-                                   size = 12),
-        axis.text.y = element_text(size = 12)) +
+                                   size = 8),
+        axis.text.y = element_text(size = 8),
+        legend.background = element_blank(),
+        legend.text = element_text(size = 8)) +
   labs(x = "",
        y = "") +
   facet_grid(. ~ sample,
              scales = "free_x",
              space = "free")
+
+P1_legend <- cowplot::get_legend(P1)
+P1 <- P1 + theme(legend.position = "none")
 
 P2 <-
   lung_percent %>%
@@ -1014,20 +1038,33 @@ P2 <-
   scale_fill_brewer(palette = "Set2") +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
+        axis.title.y = element_text(size = f3_axis_title_size),
         panel.background = element_blank(),
         strip.background = element_blank(),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0, 0, -0.2, 0), "cm"),
-        panel.border = element_rect(colour = "black", fill = NA)) +
+        panel.border = element_rect(colour = "black", fill = NA),
+        legend.text = element_text(size = 8)) +
   facet_grid(. ~ sample,
              scales = "free_x",
              space = "free")
 
-figure_3d <- cowplot::plot_grid(P2,
-                                P1,
-                                ncol = 1,
-                                align = "v",
-                                rel_heights = c(2, 10))
+P2_legend <- cowplot::get_legend(P2)
+P2 <- P2 + theme(legend.position = "none")
+
+
+figure_3d <-
+    cowplot::plot_grid(cowplot::plot_grid(P2,
+                                          P1,
+                                          align = "v",
+                                          rel_heights = c(2, 10),
+                                          ncol = 1),
+                       cowplot::plot_grid(P1_legend,
+                                          P2_legend,
+                                          ncol = 1,
+                                          axis = "t"),
+                        nrow = 1,
+                        rel_widths = c(0.95, 0.05))
 figure_3d
 
 save(figure_3d, file = "figures/figure_3/figure_3d.RData")
@@ -1045,8 +1082,37 @@ load("figures/figure_3/figure_3c_umaps.RData")
 load("figures/figure_3/figure_3c_barplots.RData")
 load("figures/figure_3/figure_3d.RData")
 
+layout_matrix <-
+    matrix(c(1,  1,  1,  1,  2,  2,  2,  6,  4,  4,  4,  8,
+             1,  1,  1,  1,  2,  2,  2,  6,  4,  4,  4,  8,
+             1,  1,  1,  1,  3,  3,  3,  7,  5,  5,  5,  9,
+             1,  1,  1,  1,  3,  3,  3,  7,  5,  5,  5,  9,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10),
+         nrow = 12,
+         byrow = TRUE)
 
-
+pdf("figures/figure_3/figure_3.pdf",
+    width = 8,
+    height = 12)
+gridExtra::grid.arrange(grobs = list(figure_3b,
+                                     patchwork::patchworkGrob(figure_3c_umaps$OS17_TL),
+                                     patchwork::patchworkGrob(figure_3c_umaps$`143B_TL`),
+                                     patchwork::patchworkGrob(figure_3c_umaps$NCHOS2_TL),
+                                     patchwork::patchworkGrob(figure_3c_umaps$NCHOS7_TL),
+                                     figure_3c_barplots$`OS-17`,
+                                     figure_3c_barplots$`143B`,
+                                     figure_3c_barplots$`NCH-OS-2`,
+                                     figure_3c_barplots$`NCH-OS-7`,
+                                     figure_3d),
+                        layout_matrix = layout_matrix)
+dev.off()
 ```
 
 # Figure 4 - Images
