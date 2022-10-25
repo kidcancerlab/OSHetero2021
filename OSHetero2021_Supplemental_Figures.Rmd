@@ -92,17 +92,17 @@ sfig_s1_a1 <- DimPlot(os17.cx_noccr,
 sfig_s1_a1
 
 pdf("figures/supplement/s1/sfig_s1_a1.pdf",
-       height = 5,
-       width = 5)
+    height = 5,
+    width = 5)
 sfig_s1_a1
 dev.off()
 
 # Post-cell cycle regression
 load("Data/os17.cx_CCR.RData")
 os17.cx$Phase <- factor(os17.cx$Phase,
-                     levels = c("G1",
-                                "G2M",
-                                "S"))
+                        levels = c("G1",
+                                   "G2M",
+                                   "S"))
 # UMAP
 sfig_s1_a2 <- DimPlot(os17.cx,
                       group.by = "Phase",
@@ -113,8 +113,8 @@ sfig_s1_a2 <- DimPlot(os17.cx,
 sfig_s1_a2
 
 pdf("figures/supplement/s1/sfig_s1_a2.pdf",
-       height = 5,
-       width = 5)
+    height = 5,
+    width = 5)
 sfig_s1_a2
 dev.off()
 
@@ -130,17 +130,17 @@ sfig_s1_b1 <- DimPlot(os17.cx_noccr,
 sfig_s1_b1
 
 pdf("figures/supplement/s1/sfig_s1_b1.pdf",
-       height = 5,
-       width = 5)
+    height = 5,
+    width = 5)
 sfig_s1_b1
 dev.off()
 
 # PCA
 # Post-cell cycle regression
 os17.cx$Phase <- factor(os17.cx$Phase,
-                     levels = c("G1",
-                                "G2M",
-                                "S"))
+                        levels = c("G1",
+                                   "G2M",
+                                   "S"))
 sfig_s1_b2 <- DimPlot(os17.cx,
                       group.by = "Phase",
                       label = F,
@@ -151,67 +151,66 @@ sfig_s1_b2 <- DimPlot(os17.cx,
 sfig_s1_b2
 
 pdf("figures/supplement/s1/sfig_s1_b2.pdf",
-       height = 5,
-       width = 5)
+    height = 5,
+    width = 5)
 sfig_s1_b2
 dev.off()
 
 # Cell-cycle genes Pre-CCR
 sfig_s1_c1 <- RidgePlot(os17.cx_noccr,
-          features = c("PCNA",
-                       "TOP2A",
-                       "MCM6",
-                       "MKI67"),
-          group.by = "Phase",
-          ncol = 2,
-          same.y.lims = T,
-          combine = T)
+                        features = c("PCNA",
+                                     "TOP2A",
+                                     "MCM6",
+                                     "MKI67"),
+                        group.by = "Phase",
+                        ncol = 2,
+                        same.y.lims = T,
+                        combine = T)
 sfig_s1_c1
 pdf("figures/supplement/s1/sfig_s1_c1.pdf",
-       height = 4,
-       width = 8)
+    height = 4,
+    width = 8)
 sfig_s1_c1
 dev.off()
 
 
 # Cell-cycle genes - post-CCR
 sfig_s1_c2 <- RidgePlot(os17.cx,
-          features = c("PCNA",
-                       "TOP2A",
-                       "MCM6",
-                       "MKI67"),
-          group.by = "Phase",
-          ncol = 2,
-          same.y.lims = T,
-          combine = T,
-	  slot = "scale.data")
+                        features = c("PCNA",
+                                     "TOP2A",
+                                     "MCM6",
+                                     "MKI67"),
+                        group.by = "Phase",
+                        ncol = 2,
+                        same.y.lims = T,
+                        combine = T,
+                        slot = "scale.data")
 sfig_s1_c2
 pdf("figures/supplement/s1/sfig_s1_c2.pdf",
-       height = 4,
-       width = 8)
+    height = 4,
+    width = 8)
 sfig_s1_c2
 dev.off()
 ```
 
 ```{r s1_group}
 
-s1 <- (sfig_s1_a1 | sfig_s1_a2) /  
-     (sfig_s1_b1 | sfig_s1_b2) / 
-     (sfig_s1_c1 | sfig_s1_c2)
+s1 <- (sfig_s1_a1 | sfig_s1_a2) /
+  (sfig_s1_b1 | sfig_s1_b2) /
+  (sfig_s1_c1 | sfig_s1_c2)
 s1
 pdf("figures/supplement/s1/s1.pdf",
-       height = 12,
-       width = 12)
+    height = 12,
+    width = 12)
 s1
 dev.off()
 
-
-s1_v2 <- (sfig_s1_a1 + sfig_s1_b1 + sfig_s1_c1) /  
-     (sfig_s1_a2 + sfig_s1_b2 + sfig_s1_c2)
+s1_v2 <- (sfig_s1_a1 + sfig_s1_b1 + sfig_s1_c1) /
+  (sfig_s1_a2 + sfig_s1_b2 + sfig_s1_c2)
 s1_v2
 pdf("figures/supplement/s1/s1_v2.pdf",
-       height = 8,
-       width = 15)
+    height = 8,
+    width = 15)
 s1_v2
 dev.off()
 ```
@@ -245,9 +244,9 @@ DimPlot(OB, reduction = "umap",
 
 # Regress out cell cycle genes
 OB_ccr <- ScaleData(object = OB,
-                vars.to.regress = c("S.Score",
-                                    "G2M.Score"),
-                features = rownames(x = OB))
+                    vars.to.regress = c("S.Score",
+                                        "G2M.Score"),
+                    features = rownames(x = OB))
 
 # Save
 save(OB_ccr, file = "Data/Supplement/OB_ccr.RData")
@@ -260,8 +259,10 @@ OB_ccr <- RunPCA(OB_ccr, pc.genes = OB_ccr@var.genes, npcs = 20) %>%
   FindNeighbors(reduction = "pca", dims = 1:20) %>%
   FindClusters(resolution = 0.1)
 
-OB.nC <- nRes(OB_ccr, res = seq(from = 0.04, to = 0.5, by = 0.01))
-# Optimal resolution identified as 0.07
+OB.nC <- nRes(OB_ccr,
+              res = seq(from = 0.04,
+                        to = 0.5,
+                        by = 0.01))
 pSil(OB.nC, 0.07)
 pSil(OB.nC, 0.06)
 OB_ccr <- OB_ccr %>%
@@ -292,16 +293,27 @@ pushViewport(viewport(layout = grid.layout(1, 2)))
 
 pies <- list()
 for (i in 1:2) {
-  temp <- WhichCells(OB_ccr, idents = cid[[i]])
-  LT.cells <- subset(OB_ccr, cells = temp)
+  temp <- WhichCells(OB_ccr,
+                     idents = cid[[i]])
+  LT.cells <- subset(OB_ccr,
+                     cells = temp)
   df <- table(LT.cells$Phase)
-  bp <- ggplot(as.data.frame(df), aes(x = "", y = Freq, fill = Var1)) + geom_bar(width = 1, stat = "identity")
+  bp <- ggplot(as.data.frame(df),
+               aes(x = "",
+                   y = Freq,
+                   fill = Var1)) +
+    geom_bar(width = 1,
+             stat = "identity")
   pie <- bp +
-    coord_polar("y", start = 0) +
+    coord_polar("y",
+                start = 0) +
     scale_fill_brewer(palette = "Blues") +
     theme_minimal() +
-    NoAxes() + NoLegend() +
-    ggtitle(paste("Cluster", cid[[i]]))
+    NoAxes() +
+    NoLegend() +
+    ggtitle(paste("Cluster",
+                  cid[[i]]))
+  
   pies[[i]] <- pie
   print(pie, vp = vplayout(ceiling(i/2), i))
 }
@@ -339,12 +351,15 @@ sfig_s2_b <- temp1 %>%
                names_repair = "minimal") %>%
   mutate(Signif = pval >= (-1 * log10(0.05))) %>%
   ggplot(., aes(x = Sample,
-              y = Pathway,
-              fill = Signif)) +
+                y = Pathway,
+                fill = Signif)) +
   geom_tile() +
-  geom_text(aes(label = sprintf("%0.2f", pval))) +
-  scale_fill_manual(values = c("gray", "red"))  +
-  scale_y_discrete(limits = rev, position = "right") +
+  geom_text(aes(label = sprintf("%0.2f",
+                                pval))) +
+  scale_fill_manual(values = c("gray",
+                               "red"))  +
+  scale_y_discrete(limits = rev,
+                   position = "right") +
   theme(legend.position = "none",
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -355,28 +370,31 @@ sfig_s2_b <- temp1 %>%
 sfig_s2_b
 
 # Save plot as PDF
-pdf("figures/supplement/s2/sfig_s2_b_OB_Pathway.pdf", height = 6, width = 6)
+pdf("figures/supplement/s2/sfig_s2_b_OB_Pathway.pdf",
+    height = 6,
+    width = 6)
 plot(sfig_s2_b)
 dev.off()
 ```
 
 
 ```{r s2_group}
-
 layout <- "
 AAAA#DD
 AAAA#DD
 BBCC#DD"
-s2 <- (sfig_s2_a1+theme(aspect.ratio = 1)) + pies[[1]] + pies[[2]] +  
-       sfig_s2_b + plot_layout(design = layout)
+s2 <- (sfig_s2_a1 + theme(aspect.ratio = 1)) +
+  pies[[1]] +
+  pies[[2]] +
+  sfig_s2_b +
+  plot_layout(design = layout)
 s2
 pdf("figures/supplement/s2/s2.pdf",
-       height = 7,
-       width = 11)
+    height = 7,
+    width = 11)
 s2
 dev.off()
 ```
-
 
 # S3
 
@@ -398,10 +416,10 @@ OS$model <- factor(as.factor(OS$model),
 #### S3 A ####
 # Plot the data
 sfig_s3_a1 <- DimPlot(OS,
-                          reduction = "umap",
-                          group.by = "src",
-                          pt.size = 1,
-                          label = F) +
+                      reduction = "umap",
+                      group.by = "src",
+                      pt.size = 1,
+                      label = F) +
   theme(aspect.ratio = 1) +
   ggtitle("OS by Tissue Source") +
   scale_color_npg(alpha = 1)
@@ -414,15 +432,15 @@ sfig_s3_a1
 dev.off()
 
 sfig_s3_a2 <- DimPlot(OS,
-                     reduction = "umap",
-                     group.by = "model",
-                     pt.size = 1,
-		     label = F,
-		     cols = c("#828282",
-                                "#E64B35FF",
-                                "#4DBBD5FF",
-                                "#00A087FF",
-                                "#3C5488FF")) +
+                      reduction = "umap",
+                      group.by = "model",
+                      pt.size = 1,
+                      label = F,
+                      cols = c("#828282",
+                               "#E64B35FF",
+                               "#4DBBD5FF",
+                               "#00A087FF",
+                               "#3C5488FF")) +
   theme(aspect.ratio = 1) +
   ggtitle("OS by Model") 
 sfig_s3_a2
@@ -451,11 +469,11 @@ sfig_s3_b <- DimPlot(OS_harmony,
                      group.by = "model",
                      pt.size = 1,
                      label = F,
-		     cols = c("#828282",
-                                "#E64B35FF",
-                                "#4DBBD5FF",
-                                "#00A087FF",
-                                "#3C5488FF")) +
+                     cols = c("#828282",
+                              "#E64B35FF",
+                              "#4DBBD5FF",
+                              "#00A087FF",
+                              "#3C5488FF")) +
   coord_fixed() +
   ggtitle("OS by Model") 
 sfig_s3_b
@@ -473,16 +491,15 @@ sfig_s3_b <- DimPlot(OS_harmony,
                      group.by = "model",
                      pt.size = 1,
                      label = F,
-		     shuffle = T,
-		     cols = c("#828282",
-                                "#E64B35FF",
-                                "#4DBBD5FF",
-                                "#00A087FF",
-                                "#3C5488FF")) +
+                     shuffle = T,
+                     cols = c("#828282",
+                              "#E64B35FF",
+                              "#4DBBD5FF",
+                              "#00A087FF",
+                              "#3C5488FF")) +
   coord_fixed() +
   ggtitle("OS by Model") 
 sfig_s3_b
-
 
 s3 <- (sfig_s3_a2 | sfig_s3_b)
 s3
@@ -503,24 +520,23 @@ options(future.globals.maxSize= 8912896000000)
 ## Batch Correction Test
 
 ```{r s4}
-# Determine overlay of replicates with or without the use batch-effect correction methods such
-# as Harmony, FastMNN
-options(future.globals.maxSize= 891289600)
+# Determine overlay of replicates with or without the use
+# of batch-effect correction methods such as Harmony, FastMNN
 
 # Clean up environment
 rm(list=setdiff(ls(), "tenXLoadQC"))
 
 source("scSeurat.R")
 source("Downstream.v2.R")
+set.seed(108)
 # loading libraries
 library(Seurat)
 library(future)
 library(tidyverse)
 library(msigdbr)
-set.seed(108)
 library(harmony)
-#library(SeuratData)
 library(SeuratWrappers)
+
 # Cellecta - Replicate 1 Load cell culture data
 cellecta.cx.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/filtered_feature_bc_matrix/",
                               spec = "mixHuman")
@@ -686,19 +702,19 @@ DimPlot(Rep1_H_v3,
   coord_fixed() +
   scale_color_npg(alpha = 0.7)
 
-# DimPlot(Rep1_H_v3, reduction = 'umap', pt.size = 1, label = F, group.by = c('src', 'Phase'),
-# ncol = 2) + coord_fixed() + scale_color_npg(alpha = 0.7)
+save(Rep1_H_v3, file = "Data/Supplement/Rep1_H_v3-FastMNN.RData")
+save(Rep1_H, file = "Data/Supplement/Rep1_H.RData")
 ```
 
 ```{r s4_correctedplots}
-#save(Rep1_H_v3, file = "Data/Supplement/Rep1_H_v3-FastMNN.RData")
 load("Data/Supplement/Rep1_H_v3-FastMNN.RData")
+
 # By rep
 sfig_s4_a1 <- DimPlot(Rep1_H_v3,
-        reduction = "umap",
-        pt.size = 1,
-        label = F,
-        group.by = "rep") +
+                      reduction = "umap",
+                      pt.size = 1,
+                      label = F,
+                      group.by = "rep") +
   theme(aspect.ratio = 1) +
   scale_color_npg(alpha = 1) +
   ggtitle("FastMNN by Replicate") +
@@ -713,10 +729,10 @@ dev.off()
 
 # By cell cycle phase
 sfig_s4_a2 <- DimPlot(Rep1_H_v3,
-        reduction = "umap",
-        pt.size = 1,
-        label = F,
-        group.by = "Phase") +
+                      reduction = "umap",
+                      pt.size = 1,
+                      label = F,
+                      group.by = "Phase") +
   theme(aspect.ratio = 1) +
   scale_color_npg(alpha = 1) +
   ggtitle("FastMNN by Phase") +
@@ -737,10 +753,10 @@ Rep1_H_v3$src[grep("Zymo_Cx", Rep1_H_v3$src)] <- "Rep2 - Cell Culture"
 Rep1_H_v3$src[grep("Zymo_Lung", Rep1_H_v3$src)] <- "Rep2 - Lung"
 
 sfig_s4_a3 <- DimPlot(Rep1_H_v3,
-        reduction = "umap",
-        pt.size = 1,
-        label = F,
-        group.by = "src") +
+                      reduction = "umap",
+                      pt.size = 1,
+                      label = F,
+                      group.by = "src") +
   theme(aspect.ratio = 1) +
   #scale_color_npg(alpha = 1) +
   ggtitle("FastMNN by Type") +
@@ -760,89 +776,106 @@ library(Seurat)
 library(ggsci)
 options(future.globals.maxSize=89128960000)
 set.seed(108)
-#save(Rep1_H, file = "Data/Supplement/Rep1_H.RData")
+
 load("Data/Supplement/Rep1_H.RData")
 
 Rep1_H_sct <- SplitObject(Rep1_H, split.by = "src")
 
 for (i in 1:length(Rep1_H_sct)) {
-    Rep1_H_sct[[i]] <- SCTransform(Rep1_H_sct[[i]], verbose = FALSE)
+  Rep1_H_sct[[i]] <- SCTransform(Rep1_H_sct[[i]], verbose = FALSE)
 }
 
 Rep1_H.features <- SelectIntegrationFeatures(object.list = Rep1_H_sct,
-                                            nfeatures = 3000)
+                                             nfeatures = 3000)
 Rep1_H_sct <- PrepSCTIntegration(object.list = Rep1_H_sct,
                                  anchor.features = Rep1_H.features,
                                  verbose = FALSE)
 Rep1_H_sct.anchors <- FindIntegrationAnchors(object.list = Rep1_H_sct,
-                                        normalization.method = "SCT",
-                                        anchor.features = Rep1_H.features,
-                                        verbose = FALSE)
+                                             normalization.method = "SCT",
+                                             anchor.features = Rep1_H.features,
+                                             verbose = FALSE)
 Rep1_H_sct.integrated <- IntegrateData(anchorset = Rep1_H_sct.anchors,
-                                  normalization.method = "SCT",
-                                  verbose = FALSE)
+                                       normalization.method = "SCT",
+                                       verbose = FALSE)
 
 Rep1_H_sct.integrated <- RunPCA(Rep1_H_sct.integrated, verbose = FALSE)
 Rep1_H_sct.integrated <- RunUMAP(Rep1_H_sct.integrated, dims = 1:30)
 
-saveRDS(Rep1_H_sct.integrated, file = "Data/Supplement/Rep1_H_sct.integrated.rds")
+saveRDS(Rep1_H_sct.integrated,
+        file = "Data/Supplement/Rep1_H_sct.integrated.rds")
 
 
 sfig_s4_b1 <- DimPlot(Rep1_H_sct.integrated,
-        reduction = "umap",
-        group.by = "rep",
-        pt.size = 1,
-        label = F) +
+                      reduction = "umap",
+                      group.by = "rep",
+                      pt.size = 1,
+                      label = F) +
   theme(aspect.ratio = 1) +
   ggtitle("SCTransform by Replicate") +
   NoAxes()
 sfig_s4_b1
 
-pdf("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s4/sfig_s4_b1.pdf", height = 5, width = 5)
+pdf("figures/supplement/s4/sfig_s4_b1.pdf",
+    height = 5,
+    width = 5)
 sfig_s4_b1
 dev.off()
 
 sfig_s4_b2 <- DimPlot(Rep1_H_sct.integrated,
-        reduction = "umap",
-        group.by = "Phase",
-        pt.size = 1,
-        label = F) +
+                      reduction = "umap",
+                      group.by = "Phase",
+                      pt.size = 1,
+                      label = F) +
   theme(aspect.ratio = 1) +
   ggtitle("SCTransform by Phase") +
   scale_color_npg(alpha = 1) +
   NoAxes()
 sfig_s4_b2
 
-pdf("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s4/sfig_s4_b2.pdf", height = 5, width = 5)
+pdf("figures/supplement/s4/sfig_s4_b2.pdf",
+    height = 5,
+    width = 5)
 sfig_s4_b2
 dev.off()
 
 # Rename src to match paper
-Rep1_H_sct.integrated$src[grep("Cellecta_Cx", Rep1_H_sct.integrated$src)] <- "Rep1 - Cell Culture"
-Rep1_H_sct.integrated$src[grep("Cellecta_Lung", Rep1_H_sct.integrated$src)] <- "Rep1 - Lung"
-Rep1_H_sct.integrated$src[grep("Zymo_Cx", Rep1_H_sct.integrated$src)] <- "Rep2 - Cell Culture"
-Rep1_H_sct.integrated$src[grep("Zymo_Lung", Rep1_H_sct.integrated$src)] <- "Rep2 - Lung"
+Rep1_H_sct.integrated$src[grep("Cellecta_Cx",
+                               Rep1_H_sct.integrated$src)] <-
+  "Rep1 - Cell Culture"
+Rep1_H_sct.integrated$src[grep("Cellecta_Lung",
+                               Rep1_H_sct.integrated$src)] <-
+  "Rep1 - Lung"
+Rep1_H_sct.integrated$src[grep("Zymo_Cx",
+                               Rep1_H_sct.integrated$src)] <-
+  "Rep2 - Cell Culture"
+Rep1_H_sct.integrated$src[grep("Zymo_Lung",
+                               Rep1_H_sct.integrated$src)] <-
+  "Rep2 - Lung"
 
 sfig_s4_b3 <- DimPlot(Rep1_H_sct.integrated,
-        reduction = "umap",
-        group.by = "src",
-        pt.size = 1,
-        label = F) +
+                      reduction = "umap",
+                      group.by = "src",
+                      pt.size = 1,
+                      label = F) +
   theme(aspect.ratio = 1) +
   ggtitle("SCTransform by Type") +
   NoAxes()
 sfig_s4_b3
 
-pdf("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s4/sfig_s4_b3.pdf")
+pdf("figures/supplement/s4/sfig_s4_b3.pdf",
+    height = 5,
+    width = 5)
 sfig_s4_b3
 dev.off()
-
 ```
+
 ```{r s4_group}
 s4 <- (sfig_s4_a1 | sfig_s4_a2 | sfig_s4_a3) /
-      (sfig_s4_b1 | sfig_s4_b2 | sfig_s4_b3)
+  (sfig_s4_b1 | sfig_s4_b2 | sfig_s4_b3)
 
-pdf("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s4/s4.pdf", height=5, width=20)
+pdf("figures/supplement/s4/s4.pdf",
+    height=5,
+    width=20)
 s4
 dev.off()
 ```
@@ -861,7 +894,8 @@ library(Seurat)
 library(tidyverse)
 load("Data/OS_list_CCR.RData")
 
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+vplayout <- function(x, y) viewport(layout.pos.row = x,
+                                    layout.pos.col = y)
 pdf("figures/supplement/s2/sfig_s4_c.pdf",
     width = 20,
     height = 5)
@@ -872,22 +906,24 @@ OS_list_harmony <- list()
 for (i in 1:length(OS_list)) {
   # Run Harmony
   OS_list_harmony[[paste0(head(OS_list[[i]]@meta.data$model, 1))]] <- 
-   OS_list[[i]] %>%
-   RunPCA(pc.genes = OS_list_harmony[[i]]@var.genes, npcs = 20) %>%
-   RunHarmony(group.by.vars = "src", plot_convergence = T) %>%
-   RunUMAP(reduction = "harmony", dims = 1:20) %>%
-   FindNeighbors(reduction = "harmony", dims = 1:20) %>%
-   FindClusters(resolution = 0.2)
-
+    OS_list[[i]] %>%
+    RunPCA(pc.genes = OS_list_harmony[[i]]@var.genes, npcs = 20) %>%
+    RunHarmony(group.by.vars = "src", plot_convergence = T) %>%
+    RunUMAP(reduction = "harmony", dims = 1:20) %>%
+    FindNeighbors(reduction = "harmony", dims = 1:20) %>%
+    FindClusters(resolution = 0.2)
+  
   sfig_s4_temp <- DimPlot(OS_list_harmony[[i]],
-                 reduction = "umap",
-                 group.by = "src",
-                 pt.size = 1,
-                 label = F) +
-  theme(aspect.ratio = 1) +
-    ggtitle(paste0(head(OS_list_harmony[[i]]@meta.data$model, 1), " Harmony")) +
+                          reduction = "umap",
+                          group.by = "src",
+                          pt.size = 1,
+                          label = F) +
+    theme(aspect.ratio = 1) +
+    ggtitle(paste0(head(OS_list_harmony[[i]]@meta.data$model,
+                        1),
+                   " Harmony")) +
     NoAxes()
-
+  
   #pdf(paste0("figures/supplement/s4/sfig_s4_c",
   # i,
   # ".pdf"))
@@ -905,52 +941,76 @@ library("harmony")
 set.seed(100)
 # Copied from Sanjana's original harmony code (Harmony_v2.R)
 # Reflects preliminary analysis of datasets
-# So, methods and cutoffs used here are not exactly as in the final version used for the main paper figures
+# So, methods and cutoffs used here
+# are not exactly as in the final version used for the main paper figures
 
 #Tibia
-S0018 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0018-zymo-tib/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
-S0018 <- subset(S0018, subset = nFeature_RNA >1500 & nCount_RNA <50000 & percent.mt <20)
+S0018 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0018-zymo-tib/outs/filtered_feature_bc_matrix/",
+                    spec = "mixHuman")
+S0018 <- subset(S0018,
+                subset = nFeature_RNA > 1500 &
+                  nCount_RNA < 50000 &
+                  percent.mt < 20)
 S0018 <- NormalizeData(S0018)
 S0018 <- FindVariableFeatures(S0018, selection.method = "vst")
 S0018 <- ScaleData(S0018)
 S0018 <- RunPCA(S0018, pc.genes = S0018@var.genes, npcs = 20)
 
-S0042 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0042/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
-S0042 <- subset(S0042, subset = nFeature_RNA >1500 & nCount_RNA <40000 & percent.mt <40)
+S0042 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0042/outs/filtered_feature_bc_matrix/",
+                    spec = "mixHuman")
+S0042 <- subset(S0042,
+                subset = nFeature_RNA > 1500 &
+                  nCount_RNA < 40000 &
+                  percent.mt < 40)
 S0042 <- NormalizeData(S0042)
 S0042 <- FindVariableFeatures(S0042, selection.method = "vst")
 S0042 <- ScaleData(S0042)
 S0042 <- RunPCA(S0042, pc.genes = S0042@var.genes, npcs = 20)
 
-S0034 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0034/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
-S0034 <- subset(S0034, subset = nFeature_RNA >1500 & nCount_RNA <30000 & percent.mt <20)
+S0034 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0034/outs/filtered_feature_bc_matrix/",
+                    spec = "mixHuman")
+S0034 <- subset(S0034,
+                subset = nFeature_RNA > 1500 &
+                  nCount_RNA < 30000 &
+                  percent.mt < 20)
 S0034 <- NormalizeData(S0034)
 S0034 <- FindVariableFeatures(S0034, selection.method = "vst")
 S0034 <- ScaleData(S0034)
 S0034 <- RunPCA(S0034, pc.genes = S0034@var.genes, npcs = 20)
 
 #Lung
-S0024 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
-S0024 <- subset(S0024, subset = nFeature_RNA >1500 & nCount_RNA <60000 & percent.mt <35)
+S0024 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix/",
+                    spec = "mixHuman")
+S0024 <- subset(S0024,
+                subset = nFeature_RNA > 1500 &
+                  nCount_RNA < 60000 &
+                  percent.mt < 35)
 S0024 <- NormalizeData(S0024)
 S0024 <- FindVariableFeatures(S0024, selection.method = "vst")
 S0024 <- ScaleData(S0024)
 S0024 <- RunPCA(S0024, pc.genes = S0024@var.genes, npcs = 20)
 
-S0041 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0041/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
-S0041 <- subset(S0041, subset = nFeature_RNA >1500 & nCount_RNA <60000 & percent.mt <40)
+S0041 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0041/outs/filtered_feature_bc_matrix/",
+                    spec = "mixHuman")
+S0041 <- subset(S0041,
+                subset = nFeature_RNA > 1500 &
+                  nCount_RNA < 60000 &
+                  percent.mt < 40)
 S0041 <- NormalizeData(S0041)
 S0041 <- FindVariableFeatures(S0041, selection.method = "vst")
 S0041 <- ScaleData(S0041)
 S0041 <- RunPCA(S0041, pc.genes = S0041@var.genes, npcs = 20)
 
-S0055 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0055/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
-S0055 <- subset(S0055, subset = nFeature_RNA >1500 & nCount_RNA <50000 & percent.mt <40)
+S0055 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0055/outs/filtered_feature_bc_matrix/",
+                    spec = "mixHuman")
+S0055 <- subset(S0055,
+                subset = nFeature_RNA > 1500 &
+                  nCount_RNA < 50000 &
+                  percent.mt < 40)
 S0055 <- NormalizeData(S0055)
 S0055 <- FindVariableFeatures(S0055, selection.method = "vst")
 S0055 <- ScaleData(S0055)
 S0055 <- RunPCA(S0055, pc.genes = S0055@var.genes, npcs = 20)
-
 
 S0018$src <- "S0018-OS17-tibia"
 S0042$src <- "S0042-NCHOS2-tibia"
@@ -984,8 +1044,17 @@ S0024 <- subset(S0024, cells = sample(Cells(S0024), min))
 S0041 <- subset(S0041, cells = sample(Cells(S0041), min))
 S0055 <- subset(S0055, cells = sample(Cells(S0055), min))
 
-comb <- merge(S0018, y = c(S0042, S0034, S0024, S0041, S0055), 
-              add.cell.ids = c("S0018","S0042", "S0034", "S0024", "S0041", "S0055"), 
+comb <- merge(S0018, y = c(S0042,
+                           S0034,
+                           S0024,
+                           S0041,
+                           S0055), 
+              add.cell.ids = c("S0018",
+                               "S0042",
+                               "S0034",
+                               "S0024",
+                               "S0041",
+                               "S0055"), 
               project = "Tibia_Lung")
 comb <- NormalizeData(comb)
 comb <- FindVariableFeatures(comb, selection.method = "vst")
@@ -996,34 +1065,57 @@ comb <- RunHarmony(comb, group.by.vars = "src", plot_convergence = T)
 # Attempt to regress out the effects of cell cycle on these tumor cells
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
-# s.genes <- paste0('hg19-', s.genes)
-# g2m.genes <- paste0('hg19-', g2m.genes)
-comb<- CellCycleScoring(object = comb, s.features = s.genes,
-                        g2m.features = g2m.genes, set.ident = TRUE)
-# 
+
+comb<- CellCycleScoring(object = comb,
+                        s.features = s.genes,
+                        g2m.features = g2m.genes,
+                        set.ident = TRUE)
+
 # # Regress out features associated with cell cycle
 # comb <- ScaleData(object = comb, vars.to.regress = c("S.Score", "G2M.Score"), 
 #                   features = rownames(x = comb))
 # comb <- RunPCA(comb, pc.genes = comb@var.genes, npcs = 20)
 
-DimPlot(comb, reduction = "pca", group.by = "src")
-DimPlot(comb, reduction = "harmony", group.by = "src")
-DimPlot(comb, group.by = "Phase")
+DimPlot(comb,
+        reduction = "pca",
+        group.by = "src")
+DimPlot(comb,
+        reduction = "harmony",
+        group.by = "src")
+DimPlot(comb,
+        group.by = "Phase")
 
 comb <- RunUMAP(comb, reduction = "harmony", dims = 1:20)
 comb <- FindNeighbors(comb, reduction = "harmony", dims = 1:20)
 comb <- FindClusters(comb, resolution = 0.3)
 
-DimPlot(comb, reduction = "umap", group.by = "Phase") + coord_fixed()
-DimPlot(comb, reduction = "umap", group.by = "src") + coord_fixed()
-DimPlot(comb, reduction = "umap") + coord_fixed()
+DimPlot(comb,
+        reduction = "umap",
+        group.by = "Phase") +
+  coord_fixed()
+DimPlot(comb,
+        reduction = "umap",
+        group.by = "src") +
+  coord_fixed()
+DimPlot(comb,
+        reduction = "umap") +
+  coord_fixed()
 
 saveRDS(comb, file = "Data/Supplement/TL_02_Harmony.rds")
 
 #FeaturePlot(comb, features = c("IL6", "IL11", "CXCL8", "IL1A", "IL1B")) + coord_fixed()
 
-os <- subset(comb, idents = c(6, 5, 2, 0, 7))
-DimPlot(os, reduction = "umap", group.by = "cond") + coord_fixed()
+os <- subset(comb,
+             idents = c(6,
+                        5,
+                        2,
+                        0,
+                        7))
+DimPlot(os,
+        reduction = "umap",
+        group.by = "cond") +
+  coord_fixed()
+
 os <- NormalizeData(os)
 os <- FindVariableFeatures(os, selection.method = "vst")
 os <- ScaleData(os)
@@ -1032,11 +1124,15 @@ os <- RunHarmony(os, group.by.vars = "src", plot_convergence = T)
 os <- RunUMAP(os, reduction = "pca", dims = 1:20)
 os <- FindNeighbors(os, reduction = "pca", dims = 1:20)
 os <- FindClusters(os, resolution = 0.3)
-DimPlot(os, reduction = "umap", group.by = "cond") +coord_fixed()
-DimPlot(os, reduction = "umap") + coord_fixed()
+DimPlot(os,
+        reduction = "umap",
+        group.by = "cond") +
+  coord_fixed()
+DimPlot(os,
+        reduction = "umap") +
+  coord_fixed()
 #FeaturePlot(os, features = c("IL6", "IL11", "CXCL8", "IL1A", "IL1B")) + coord_fixed()
 ```
-
 
 # S5 & S6 & S7
 Patient data
@@ -1144,8 +1240,7 @@ for (i in 1:9) {
 
 rm(s_obj)
 
-# Save a stopping point - individual objects save(raw, file =
-# 'R:/RESRoberts/Bioinformatics/Analysis/Sanjana/tar_dir/raw.RData')
+# Save a stopping point - individual objects
 save(raw, file = "Data/Supplement/tar_dir/raw.RData")
 
 # For s5
@@ -1156,19 +1251,11 @@ Glycolysis <- read.table(file = "pathways/Glycolysis.txt",
                          sep = ",")
 Glycolysis <- Glycolysis[, 1]
 
-# OxPhos <- read.table(file =
-# 'pathways/OxPhos.txt', header = FALSE, sep =
-# ',') OxPhos <- OxPhos[,1]
-
 # for s6
 Hypoxia <- read.table(file = "pathways/Hypoxia.txt",
                       header = FALSE,
                       sep = ",")
 Hypoxia <- Hypoxia[, 1]
-
-# SASP <- read.table(file =
-# 'pathways/SASP.txt', header = FALSE, sep =
-# ',') SASP <- SASP[,1]
 
 # For S7
 EMT <- read.table(file = "pathways/EMT.txt",
@@ -1182,15 +1269,10 @@ TNFA <- read.table(file = "pathways/TNFA.txt",
                    sep = ",")
 TNFA <- TNFA[, 1]
 
-# growth <- read.table(file =
-# 'pathways/growth.txt', header = FALSE, sep =
-# ',') growth <- growth[,1]
-
 gl$Glycolysis <- Glycolysis
 gl$Hypoxia <- Hypoxia
 gl$EMT <- EMT
 gl$TNFA <- TNFA
-# gl$growth <- growth
 
 mod_names <- names(gl)
 
@@ -1213,25 +1295,32 @@ for (i in 1:length(raw)) {
     theme(aspect.ratio = 1)
   
   pdf(file = paste0("figures/supplement/s5/",
-             names(gl[1]),
-             "_FeaturePlot_",
-             s[i],
-             ".pdf"))
+                    names(gl[1]),
+                    "_FeaturePlot_",
+                    s[i],
+                    ".pdf"))
   print(p)
   dev.off()
-
+  
   gly[[i]] <- p
 }
 
-s5 <- gly[[1]]+gly[[2]]+gly[[3]]+
-       gly[[4]]+gly[[5]]+gly[[6]]+
-       gly[[7]]+gly[[8]]+gly[[9]]+plot_layout(ncol = 3)
+s5 <- gly[[1]] +
+  gly[[2]] +
+  gly[[3]] +
+  gly[[4]] +
+  gly[[5]] +
+  gly[[6]] +
+  gly[[7]] +
+  gly[[8]] +
+  gly[[9]] +
+  plot_layout(ncol = 3)
 
-
-pdf(file = "figures/supplement/s5/s5.pdf", height=13, width=15)
+pdf(file = "figures/supplement/s5/s5.pdf",
+    height=13,
+    width=15)
 s5
 dev.off()
-
 
 #### S6 ####
 # Hypoxia - Added min.cutoff to isolate for cells most module like
@@ -1252,25 +1341,31 @@ for (i in 1:length(raw)) {
     theme(aspect.ratio = 1)
   
   pdf(file = paste0("figures/supplement/s6/",
-             names(gl[2]),
-             "_FeaturePlot_",
-             s[i],
-             ".pdf"))
+                    names(gl[2]),
+                    "_FeaturePlot_",
+                    s[i],
+                    ".pdf"))
   print(p)
   dev.off()
   
   hypx[[i]] <- p
 }
-s6 <- hypx[[1]]+hypx[[2]]+hypx[[3]]+
-       hypx[[4]]+hypx[[5]]+hypx[[6]]+
-       hypx[[7]]+hypx[[8]]+hypx[[9]]+ 
+s6 <- hypx[[1]] +
+  hypx[[2]] +
+  hypx[[3]] +
+  hypx[[4]] +
+  hypx[[5]] +
+  hypx[[6]] +
+  hypx[[7]] +
+  hypx[[8]] +
+  hypx[[9]] +
   plot_layout(ncol = 3)
 
-
-pdf(file = "figures/supplement/s6/s6.pdf", height=13, width=15)
+pdf(file = "figures/supplement/s6/s6.pdf",
+    height=13,
+    width=15)
 s6
 dev.off()
-
 
 #### S7 ####
 # EMT - Added min.cutoff to isolate for cells most module like
@@ -1291,26 +1386,32 @@ for (i in 1:length(raw)) {
     theme(aspect.ratio = 1)
   
   pdf(file = paste0("figures/supplement/s7/",
-             names(gl[3]),
-             "_FeaturePlot_",
-             s[i],
-             ".pdf"))
+                    names(gl[3]),
+                    "_FeaturePlot_",
+                    s[i],
+                    ".pdf"))
   print(p)
   dev.off()
   
   emt[[i]] <- p
 }
 
-s7 <- emt[[1]]+emt[[2]]+emt[[3]]+
-       emt[[4]]+emt[[5]]+emt[[6]]+
-       emt[[7]]+emt[[8]]+emt[[9]]+ 
+s7 <- emt[[1]] +
+  emt[[2]] +
+  emt[[3]] +
+  emt[[4]] +
+  emt[[5]] +
+  emt[[6]] +
+  emt[[7]] +
+  emt[[8]] +
+  emt[[9]] +
   plot_layout(ncol = 3)
 
-
-pdf(file = "figures/supplement/s7/s7.pdf", height=13, width=15)
+pdf(file = "figures/supplement/s7/s7.pdf",
+    height=13,
+    width=15)
 s7
 dev.off()
-
 
 #### S8 ####
 # TNFA - Added min.cutoff to isolate for cells most module like
@@ -1331,29 +1432,35 @@ for (i in 1:length(raw)) {
     theme(aspect.ratio = 1)
   
   pdf(file = paste0("figures/supplement/s8/",
-             names(gl[4]),
-             "_FeaturePlot_",
-             s[i],
-             ".pdf"))
+                    names(gl[4]),
+                    "_FeaturePlot_",
+                    s[i],
+                    ".pdf"))
   print(p)
   dev.off()
-
+  
   tnf[[i]] <- p
 }
 
-s8 <- tnf[[1]]+tnf[[2]]+tnf[[3]]+
-       tnf[[4]]+tnf[[5]]+tnf[[6]]+
-       tnf[[7]]+tnf[[8]]+tnf[[9]]+ 
+s8 <- tnf[[1]] +
+  tnf[[2]] +
+  tnf[[3]] +
+  tnf[[4]] +
+  tnf[[5]] +
+  tnf[[6]] +
+  tnf[[7]] +
+  tnf[[8]] +
+  tnf[[9]] +
   plot_layout(ncol = 3)
 
-
-pdf(file = "figures/supplement/s8/s8.pdf", height=13, width=15)
+pdf(file = "figures/supplement/s8/s8.pdf",
+    height=13,
+    width=15)
 s8
 dev.off()
 ```
 
 # S9 & S10 - Imaging
-
 
 # S11
 
@@ -1375,14 +1482,22 @@ set.seed(100)
 
 #Cellecta and Zymo, Cell culture 
 #Cellecta
-cellecta.cx.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
-cellecta.cx.raw <- subset(cellecta.cx.raw, subset = nFeature_RNA >2500 & nCount_RNA <40000 & percent.mt <14)
+cellecta.cx.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/filtered_feature_bc_matrix/",
+                              spec = "mixHuman")
+cellecta.cx.raw <- subset(cellecta.cx.raw,
+                          subset = nFeature_RNA > 2500 &
+                            nCount_RNA < 40000 &
+                            percent.mt < 14)
 cellecta.cx.raw$src <- "Replicate_02"
 cellecta.cx.raw$cond <- "Culture"
 
 #Zymo
-zymo.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0016-zymo/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
-zymo.cx.raw <- subset(zymo.cx.raw, subset = nFeature_RNA >3500 & nCount_RNA <50000 & percent.mt <15)
+zymo.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0016-zymo/outs/filtered_feature_bc_matrix/",
+                          spec = "mixHuman")
+zymo.cx.raw <- subset(zymo.cx.raw,
+                      subset = nFeature_RNA > 3500 &
+                        nCount_RNA < 50000 &
+                        percent.mt < 15)
 zymo.cx.raw$src <- "Replicate_01"
 zymo.cx.raw$cond <- "Culture"
 
@@ -1406,10 +1521,11 @@ zymo.cx.raw <- processLTBC(zymo.cx.raw,
                            col.fill = "#00A087FF",
                            relative = T)
 
-
 # Merge into a single Seurat object
-Reps <- merge(cellecta.cx.raw, y = zymo.cx.raw,
-              add.cell.ids = c("Cellecta_Cx", "Zymo_Cx"),
+Reps <- merge(cellecta.cx.raw,
+              y = zymo.cx.raw,
+              add.cell.ids = c("Cellecta_Cx",
+                               "Zymo_Cx"),
               project = "Heterogeneity")
 
 # Process and cluster
@@ -1423,24 +1539,37 @@ Reps <- NormalizeData(Reps) %>%
 
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
-Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
-                         g2m.features = g2m.genes, set.ident = TRUE)
+Reps <- CellCycleScoring(object = Reps,
+                         s.features = s.genes,
+                         g2m.features = g2m.genes,
+                         set.ident = TRUE)
 
 # Attempt to regress out the effects of cell cycle on these tumor cells
-Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
-                         g2m.features = g2m.genes, set.ident = TRUE)
+Reps <- CellCycleScoring(object = Reps,
+                         s.features = s.genes,
+                         g2m.features = g2m.genes,
+                         set.ident = TRUE)
 
-Reps <- ScaleData(object = Reps, vars.to.regress = c("S.Score", "G2M.Score"),
-                  features = rownames(x = Reps)) 
+Reps <- ScaleData(object = Reps,
+                  vars.to.regress = c("S.Score",
+                                      "G2M.Score"),
+                  features = rownames(x = Reps))
+
 Reps <- RunPCA(Reps, pc.genes = Reps@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
   FindNeighbors(reduction = "pca", dims = 1:20) %>%
   FindClusters(resolution = 0.3)
 
-#save(Reps, file = "Data/Supplement/Reps_s11_1_ccr.RData")
+# Save
+save(Reps, file = "Data/Supplement/Reps_s11_1_ccr.RData")
 
 # Plot the data 
-sfig_s11_b1 <- DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F, shuffle = T) + 
+sfig_s11_b1 <- DimPlot(Reps,
+                       reduction = "umap",
+                       group.by = "src",
+                       pt.size = 1,
+                       label = F,
+                       shuffle = T) + 
   theme(aspect.ratio = 1) + 
   ggtitle("Reps by Source") + 
   scale_color_npg(alpha = 1) +
@@ -1448,7 +1577,7 @@ sfig_s11_b1 <- DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, 
 sfig_s11_b1
 
 pdf("figures/supplement/s11/sfig_s11_b1.pdf",
-     width = 6,
+    width = 6,
     height = 6)
 sfig_s11_b1
 dev.off()
@@ -1463,17 +1592,22 @@ library(cowplot)
 library(Seurat)
 set.seed(100)
 
-cellecta.lung.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/filtered_feature_bc_matrix/", 
+# Cellecta
+cellecta.lung.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/filtered_feature_bc_matrix/",
                                 spec = "mixHuman")
-cellecta.lung.raw <- subset(cellecta.lung.raw, subset = percent.mt <20 & percent.mt > 2)
+cellecta.lung.raw <- subset(cellecta.lung.raw,
+                            subset = percent.mt < 20 &
+                              percent.mt > 2)
 cellecta.lung.raw$src <- "Replicate_02"
 cellecta.lung.raw$cond <- "Lung"
 
 #Zymo
-
-zymo.lung.raw<- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix/", 
+zymo.lung.raw<- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix/",
                            spec = "mixHuman")
-zymo.lung.raw <- subset(zymo.lung.raw, subset = nFeature_RNA >1250 & nCount_RNA <60000 & percent.mt <25)
+zymo.lung.raw <- subset(zymo.lung.raw,
+                        subset = nFeature_RNA > 1250 &
+                          nCount_RNA < 60000 &
+                          percent.mt < 25)
 zymo.lung.raw$src <- "Replicate_01"
 zymo.lung.raw$cond <- "Lung"
 
@@ -1498,9 +1632,11 @@ zymo.lung.raw <- processLTBC(zymo.lung.raw,
                              relative = T)
 
 # Merge into a single Seurat object
-Reps2 <- merge(cellecta.lung.raw, y = zymo.lung.raw,
-              add.cell.ids = c("Cellecta_lung", "Zymo_lung"),
-              project = "Heterogeneity")
+Reps2 <- merge(cellecta.lung.raw,
+               y = zymo.lung.raw,
+               add.cell.ids = c("Cellecta_lung",
+                                "Zymo_lung"),
+               project = "Heterogeneity")
 
 # Process and cluster
 Reps2 <- NormalizeData(Reps2) %>%
@@ -1513,24 +1649,36 @@ Reps2 <- NormalizeData(Reps2) %>%
 
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
-Reps2 <- CellCycleScoring(object = Reps2, s.features = s.genes,
-                         g2m.features = g2m.genes, set.ident = TRUE)
+Reps2 <- CellCycleScoring(object = Reps2,
+                          s.features = s.genes,
+                          g2m.features = g2m.genes,
+                          set.ident = TRUE)
 
 # Attempt to regress out the effects of cell cycle on these tumor cells
-Reps2 <- CellCycleScoring(object = Reps2, s.features = s.genes,
-                         g2m.features = g2m.genes, set.ident = TRUE)
+Reps2 <- CellCycleScoring(object = Reps2,
+                          s.features = s.genes,
+                          g2m.features = g2m.genes,
+                          set.ident = TRUE)
 
-Reps2 <- ScaleData(object = Reps2, vars.to.regress = c("S.Score", "G2M.Score"),
-                  features = rownames(x = Reps2)) 
+Reps2 <- ScaleData(object = Reps2,
+                   vars.to.regress = c("S.Score",
+                                       "G2M.Score"),
+                   features = rownames(x = Reps2))
+
 Reps2 <- RunPCA(Reps2, pc.genes = Reps2@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
   FindNeighbors(reduction = "pca", dims = 1:20) %>%
   FindClusters(resolution = 0.3)
 
-#save(Reps2, file = "Data/Supplement/Reps_s11_2_lung_ccr.RData")
+save(Reps2, file = "Data/Supplement/Reps_s11_2_lung_ccr.RData")
 
 # Plot the data 
-sfig_s11_b2 <- DimPlot(Reps2, reduction = "umap", group.by = "src", pt.size = 1, label = F, shuffle = T) + 
+sfig_s11_b2 <- DimPlot(Reps2,
+                       reduction = "umap",
+                       group.by = "src",
+                       pt.size = 1,
+                       label = F,
+                       shuffle = T) + 
   theme(aspect.ratio = 1) + 
   ggtitle("Reps by Source") + 
   scale_color_npg(alpha = 1) +
@@ -1538,7 +1686,7 @@ sfig_s11_b2 <- DimPlot(Reps2, reduction = "umap", group.by = "src", pt.size = 1,
 sfig_s11_b2
 
 pdf("figures/supplement/s11/sfig_s11_b2.pdf",
-     width = 6,
+    width = 6,
     height = 6)
 sfig_s11_b2
 dev.off()
@@ -1547,47 +1695,51 @@ dev.off()
 ```{r s11_correctplots}
 # Add lineage tracing tags to the Seurat objects
 sfig_s11_a1 <- processLTBC(cellecta.cx.raw,
-                               lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/lt.fq",
-                               cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/cid.fq",
-                               histogram = T,
-			       plot.only = T,
-                               title = "Culture",
-                               ymax = 10,
-                               col.fill = "#E64B35FF",
-                               relative = T) + ggtitle("Replicate #2 Lineage Tag Enrichment Analysis", subtitle="Culture")
+                           lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/lt.fq",
+                           cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/cid.fq",
+                           histogram = T,
+                           plot.only = T,
+                           title = "Culture",
+                           ymax = 10,
+                           col.fill = "#E64B35FF",
+                           relative = T) +
+  ggtitle("Replicate #2 Lineage Tag Enrichment Analysis",
+          subtitle="Culture")
 pdf("figures/supplement/s11/sfig_s11_a1.pdf",
-     width = 8,
+    width = 8,
     height = 2)
 sfig_s11_a1 
 dev.off()
 
 # Add lineage tracing tags to the Seurat objects
 sfig_s11_a2 <- processLTBC(cellecta.lung.raw,
-                                 lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/lt.fq",
-                                 cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/cid.fq",
-                                 histogram = T,
-				 plot.only = T,
-                                 title = "Lung",
-                                 ymax = 10,
-                                 col.fill = "#E64B35FF",
-                                 relative = T)
+                           lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/lt.fq",
+                           cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/cid.fq",
+                           histogram = T,
+                           plot.only = T,
+                           title = "Lung",
+                           ymax = 10,
+                           col.fill = "#E64B35FF",
+                           relative = T)
 pdf("figures/supplement/s11/sfig_s11_a2.pdf",
-     width = 8,
+    width = 8,
     height = 2)
 sfig_s11_a2
 dev.off()
 
 #Patchwork 
-
 layout <- "
 AAAACCDD
 BBBBCCDD
 "
-
-s11 <- (sfig_s11_a1+theme(aspect.ratio = 1)) + sfig_s11_a2 + sfig_s11_b1 + sfig_s11_b2 + plot_layout(design = layout)
+s11 <- sfig_s11_a1 +
+  sfig_s11_a2 +
+  sfig_s11_b1 +
+  sfig_s11_b2 +
+  plot_layout(design = layout)
 s11
 pdf("figures/supplement/s11/s11.pdf",
-     width = 25,
+    width = 25,
     height = 5)
 s11
 dev.off()
@@ -1599,15 +1751,19 @@ BBBB
 CCDD
 CCDD
 "
-
-s11 <- sfig_s11_a1 + sfig_s11_a2 + sfig_s11_b1 + sfig_s11_b2 + plot_layout(design = layout)
+s11 <- sfig_s11_a1 +
+  sfig_s11_a2 +
+  sfig_s11_b1 +
+  sfig_s11_b2 +
+  plot_layout(design = layout)
 s11
 pdf("figures/supplement/s11/s11v2.pdf",
-     width = 12,
+    width = 12,
     height = 9)
 s11
 dev.off()
 ```
 
-
-
+```{r session}
+sessionInfo()
+```
