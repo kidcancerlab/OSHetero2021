@@ -1,5 +1,5 @@
 ---
-title: "Supplemental Figures"
+title: "OSHetero2021 Supplement"
 author: "Sanjana Rajan, Emily Franz, Matthew Cannon"
 date: "`r format(Sys.time(), '%m/%d/%Y')`"
 output: 
@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r lib, cache=FALSE}
+```{r Fig1_lib, cache=FALSE}
 source("scSeurat.R")
 source("Downstream.v2.R")
 set.seed(888)
@@ -52,8 +52,8 @@ library(pzfx)
 library(ggridges)
 library(effsize)
 library(perm)
-options(future.globals.maxSize= 891289600)
 
+options(future.globals.maxSize= 89128960000)
 ```
 
 # S1
@@ -87,7 +87,7 @@ sfig_s1_a1 <- DimPlot(os17.cx_noccr,
                       group.by = "Phase",
                       label = T) +
   scale_color_npg(alpha = 1) +
-  coord_fixed() +
+  theme(aspect.ratio = 1) +
   ggtitle("")
 sfig_s1_a1
 
@@ -108,8 +108,9 @@ sfig_s1_a2 <- DimPlot(os17.cx,
                       group.by = "Phase",
                       label = F) +
   scale_color_npg(alpha = 1) +
-  coord_fixed() +
+  theme(aspect.ratio = 1) +
   ggtitle("")
+sfig_s1_a2
 
 pdf("figures/supplement/s1/sfig_s1_a2.pdf",
        height = 5,
@@ -124,9 +125,9 @@ sfig_s1_b1 <- DimPlot(os17.cx_noccr,
                       label = T,
                       reduction = "pca") +
   scale_color_npg(alpha = 1) +
-  coord_fixed() +
+  theme(aspect.ratio = 1) +
   ggtitle("")
-sfig_s1_a1
+sfig_s1_b1
 
 pdf("figures/supplement/s1/sfig_s1_b1.pdf",
        height = 5,
@@ -145,8 +146,9 @@ sfig_s1_b2 <- DimPlot(os17.cx,
                       label = F,
                       reduction = "pca") +
   scale_color_npg(alpha = 1) +
-  coord_fixed() +
+  theme(aspect.ratio = 1) +
   ggtitle("")
+sfig_s1_b2
 
 pdf("figures/supplement/s1/sfig_s1_b2.pdf",
        height = 5,
@@ -154,8 +156,8 @@ pdf("figures/supplement/s1/sfig_s1_b2.pdf",
 sfig_s1_b2
 dev.off()
 
-# Cell-cycle genes
-RidgePlot(os17.cx,
+# Cell-cycle genes Pre-CCR
+sfig_s1_c1 <- RidgePlot(os17.cx_noccr,
           features = c("PCNA",
                        "TOP2A",
                        "MCM6",
@@ -163,13 +165,54 @@ RidgePlot(os17.cx,
           group.by = "Phase",
           ncol = 2,
           same.y.lims = T,
-          slot = "scale.data",
           combine = T)
+sfig_s1_c1
+pdf("figures/supplement/s1/sfig_s1_c1.pdf",
+       height = 4,
+       width = 8)
+sfig_s1_c1
+dev.off()
 
-pdf("figures/supplement/s1/sfig_s1_b2.pdf",
-       height = 5,
-       width = 6)
-sfig_s1_b2
+
+# Cell-cycle genes - post-CCR
+sfig_s1_c2 <- RidgePlot(os17.cx,
+          features = c("PCNA",
+                       "TOP2A",
+                       "MCM6",
+                       "MKI67"),
+          group.by = "Phase",
+          ncol = 2,
+          same.y.lims = T,
+          combine = T,
+	  slot = "scale.data")
+sfig_s1_c2
+pdf("figures/supplement/s1/sfig_s1_c2.pdf",
+       height = 4,
+       width = 8)
+sfig_s1_c2
+dev.off()
+```
+
+```{r s1_group}
+
+s1 <- (sfig_s1_a1 | sfig_s1_a2) /  
+     (sfig_s1_b1 | sfig_s1_b2) / 
+     (sfig_s1_c1 | sfig_s1_c2)
+s1
+pdf("figures/supplement/s1/s1.pdf",
+       height = 12,
+       width = 12)
+s1
+dev.off()
+
+
+s1_v2 <- (sfig_s1_a1 + sfig_s1_b1 + sfig_s1_c1) /  
+     (sfig_s1_a2 + sfig_s1_b2 + sfig_s1_c2)
+s1_v2
+pdf("figures/supplement/s1/s1_v2.pdf",
+       height = 8,
+       width = 15)
+s1_v2
 dev.off()
 ```
 
@@ -208,7 +251,9 @@ OB_ccr <- ScaleData(object = OB,
 
 # Save
 save(OB_ccr, file = "Data/Supplement/OB_ccr.RData")
+```
 
+```{r obplot}
 #### S2 A1: OB UMAP ####
 OB_ccr <- RunPCA(OB_ccr, pc.genes = OB_ccr@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
@@ -224,7 +269,6 @@ OB_ccr <- OB_ccr %>%
 
 sfig_s2_a1 <- DimPlot(OB_ccr,
                       label = T) +
-  coord_fixed() +
   ggtitle("Osteoblasts") +
   NoLegend() +
   NoAxes() +
@@ -246,6 +290,7 @@ pdf("figures/supplement/s2/sfig_s2_a2_OB_pie.pdf",
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(1, 2)))
 
+pies <- list()
 for (i in 1:2) {
   temp <- WhichCells(OB_ccr, idents = cid[[i]])
   LT.cells <- subset(OB_ccr, cells = temp)
@@ -257,7 +302,7 @@ for (i in 1:2) {
     theme_minimal() +
     NoAxes() + NoLegend() +
     ggtitle(paste("Cluster", cid[[i]]))
-  
+  pies[[i]] <- pie
   print(pie, vp = vplayout(ceiling(i/2), i))
 }
 dev.off()
@@ -310,10 +355,28 @@ sfig_s2_b <- temp1 %>%
 sfig_s2_b
 
 # Save plot as PDF
-pdf("figures/supplement/s2/sfig_s2_b_OB_Pathway.pdf", height = 8, width = 8)
+pdf("figures/supplement/s2/sfig_s2_b_OB_Pathway.pdf", height = 6, width = 6)
 plot(sfig_s2_b)
 dev.off()
 ```
+
+
+```{r s2_group}
+
+layout <- "
+AAAA#DD
+AAAA#DD
+BBCC#DD"
+s2 <- (sfig_s2_a1+theme(aspect.ratio = 1)) + pies[[1]] + pies[[2]] +  
+       sfig_s2_b + plot_layout(design = layout)
+s2
+pdf("figures/supplement/s2/s2.pdf",
+       height = 7,
+       width = 11)
+s2
+dev.off()
+```
+
 
 # S3
 
@@ -334,29 +397,40 @@ OS$model <- factor(as.factor(OS$model),
 
 #### S3 A ####
 # Plot the data
-sfig_s3_a_temp <- DimPlot(OS,
+sfig_s3_a1 <- DimPlot(OS,
                           reduction = "umap",
                           group.by = "src",
                           pt.size = 1,
                           label = F) +
-  coord_fixed() +
+  theme(aspect.ratio = 1) +
   ggtitle("OS by Tissue Source") +
   scale_color_npg(alpha = 1)
-sfig_s3_a_temp
+sfig_s3_a1
 
-sfig_s3_a <- DimPlot(OS,
-                     reduction = "umap",
-                     group.by = "model",
-                     pt.size = 1, label = T) +
-  coord_fixed() +
-  ggtitle("OS by Model") +
-  scale_color_npg(alpha = 1)
-sfig_s3_a
-
-pdf("figures/supplement/s3/sfig_s3_a",
+pdf("figures/supplement/s3/sfig_s3_a1.pdf",
     height = 5,
     width = 5)
-sfig_s3_a
+sfig_s3_a1
+dev.off()
+
+sfig_s3_a2 <- DimPlot(OS,
+                     reduction = "umap",
+                     group.by = "model",
+                     pt.size = 1,
+		     label = F,
+		     cols = c("#828282",
+                                "#E64B35FF",
+                                "#4DBBD5FF",
+                                "#00A087FF",
+                                "#3C5488FF")) +
+  theme(aspect.ratio = 1) +
+  ggtitle("OS by Model") 
+sfig_s3_a2
+
+pdf("figures/supplement/s3/sfig_s3_a2.pdf",
+    height = 5,
+    width = 5)
+sfig_s3_a2
 dev.off()
 
 #### S3 B: Harmony ####
@@ -376,18 +450,53 @@ sfig_s3_b <- DimPlot(OS_harmony,
                      reduction = "umap",
                      group.by = "model",
                      pt.size = 1,
-                     label = T,
-                     repel = T) +
+                     label = F,
+		     cols = c("#828282",
+                                "#E64B35FF",
+                                "#4DBBD5FF",
+                                "#00A087FF",
+                                "#3C5488FF")) +
   coord_fixed() +
-  ggtitle("OS by Model") +
-  scale_color_npg(alpha = 1)
+  ggtitle("OS by Model") 
 sfig_s3_b
 
-pdf("figures/supplement/s3/sfig_s3_b",
+pdf("figures/supplement/s3/sfig_s3_b.pdf",
     height = 5,
     width = 5)
 sfig_s3_b
 dev.off()
+```
+
+```{r s3_group}
+sfig_s3_b <- DimPlot(OS_harmony,
+                     reduction = "umap",
+                     group.by = "model",
+                     pt.size = 1,
+                     label = F,
+		     shuffle = T,
+		     cols = c("#828282",
+                                "#E64B35FF",
+                                "#4DBBD5FF",
+                                "#00A087FF",
+                                "#3C5488FF")) +
+  coord_fixed() +
+  ggtitle("OS by Model") 
+sfig_s3_b
+
+
+s3 <- (sfig_s3_a2 | sfig_s3_b)
+s3
+
+pdf("figures/supplement/s3/s3.pdf",
+    height = 5,
+    width = 10)
+s3
+dev.off()
+
+#CLEAN
+# BatchEffectCorrectionSCTransform - all
+rm(list=setdiff(ls(), "tenXLoadQC"))
+options(future.globals.maxSize= 8912896000000)
 ```
 
 # S4
@@ -396,10 +505,11 @@ dev.off()
 ```{r s4}
 # Determine overlay of replicates with or without the use batch-effect correction methods such
 # as Harmony, FastMNN
-options(future.globals.maxSize= 8912896000)
+options(future.globals.maxSize= 891289600)
 
 # Clean up environment
 rm(list=setdiff(ls(), "tenXLoadQC"))
+
 source("scSeurat.R")
 source("Downstream.v2.R")
 # loading libraries
@@ -411,10 +521,7 @@ set.seed(108)
 library(harmony)
 #library(SeuratData)
 library(SeuratWrappers)
-
 # Cellecta - Replicate 1 Load cell culture data
-#cellecta.cx.raw <- tenXLoadQC("R:/RESRoberts/Bioinformatics/scRNAOuts/S0015-cellecta/outs/filtered_feature_bc_matrix/",
-#    spec = "mixHuman")
 cellecta.cx.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/filtered_feature_bc_matrix/",
                               spec = "mixHuman")
 cellecta.cx.raw <- subset(cellecta.cx.raw,
@@ -423,7 +530,7 @@ cellecta.cx.raw <- subset(cellecta.cx.raw,
                             percent.mt < 14)
 cellecta.cx.raw$src <- "Cellecta_Cx"
 cellecta.cx.raw$cond <- "Plate"
-cellecta.cx.raw$rep <- "Rep1"
+cellecta.cx.raw$rep <- "Rep2"
 
 # Load orthotopic lung data
 cellecta.lung.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/filtered_feature_bc_matrix/",
@@ -433,7 +540,7 @@ cellecta.lung.raw <- subset(cellecta.lung.raw,
                               percent.mt > 2)
 cellecta.lung.raw$src <- "Cellecta_Lung"
 cellecta.lung.raw$cond <- "Lung"
-cellecta.lung.raw$rep <- "Rep1"
+cellecta.lung.raw$rep <- "Rep2"
 
 # Zymo - Replicate 2
 zymo.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0016-zymo/outs/filtered_feature_bc_matrix/",
@@ -444,7 +551,7 @@ zymo.cx.raw <- subset(zymo.cx.raw,
                         percent.mt < 15)
 zymo.cx.raw$src <- "Zymo_Cx"
 zymo.cx.raw$cond <- "Plate"
-zymo.cx.raw$rep <- "Rep2"
+zymo.cx.raw$rep <- "Rep1"
 
 # Load orthotopic bone data
 zymo.tib.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0018xS0028/outs/filtered_feature_bc_matrix/",
@@ -455,7 +562,7 @@ zymo.tib.raw <- subset(zymo.tib.raw,
                          percent.mt < 18)
 zymo.tib.raw$src <- "Zymo_Tib"
 zymo.tib.raw$cond <- "Bone"
-zymo.tib.raw$rep <- "Rep2"
+zymo.tib.raw$rep <- "Rep1"
 
 # Load orthotopic lung data
 zymo.lung.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix/",
@@ -466,7 +573,7 @@ zymo.lung.raw <- subset(zymo.lung.raw,
                           percent.mt < 25)
 zymo.lung.raw$src <- "Zymo_Lung"
 zymo.lung.raw$cond <- "Lung"
-zymo.lung.raw$rep <- "Rep2"
+zymo.lung.raw$rep <- "Rep1"
 
 # Subset to least number of cells across all conditions (Cell culture and orthotopic lung)
 # Subset all to #1900 cells
@@ -583,111 +690,360 @@ DimPlot(Rep1_H_v3,
 # ncol = 2) + coord_fixed() + scale_color_npg(alpha = 0.7)
 ```
 
-```{r s4_1}
-# BatchEffectCorrectionSCTransform - all
-source("scSeurat.R")
-library(dplyr)
-library(ggplot2)
-library(harmony)
-library(cowplot)
-library(Seurat)
-set.seed(100)
+```{r s4_correctedplots}
+#save(Rep1_H_v3, file = "Data/Supplement/Rep1_H_v3-FastMNN.RData")
+load("Data/Supplement/Rep1_H_v3-FastMNN.RData")
+# By rep
+sfig_s4_a1 <- DimPlot(Rep1_H_v3,
+        reduction = "umap",
+        pt.size = 1,
+        label = F,
+        group.by = "rep") +
+  theme(aspect.ratio = 1) +
+  scale_color_npg(alpha = 1) +
+  ggtitle("FastMNN by Replicate") +
+  NoAxes()
+sfig_s4_a1
 
-load("Data/OS_merged_postCCR.RData")
-# Integrate using Seurats SCTransform Integration workflow
-OSrep.list <- SplitObject(OS, split.by = "src")
-
-for (i in 1:length(OSrep.list)) {
-  OSrep.list[[i]] <- SCTransform(OSrep.list[[i]], verbose = FALSE)
-}
-
-OSrep.features <- SelectIntegrationFeatures(object.list = OSrep.list, nfeatures = 3000)
-OSrep.list <- PrepSCTIntegration(object.list = OSrep.list, anchor.features = OSrep.features, verbose = FALSE)
-OSrep.anchors <- FindIntegrationAnchors(object.list = OSrep.list, normalization.method = "SCT",
-    anchor.features = OSrep.features, verbose = FALSE)
-OSrep.integrated <- IntegrateData(anchorset = OSrep.anchors, normalization.method = "SCT", verbose = FALSE)
-
-OSrep.integrated <- RunPCA(OSrep.integrated, verbose = FALSE)
-OSrep.integrated <- RunUMAP(OSrep.integrated, dims = 1:30)
-
-saveRDS(OSrep.integrated, file = "Data/Supplement/OSrep.integrated.rds")
-
-pdf("figures/supplement/s4/OSrep.integrated.Phase_v2.pdf")
-DimPlot(OSrep.integrated, reduction = "umap", group.by = "Phase", pt.size = 1, label = F) + coord_fixed() + ggtitle("OS by Source") +
-    scale_color_npg(alpha = 1)
+pdf("figures/supplement/s4/sfig_s4_a1.pdf",
+    height = 5,
+    width = 5)
+sfig_s4_a1
 dev.off()
 
-pdf("figures/supplement/s4/OSrep.integrated_v2.pdf")
-DimPlot(OSrep.integrated, reduction = "umap", pt.size = 1, label = T) + coord_fixed() + ggtitle("OS Clusters")
-scale_color_npg(alpha = 1)
+# By cell cycle phase
+sfig_s4_a2 <- DimPlot(Rep1_H_v3,
+        reduction = "umap",
+        pt.size = 1,
+        label = F,
+        group.by = "Phase") +
+  theme(aspect.ratio = 1) +
+  scale_color_npg(alpha = 1) +
+  ggtitle("FastMNN by Phase") +
+  NoAxes()
+sfig_s4_a2
+
+pdf("figures/supplement/s4/sfig_s4_a2.pdf",
+    height = 5,
+    width = 5)
+sfig_s4_a2
+dev.off()
+
+# By src
+# Rename src to match paper
+Rep1_H_v3$src[grep("Cellecta_Cx", Rep1_H_v3$src)] <- "Rep1 - Cell Culture"
+Rep1_H_v3$src[grep("Cellecta_Lung", Rep1_H_v3$src)] <- "Rep1 - Lung"
+Rep1_H_v3$src[grep("Zymo_Cx", Rep1_H_v3$src)] <- "Rep2 - Cell Culture"
+Rep1_H_v3$src[grep("Zymo_Lung", Rep1_H_v3$src)] <- "Rep2 - Lung"
+
+sfig_s4_a3 <- DimPlot(Rep1_H_v3,
+        reduction = "umap",
+        pt.size = 1,
+        label = F,
+        group.by = "src") +
+  theme(aspect.ratio = 1) +
+  #scale_color_npg(alpha = 1) +
+  ggtitle("FastMNN by Type") +
+  NoAxes()
+sfig_s4_a3
+
+pdf("figures/supplement/s4/sfig_s4_a3.pdf",
+    height = 5,
+    width = 6)
+sfig_s4_a3
 dev.off()
 ```
 
-```{r s4_2}
-# BatchEffectCorrectionSCTransform - all
-source("scSeurat.R")
-library(dplyr)
-library(ggplot2)
-library(harmony)
-library(cowplot)
+```{r s4_b}
+library(sctransform)
 library(Seurat)
-set.seed(100)
+library(ggsci)
+options(future.globals.maxSize=89128960000)
+set.seed(108)
+#save(Rep1_H, file = "Data/Supplement/Rep1_H.RData")
+load("Data/Supplement/Rep1_H.RData")
 
-load("Data/OS_merged_postCCR.RData")
+Rep1_H_sct <- SplitObject(Rep1_H, split.by = "src")
 
-# Integrate using Seurats SCTransform Integration workflow
-OSrep.list <- SplitObject(OS, split.by = "src")
-
-for (i in 1:length(OSrep.list)) {
-    OSrep.list[[i]] <- SCTransform(OSrep.list[[i]], verbose = FALSE)
+for (i in 1:length(Rep1_H_sct)) {
+    Rep1_H_sct[[i]] <- SCTransform(Rep1_H_sct[[i]], verbose = FALSE)
 }
 
-OSrep.features <- SelectIntegrationFeatures(object.list = OSrep.list,
+Rep1_H.features <- SelectIntegrationFeatures(object.list = Rep1_H_sct,
                                             nfeatures = 3000)
-OSrep.list <- PrepSCTIntegration(object.list = OSrep.list,
-                                 anchor.features = OSrep.features,
+Rep1_H_sct <- PrepSCTIntegration(object.list = Rep1_H_sct,
+                                 anchor.features = Rep1_H.features,
                                  verbose = FALSE)
-OSrep.anchors <- FindIntegrationAnchors(object.list = OSrep.list,
+Rep1_H_sct.anchors <- FindIntegrationAnchors(object.list = Rep1_H_sct,
                                         normalization.method = "SCT",
-                                        anchor.features = OSrep.features,
+                                        anchor.features = Rep1_H.features,
                                         verbose = FALSE)
-OSrep.integrated <- IntegrateData(anchorset = OSrep.anchors,
+Rep1_H_sct.integrated <- IntegrateData(anchorset = Rep1_H_sct.anchors,
                                   normalization.method = "SCT",
                                   verbose = FALSE)
 
-OSrep.integrated <- RunPCA(OSrep.integrated, verbose = FALSE)
-OSrep.integrated <- RunUMAP(OSrep.integrated, dims = 1:30)
+Rep1_H_sct.integrated <- RunPCA(Rep1_H_sct.integrated, verbose = FALSE)
+Rep1_H_sct.integrated <- RunUMAP(Rep1_H_sct.integrated, dims = 1:30)
 
-saveRDS(OSrep.integrated, file = "Data/Supplement/OSrep.integrated_v2.rds")
+saveRDS(Rep1_H_sct.integrated, file = "Data/Supplement/Rep1_H_sct.integrated.rds")
 
-pdf("figures/supplement/s4/OSrep.integrated.Phase.pdf")
-DimPlot(OSrep.integrated,
+
+sfig_s4_b1 <- DimPlot(Rep1_H_sct.integrated,
+        reduction = "umap",
+        group.by = "rep",
+        pt.size = 1,
+        label = F) +
+  theme(aspect.ratio = 1) +
+  ggtitle("SCTransform by Replicate") +
+  NoAxes()
+sfig_s4_b1
+
+pdf("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s4/sfig_s4_b1.pdf", height = 5, width = 5)
+sfig_s4_b1
+dev.off()
+
+sfig_s4_b2 <- DimPlot(Rep1_H_sct.integrated,
         reduction = "umap",
         group.by = "Phase",
         pt.size = 1,
         label = F) +
-  coord_fixed() +
-  ggtitle("OS by Phase") +
-  scale_color_npg(alpha = 1)
+  theme(aspect.ratio = 1) +
+  ggtitle("SCTransform by Phase") +
+  scale_color_npg(alpha = 1) +
+  NoAxes()
+sfig_s4_b2
+
+pdf("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s4/sfig_s4_b2.pdf", height = 5, width = 5)
+sfig_s4_b2
 dev.off()
 
-pdf("figures/supplement/s4/OSrep.integrated.pdf")
-DimPlot(OSrep.integrated,
+# Rename src to match paper
+Rep1_H_sct.integrated$src[grep("Cellecta_Cx", Rep1_H_sct.integrated$src)] <- "Rep1 - Cell Culture"
+Rep1_H_sct.integrated$src[grep("Cellecta_Lung", Rep1_H_sct.integrated$src)] <- "Rep1 - Lung"
+Rep1_H_sct.integrated$src[grep("Zymo_Cx", Rep1_H_sct.integrated$src)] <- "Rep2 - Cell Culture"
+Rep1_H_sct.integrated$src[grep("Zymo_Lung", Rep1_H_sct.integrated$src)] <- "Rep2 - Lung"
+
+sfig_s4_b3 <- DimPlot(Rep1_H_sct.integrated,
         reduction = "umap",
+        group.by = "src",
         pt.size = 1,
-        label = T) +
-  coord_fixed() +
-  ggtitle("OS Clusters")
-scale_color_npg(alpha = 1)
+        label = F) +
+  theme(aspect.ratio = 1) +
+  ggtitle("SCTransform by Type") +
+  NoAxes()
+sfig_s4_b3
+
+pdf("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s4/sfig_s4_b3.pdf")
+sfig_s4_b3
 dev.off()
 
 ```
+```{r s4_group}
+s4 <- (sfig_s4_a1 | sfig_s4_a2 | sfig_s4_a3) /
+      (sfig_s4_b1 | sfig_s4_b2 | sfig_s4_b3)
+
+pdf("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s4/s4.pdf", height=5, width=20)
+s4
+dev.off()
+```
+
+```{r clean2, cache=FALSE}
+# BatchEffectCorrectionSCTransform - all
+options(future.globals.maxSize= 8912896000000)
+# Clean up environment
+rm(list=setdiff(ls(), "tenXLoadQC"))
+```
+
+```{r s4_c}
+set.seed(108)
+library(harmony)
+library(Seurat)
+library(tidyverse)
+load("Data/OS_list_CCR.RData")
+
+vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+pdf("figures/supplement/s2/sfig_s4_c.pdf",
+    width = 20,
+    height = 5)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 4)))
+
+OS_list_harmony <- list()
+for (i in 1:length(OS_list)) {
+  # Run Harmony
+  OS_list_harmony[[paste0(head(OS_list[[i]]@meta.data$model, 1))]] <- 
+   OS_list[[i]] %>%
+   RunPCA(pc.genes = OS_list_harmony[[i]]@var.genes, npcs = 20) %>%
+   RunHarmony(group.by.vars = "src", plot_convergence = T) %>%
+   RunUMAP(reduction = "harmony", dims = 1:20) %>%
+   FindNeighbors(reduction = "harmony", dims = 1:20) %>%
+   FindClusters(resolution = 0.2)
+
+  sfig_s4_temp <- DimPlot(OS_list_harmony[[i]],
+                 reduction = "umap",
+                 group.by = "src",
+                 pt.size = 1,
+                 label = F) +
+  theme(aspect.ratio = 1) +
+    ggtitle(paste0(head(OS_list_harmony[[i]]@meta.data$model, 1), " Harmony")) +
+    NoAxes()
+
+  #pdf(paste0("figures/supplement/s4/sfig_s4_c",
+  # i,
+  # ".pdf"))
+  # print(sfig_s4_temp)
+  #dev.off()
+  
+  print(sfig_s4_temp, vp = vplayout(ceiling(i/4), i))
+}
+dev.off()
+```
+
+```{r s4_c_original}
+source("scSeurat.R")
+library("harmony")
+set.seed(100)
+# Copied from Sanjana's original harmony code (Harmony_v2.R)
+# Reflects preliminary analysis of datasets
+# So, methods and cutoffs used here are not exactly as in the final version used for the main paper figures
+
+#Tibia
+S0018 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0018-zymo-tib/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
+S0018 <- subset(S0018, subset = nFeature_RNA >1500 & nCount_RNA <50000 & percent.mt <20)
+S0018 <- NormalizeData(S0018)
+S0018 <- FindVariableFeatures(S0018, selection.method = "vst")
+S0018 <- ScaleData(S0018)
+S0018 <- RunPCA(S0018, pc.genes = S0018@var.genes, npcs = 20)
+
+S0042 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0042/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
+S0042 <- subset(S0042, subset = nFeature_RNA >1500 & nCount_RNA <40000 & percent.mt <40)
+S0042 <- NormalizeData(S0042)
+S0042 <- FindVariableFeatures(S0042, selection.method = "vst")
+S0042 <- ScaleData(S0042)
+S0042 <- RunPCA(S0042, pc.genes = S0042@var.genes, npcs = 20)
+
+S0034 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0034/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
+S0034 <- subset(S0034, subset = nFeature_RNA >1500 & nCount_RNA <30000 & percent.mt <20)
+S0034 <- NormalizeData(S0034)
+S0034 <- FindVariableFeatures(S0034, selection.method = "vst")
+S0034 <- ScaleData(S0034)
+S0034 <- RunPCA(S0034, pc.genes = S0034@var.genes, npcs = 20)
+
+#Lung
+S0024 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
+S0024 <- subset(S0024, subset = nFeature_RNA >1500 & nCount_RNA <60000 & percent.mt <35)
+S0024 <- NormalizeData(S0024)
+S0024 <- FindVariableFeatures(S0024, selection.method = "vst")
+S0024 <- ScaleData(S0024)
+S0024 <- RunPCA(S0024, pc.genes = S0024@var.genes, npcs = 20)
+
+S0041 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0041/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
+S0041 <- subset(S0041, subset = nFeature_RNA >1500 & nCount_RNA <60000 & percent.mt <40)
+S0041 <- NormalizeData(S0041)
+S0041 <- FindVariableFeatures(S0041, selection.method = "vst")
+S0041 <- ScaleData(S0041)
+S0041 <- RunPCA(S0041, pc.genes = S0041@var.genes, npcs = 20)
+
+S0055 <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0055/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
+S0055 <- subset(S0055, subset = nFeature_RNA >1500 & nCount_RNA <50000 & percent.mt <40)
+S0055 <- NormalizeData(S0055)
+S0055 <- FindVariableFeatures(S0055, selection.method = "vst")
+S0055 <- ScaleData(S0055)
+S0055 <- RunPCA(S0055, pc.genes = S0055@var.genes, npcs = 20)
+
+
+S0018$src <- "S0018-OS17-tibia"
+S0042$src <- "S0042-NCHOS2-tibia"
+S0034$src <- "S0034-NCHOS7-tibia"
+S0024$src <- "S0024-OS17-lung"
+S0041$src <- "S0041-NCHOS2-lung"
+S0055$src <- "S0055-NCHOS7-lung"
+
+S0018$cond <- "Tibia"
+S0042$cond <- "Tibia"
+S0034$cond <- "Tibia"
+S0024$cond <- "Lung"
+S0041$cond <- "Lung"
+S0055$cond <- "Lung"
+
+#Subset number of cells in each Seurat object to the least in the group
+a <- table(S0018$orig.ident)
+b <- table(S0042$orig.ident)
+c <- table(S0034$orig.ident)
+d <- table(S0024$orig.ident)
+e <- table(S0041$orig.ident)
+f <- table(S0055$orig.ident)
+
+list <- c(a, b, c, d, e, f)
+min <- min(list)
+
+S0018 <- subset(S0018, cells = sample(Cells(S0018), min))
+S0042 <- subset(S0042, cells = sample(Cells(S0042), min))
+S0034 <- subset(S0034, cells = sample(Cells(S0034), min))
+S0024 <- subset(S0024, cells = sample(Cells(S0024), min))
+S0041 <- subset(S0041, cells = sample(Cells(S0041), min))
+S0055 <- subset(S0055, cells = sample(Cells(S0055), min))
+
+comb <- merge(S0018, y = c(S0042, S0034, S0024, S0041, S0055), 
+              add.cell.ids = c("S0018","S0042", "S0034", "S0024", "S0041", "S0055"), 
+              project = "Tibia_Lung")
+comb <- NormalizeData(comb)
+comb <- FindVariableFeatures(comb, selection.method = "vst")
+comb <- ScaleData(comb)
+comb <- RunPCA(comb, pc.genes = comb@var.genes, npcs = 20)
+comb <- RunHarmony(comb, group.by.vars = "src", plot_convergence = T)
+
+# Attempt to regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+# s.genes <- paste0('hg19-', s.genes)
+# g2m.genes <- paste0('hg19-', g2m.genes)
+comb<- CellCycleScoring(object = comb, s.features = s.genes,
+                        g2m.features = g2m.genes, set.ident = TRUE)
+# 
+# # Regress out features associated with cell cycle
+# comb <- ScaleData(object = comb, vars.to.regress = c("S.Score", "G2M.Score"), 
+#                   features = rownames(x = comb))
+# comb <- RunPCA(comb, pc.genes = comb@var.genes, npcs = 20)
+
+DimPlot(comb, reduction = "pca", group.by = "src")
+DimPlot(comb, reduction = "harmony", group.by = "src")
+DimPlot(comb, group.by = "Phase")
+
+comb <- RunUMAP(comb, reduction = "harmony", dims = 1:20)
+comb <- FindNeighbors(comb, reduction = "harmony", dims = 1:20)
+comb <- FindClusters(comb, resolution = 0.3)
+
+DimPlot(comb, reduction = "umap", group.by = "Phase") + coord_fixed()
+DimPlot(comb, reduction = "umap", group.by = "src") + coord_fixed()
+DimPlot(comb, reduction = "umap") + coord_fixed()
+
+saveRDS(comb, file = "Data/Supplement/TL_02_Harmony.rds")
+
+#FeaturePlot(comb, features = c("IL6", "IL11", "CXCL8", "IL1A", "IL1B")) + coord_fixed()
+
+os <- subset(comb, idents = c(6, 5, 2, 0, 7))
+DimPlot(os, reduction = "umap", group.by = "cond") + coord_fixed()
+os <- NormalizeData(os)
+os <- FindVariableFeatures(os, selection.method = "vst")
+os <- ScaleData(os)
+os <- RunPCA(os, pc.genes = os@var.genes, npcs = 20)
+os <- RunHarmony(os, group.by.vars = "src", plot_convergence = T)
+os <- RunUMAP(os, reduction = "pca", dims = 1:20)
+os <- FindNeighbors(os, reduction = "pca", dims = 1:20)
+os <- FindClusters(os, resolution = 0.3)
+DimPlot(os, reduction = "umap", group.by = "cond") +coord_fixed()
+DimPlot(os, reduction = "umap") + coord_fixed()
+#FeaturePlot(os, features = c("IL6", "IL11", "CXCL8", "IL1A", "IL1B")) + coord_fixed()
+```
+
 
 # S5 & S6 & S7
 Patient data
 
 ```{r patientdata_5-6-7}
 library(rrrSingleCellUtils)
+library(patchwork)
 library(Seurat)
 library(ggplot2)
 library(tidyverse)
@@ -737,7 +1093,7 @@ type <- c("Primary",
           "Primary")
 
 # Download, file, and extract the files from GEO
-tar_dir <- "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/tar_dir"
+tar_dir <- "Data/Supplement/tar_dir"
 geo_pre <- "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE152nnn/GSE152048/suppl/GSE152048_"
 
 for (i in 1:length(s)) {
@@ -759,7 +1115,7 @@ for (i in 1:length(s)) {
 # Create a vector that contains normalized Seurat objects for all samples
 raw <- c()
 for (i in 1:9) {
-  s_obj <- tenx_load_qc(str_c("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/tar_dir/",
+  s_obj <- tenx_load_qc(str_c("tar_dir/",
                               s[i],
                               "/"))
   s_obj <- subset(s_obj,
@@ -795,39 +1151,39 @@ save(raw, file = "Data/Supplement/tar_dir/raw.RData")
 # For s5
 # Apply Glycolysis module score to each of the primary tumor cells
 gl <- list()
-Glycolysis <- read.table(file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/Glycolysis.txt",
+Glycolysis <- read.table(file = "pathways/Glycolysis.txt",
                          header = FALSE,
                          sep = ",")
 Glycolysis <- Glycolysis[, 1]
 
 # OxPhos <- read.table(file =
-# '/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/OxPhos.txt', header = FALSE, sep =
+# 'pathways/OxPhos.txt', header = FALSE, sep =
 # ',') OxPhos <- OxPhos[,1]
 
 # for s6
-Hypoxia <- read.table(file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/Hypoxia.txt",
+Hypoxia <- read.table(file = "pathways/Hypoxia.txt",
                       header = FALSE,
                       sep = ",")
 Hypoxia <- Hypoxia[, 1]
 
 # SASP <- read.table(file =
-# '/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/SASP.txt', header = FALSE, sep =
+# 'pathways/SASP.txt', header = FALSE, sep =
 # ',') SASP <- SASP[,1]
 
 # For S7
-EMT <- read.table(file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/EMT.txt",
+EMT <- read.table(file = "pathways/EMT.txt",
                   header = FALSE,
                   sep = ",")
 EMT <- EMT[, 1]
 
 # For s8
-TNFA <- read.table(file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/TNFA.txt",
+TNFA <- read.table(file = "pathways/TNFA.txt",
                    header = FALSE,
                    sep = ",")
 TNFA <- TNFA[, 1]
 
 # growth <- read.table(file =
-# '/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/growth.txt', header = FALSE, sep =
+# 'pathways/growth.txt', header = FALSE, sep =
 # ',') growth <- growth[,1]
 
 gl$Glycolysis <- Glycolysis
@@ -840,6 +1196,7 @@ mod_names <- names(gl)
 
 #### S5 ####
 # Glycolysis - Added min.cutoff to isolate for cells most module like
+gly <- list()
 for (i in 1:length(raw)) {
   raw[[i]] <- AddModuleScore(raw[[i]],
                              gl[1],
@@ -853,18 +1210,32 @@ for (i in 1:length(raw)) {
                    cols = c("lightgoldenrod",
                             "darkred")) +
     ggtitle(paste0(s[i])) +
-    coord_fixed()
+    theme(aspect.ratio = 1)
   
-  pdf(file = paste0("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s5/",
+  pdf(file = paste0("figures/supplement/s5/",
              names(gl[1]),
              "_FeaturePlot_",
              s[i],
              ".pdf"))
   print(p)
   dev.off()
+
+  gly[[i]] <- p
 }
+
+s5 <- gly[[1]]+gly[[2]]+gly[[3]]+
+       gly[[4]]+gly[[5]]+gly[[6]]+
+       gly[[7]]+gly[[8]]+gly[[9]]+plot_layout(ncol = 3)
+
+
+pdf(file = "figures/supplement/s5/s5.pdf", height=13, width=15)
+s5
+dev.off()
+
+
 #### S6 ####
 # Hypoxia - Added min.cutoff to isolate for cells most module like
+hypx <- list()
 for (i in 1:length(raw)) {
   raw[[i]] <- AddModuleScore(raw[[i]],
                              gl[2],
@@ -878,18 +1249,32 @@ for (i in 1:length(raw)) {
                    cols = c("lightgoldenrod",
                             "darkred")) +
     ggtitle(paste0(s[i])) +
-    coord_fixed()
+    theme(aspect.ratio = 1)
   
-  pdf(file = paste0("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s5/",
+  pdf(file = paste0("figures/supplement/s6/",
              names(gl[2]),
              "_FeaturePlot_",
              s[i],
              ".pdf"))
   print(p)
   dev.off()
+  
+  hypx[[i]] <- p
 }
+s6 <- hypx[[1]]+hypx[[2]]+hypx[[3]]+
+       hypx[[4]]+hypx[[5]]+hypx[[6]]+
+       hypx[[7]]+hypx[[8]]+hypx[[9]]+ 
+  plot_layout(ncol = 3)
+
+
+pdf(file = "figures/supplement/s6/s6.pdf", height=13, width=15)
+s6
+dev.off()
+
+
 #### S7 ####
 # EMT - Added min.cutoff to isolate for cells most module like
+emt <- list()
 for (i in 1:length(raw)) {
   raw[[i]] <- AddModuleScore(raw[[i]],
                              gl[3],
@@ -903,18 +1288,33 @@ for (i in 1:length(raw)) {
                    cols = c("lightgoldenrod",
                             "darkred")) +
     ggtitle(paste0(s[i])) +
-    coord_fixed()
+    theme(aspect.ratio = 1)
   
-  pdf(file = paste0("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s5/",
+  pdf(file = paste0("figures/supplement/s7/",
              names(gl[3]),
              "_FeaturePlot_",
              s[i],
              ".pdf"))
   print(p)
   dev.off()
+  
+  emt[[i]] <- p
 }
+
+s7 <- emt[[1]]+emt[[2]]+emt[[3]]+
+       emt[[4]]+emt[[5]]+emt[[6]]+
+       emt[[7]]+emt[[8]]+emt[[9]]+ 
+  plot_layout(ncol = 3)
+
+
+pdf(file = "figures/supplement/s7/s7.pdf", height=13, width=15)
+s7
+dev.off()
+
+
 #### S8 ####
 # TNFA - Added min.cutoff to isolate for cells most module like
+tnf <- list()
 for (i in 1:length(raw)) {
   raw[[i]] <- AddModuleScore(raw[[i]],
                              gl[4],
@@ -928,21 +1328,34 @@ for (i in 1:length(raw)) {
                    cols = c("lightgoldenrod",
                             "darkred")) +
     ggtitle(paste0(s[i])) +
-    coord_fixed()
+    theme(aspect.ratio = 1)
   
-  pdf(file = paste0("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s5/",
+  pdf(file = paste0("figures/supplement/s8/",
              names(gl[4]),
              "_FeaturePlot_",
              s[i],
              ".pdf"))
   print(p)
   dev.off()
+
+  tnf[[i]] <- p
 }
+
+s8 <- tnf[[1]]+tnf[[2]]+tnf[[3]]+
+       tnf[[4]]+tnf[[5]]+tnf[[6]]+
+       tnf[[7]]+tnf[[8]]+tnf[[9]]+ 
+  plot_layout(ncol = 3)
+
+
+pdf(file = "figures/supplement/s8/s8.pdf", height=13, width=15)
+s8
+dev.off()
 ```
 
-#S9 & S10 - Imaging
+# S9 & S10 - Imaging
 
-#S11
+
+# S11
 
 ```{r s11_1}
 source("scSeurat.R")
@@ -958,25 +1371,26 @@ library(dplyr) # %<%
 library(pheatmap)
 library(RColorBrewer)
 library(viridis) # inferno color palette
+set.seed(100)
 
 #Cellecta and Zymo, Cell culture 
 #Cellecta
 cellecta.cx.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
 cellecta.cx.raw <- subset(cellecta.cx.raw, subset = nFeature_RNA >2500 & nCount_RNA <40000 & percent.mt <14)
-cellecta.cx.raw$src <- "Replicate_01"
+cellecta.cx.raw$src <- "Replicate_02"
 cellecta.cx.raw$cond <- "Culture"
 
 #Zymo
 zymo.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0016-zymo/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
 zymo.cx.raw <- subset(zymo.cx.raw, subset = nFeature_RNA >3500 & nCount_RNA <50000 & percent.mt <15)
-zymo.cx.raw$src <- "Replicate_02"
+zymo.cx.raw$src <- "Replicate_01"
 zymo.cx.raw$cond <- "Culture"
 
 
 # Add lineage tracing tags to the Seurat objects
 cellecta.cx.raw <- processLTBC(cellecta.cx.raw,
-                               lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/S0015-cellecta/lt.fq",
-                               cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/S0015-cellecta/cid.fq",
+                               lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/lt.fq",
+                               cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/cid.fq",
                                histogram = T,
                                title = "Cx - Cellecta, Top 40 Clones",
                                ymax = 10,
@@ -1011,10 +1425,6 @@ s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
 Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
                          g2m.features = g2m.genes, set.ident = TRUE)
-DimPlot(Reps, reduction = "umap", pt.size = 1, label = F) + 
-  coord_fixed() + 
-  ggtitle("Reps by Source") + 
-  scale_color_npg(alpha = 0.7)
 
 # Attempt to regress out the effects of cell cycle on these tumor cells
 Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
@@ -1027,31 +1437,38 @@ Reps <- RunPCA(Reps, pc.genes = Reps@var.genes, npcs = 20) %>%
   FindNeighbors(reduction = "pca", dims = 1:20) %>%
   FindClusters(resolution = 0.3)
 
+#save(Reps, file = "Data/Supplement/Reps_s11_1_ccr.RData")
+
 # Plot the data 
-DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F) + 
+sfig_s11_b1 <- DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F, shuffle = T) + 
   coord_fixed() + 
   ggtitle("Reps by Source") + 
-  scale_color_npg(alpha = 1)
-DimPlot(Reps, reduction = "umap", pt.size = 1, label = T) + 
-  coord_fixed() + 
-  ggtitle("Reps Clusters") + 
-  scale_color_npg(alpha = 0.7)
+  scale_color_npg(alpha = 1) +
+  ggtitle("OS17 in Cell Culture (replicates)")
+sfig_s11_b1
 
-#Identify clones that are most enriched in the two replicates
-# Show where cells with common ancestors fall within the transcriptional phenotype clusters
-DimPlot(Reps, reduction = "umap", group.by = "Phase", pt.size = 1)+coord_fixed()
-DimPlot(Reps, reduction = "umap", label = T, pt.size = 1)+coord_fixed()
-#cell.ids <- sample(colnames(Reps))
-
+pdf("figures/supplement/s11/sfig_s11_b1.pdf",
+     width = 6,
+    height = 6)
+sfig_s11_b1
+dev.off()
 ```
 
 ```{r s11_2}
+source("scSeurat.R")
+library(dplyr)
+library(ggplot2)
+library(harmony)
+library(cowplot)
+library(Seurat)
+set.seed(100)
+
 rm(Reps)
 
 cellecta.lung.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/filtered_feature_bc_matrix/", 
                                 spec = "mixHuman")
 cellecta.lung.raw <- subset(cellecta.lung.raw, subset = percent.mt <20 & percent.mt > 2)
-cellecta.lung.raw$src <- "Replicate_01"
+cellecta.lung.raw$src <- "Replicate_02"
 cellecta.lung.raw$cond <- "Lung"
 
 #Zymo
@@ -1059,13 +1476,13 @@ cellecta.lung.raw$cond <- "Lung"
 zymo.lung.raw<- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix/", 
                            spec = "mixHuman")
 zymo.lung.raw <- subset(zymo.lung.raw, subset = nFeature_RNA >1250 & nCount_RNA <60000 & percent.mt <25)
-zymo.lung.raw$src <- "Replicate_02"
+zymo.lung.raw$src <- "Replicate_01"
 zymo.lung.raw$cond <- "Lung"
 
 # Add lineage tracing tags to the Seurat objects
 cellecta.lung.raw <- processLTBC(cellecta.lung.raw,
-                                 lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/lt.fq",
-                                 cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/cid.fq",
+                                 lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/lt.fq",
+                                 cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/cid.fq",
                                  histogram = T,
                                  title = "Lung - Cellecta, Top 40 Clones",
                                  ymax = 10,
@@ -1087,7 +1504,6 @@ Reps <- merge(cellecta.lung.raw, y = zymo.lung.raw,
               add.cell.ids = c("Cellecta_lung", "Zymo_lung"),
               project = "Heterogeneity")
 
-
 # Process and cluster
 Reps <- NormalizeData(Reps) %>%
   FindVariableFeatures(selection.method = "vst") %>%
@@ -1101,10 +1517,6 @@ s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
 Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
                          g2m.features = g2m.genes, set.ident = TRUE)
-DimPlot(Reps, reduction = "umap", pt.size = 1, label = F) + 
-  coord_fixed() + 
-  ggtitle("Reps by Source") + 
-  scale_color_npg(alpha = 0.7)
 
 # Attempt to regress out the effects of cell cycle on these tumor cells
 Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
@@ -1117,42 +1529,69 @@ Reps <- RunPCA(Reps, pc.genes = Reps@var.genes, npcs = 20) %>%
   FindNeighbors(reduction = "pca", dims = 1:20) %>%
   FindClusters(resolution = 0.3)
 
-# Plot the data 
-DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F) + 
-  coord_fixed() + 
-  ggtitle("Reps by Source") + 
-  scale_color_npg(alpha = 1)
-DimPlot(Reps, reduction = "umap", pt.size = 1, label = T) + 
-  coord_fixed() + 
-  ggtitle("Reps Clusters") + 
-  scale_color_npg(alpha = 0.7)
-
-#Identify clones that are most enriched in the two replicates
-# Show where cells with common ancestors fall within the transcriptional phenotype clusters
-DimPlot(Reps, reduction = "umap", group.by = "Phase", pt.size = 1)+coord_fixed()
-DimPlot(Reps, reduction = "umap", label = T, pt.size = 1)+coord_fixed()
-#cell.ids <- sample(colnames(Reps))
-```s = c("S.Score", "G2M.Score"),
-                  features = rownames(x = Reps)) 
-Reps <- RunPCA(Reps, pc.genes = Reps@var.genes, npcs = 20) %>%
-  RunUMAP(reduction = "pca", dims = 1:20) %>%
-  FindNeighbors(reduction = "pca", dims = 1:20) %>%
-  FindClusters(resolution = 0.3)
+#save(Reps, file = "Data/Supplement/Reps_s11_2_lung_ccr.RData")
 
 # Plot the data 
-DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F) + 
+sfig_s11_b2 <- DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F, shuffle = T) + 
   coord_fixed() + 
   ggtitle("Reps by Source") + 
-  scale_color_npg(alpha = 1)
-DimPlot(Reps, reduction = "umap", pt.size = 1, label = T) + 
-  coord_fixed() + 
-  ggtitle("Reps Clusters") + 
-  scale_color_npg(alpha = 0.7)
+  scale_color_npg(alpha = 1) +
+  ggtitle("OS17 in Orthotopic Lung (replicates)")
+sfig_s11_b2
 
-#Identify clones that are most enriched in the two replicates
-# Show where cells with common ancestors fall within the transcriptional phenotype clusters
-DimPlot(Reps, reduction = "umap", group.by = "Phase", pt.size = 1)+coord_fixed()
-DimPlot(Reps, reduction = "umap", label = T, pt.size = 1)+coord_fixed()
-#cell.ids <- sample(colnames(Reps))
+pdf("figures/supplement/s11/sfig_s11_b2.pdf",
+     width = 6,
+    height = 6)
+sfig_s11_b2
+dev.off()
 ```
+
+```{s11_correctplots}
+# Add lineage tracing tags to the Seurat objects
+sfig_s11_a1 <- processLTBC(cellecta.cx.raw,
+                               lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/lt.fq",
+                               cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/cid.fq",
+                               histogram = T,
+			       plot.only = T,
+                               title = "Culture",
+                               ymax = 10,
+                               col.fill = "#E64B35FF",
+                               relative = T)
+pdf("figures/supplement/s11/sfig_s11_a1.pdf",
+     width = 8,
+    height = 2)
+sfig_s11_a1
+dev.off()
+
+# Add lineage tracing tags to the Seurat objects
+sfig_s11_a2 <- processLTBC(cellecta.lung.raw,
+                                 lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/lt.fq",
+                                 cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/cid.fq",
+                                 histogram = T,
+				 plot.only = T,
+                                 title = "Lung",
+                                 ymax = 10,
+                                 col.fill = "#E64B35FF",
+                                 relative = T)
+pdf("figures/supplement/s11/sfig_s11_a2.pdf",
+     width = 8,
+    height = 2)
+sfig_s11_a2
+dev.off()
+
+layout <- "
+AAAACCDD
+BBBBCCDD
+"
+
+s11 <- sfig_s11_a1 + sfig_s11_a2 + sfig_s11_b1 + sfig_s11_b2 + plot_layout(design = layout)
+s11
+pdf("figures/supplement/s11/s11.pdf",
+     width = 15,
+    height = 5)
+s11
+dev.off()
+```
+
+
 
