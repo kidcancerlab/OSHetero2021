@@ -1441,7 +1441,7 @@ Reps <- RunPCA(Reps, pc.genes = Reps@var.genes, npcs = 20) %>%
 
 # Plot the data 
 sfig_s11_b1 <- DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F, shuffle = T) + 
-  coord_fixed() + 
+  theme(aspect.ratio = 1) + 
   ggtitle("Reps by Source") + 
   scale_color_npg(alpha = 1) +
   ggtitle("OS17 in Cell Culture (replicates)")
@@ -1462,8 +1462,6 @@ library(harmony)
 library(cowplot)
 library(Seurat)
 set.seed(100)
-
-rm(Reps)
 
 cellecta.lung.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/filtered_feature_bc_matrix/", 
                                 spec = "mixHuman")
@@ -1500,43 +1498,43 @@ zymo.lung.raw <- processLTBC(zymo.lung.raw,
                              relative = T)
 
 # Merge into a single Seurat object
-Reps <- merge(cellecta.lung.raw, y = zymo.lung.raw,
+Reps2 <- merge(cellecta.lung.raw, y = zymo.lung.raw,
               add.cell.ids = c("Cellecta_lung", "Zymo_lung"),
               project = "Heterogeneity")
 
 # Process and cluster
-Reps <- NormalizeData(Reps) %>%
+Reps2 <- NormalizeData(Reps2) %>%
   FindVariableFeatures(selection.method = "vst") %>%
   ScaleData() %>%
-  RunPCA(pc.genes = Reps@var.genes, npcs = 20) %>%
+  RunPCA(pc.genes = Reps2@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
   FindNeighbors(reduction = "pca", dims = 1:20) %>%
-  FindClusters(resolution = 0.2) ##Note change in resolution
+  FindClusters(resolution = 0.2) 
 
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
-Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
+Reps2 <- CellCycleScoring(object = Reps2, s.features = s.genes,
                          g2m.features = g2m.genes, set.ident = TRUE)
 
 # Attempt to regress out the effects of cell cycle on these tumor cells
-Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
+Reps2 <- CellCycleScoring(object = Reps2, s.features = s.genes,
                          g2m.features = g2m.genes, set.ident = TRUE)
 
-Reps <- ScaleData(object = Reps, vars.to.regress = c("S.Score", "G2M.Score"),
-                  features = rownames(x = Reps)) 
-Reps <- RunPCA(Reps, pc.genes = Reps@var.genes, npcs = 20) %>%
+Reps2 <- ScaleData(object = Reps2, vars.to.regress = c("S.Score", "G2M.Score"),
+                  features = rownames(x = Reps2)) 
+Reps2 <- RunPCA(Reps2, pc.genes = Reps2@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
   FindNeighbors(reduction = "pca", dims = 1:20) %>%
   FindClusters(resolution = 0.3)
 
-#save(Reps, file = "Data/Supplement/Reps_s11_2_lung_ccr.RData")
+#save(Reps2, file = "Data/Supplement/Reps_s11_2_lung_ccr.RData")
 
 # Plot the data 
-sfig_s11_b2 <- DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F, shuffle = T) + 
-  coord_fixed() + 
+sfig_s11_b2 <- DimPlot(Reps2, reduction = "umap", group.by = "src", pt.size = 1, label = F, shuffle = T) + 
+  theme(aspect.ratio = 1) + 
   ggtitle("Reps by Source") + 
   scale_color_npg(alpha = 1) +
-  ggtitle("OS17 in Orthotopic Lung (replicates)")
+  ggtitle("OS17 in Orthotopic Lung (replicates)") 
 sfig_s11_b2
 
 pdf("figures/supplement/s11/sfig_s11_b2.pdf",
@@ -1546,7 +1544,7 @@ sfig_s11_b2
 dev.off()
 ```
 
-```{s11_correctplots}
+```{r s11_correctplots}
 # Add lineage tracing tags to the Seurat objects
 sfig_s11_a1 <- processLTBC(cellecta.cx.raw,
                                lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/lt.fq",
@@ -1556,11 +1554,11 @@ sfig_s11_a1 <- processLTBC(cellecta.cx.raw,
                                title = "Culture",
                                ymax = 10,
                                col.fill = "#E64B35FF",
-                               relative = T)
+                               relative = T) + ggtitle("Replicate #2 Lineage Tag Enrichment Analysis", subtitle="Culture")
 pdf("figures/supplement/s11/sfig_s11_a1.pdf",
      width = 8,
     height = 2)
-sfig_s11_a1
+sfig_s11_a1 
 dev.off()
 
 # Add lineage tracing tags to the Seurat objects
@@ -1579,16 +1577,34 @@ pdf("figures/supplement/s11/sfig_s11_a2.pdf",
 sfig_s11_a2
 dev.off()
 
+#Patchwork 
+
 layout <- "
 AAAACCDD
 BBBBCCDD
 "
 
-s11 <- sfig_s11_a1 + sfig_s11_a2 + sfig_s11_b1 + sfig_s11_b2 + plot_layout(design = layout)
+s11 <- (sfig_s11_a1+theme(aspect.ratio = 1)) + sfig_s11_a2 + sfig_s11_b1 + sfig_s11_b2 + plot_layout(design = layout)
 s11
 pdf("figures/supplement/s11/s11.pdf",
-     width = 15,
+     width = 25,
     height = 5)
+s11
+dev.off()
+
+#v2
+layout <- "
+AAAA
+BBBB
+CCDD
+CCDD
+"
+
+s11 <- sfig_s11_a1 + sfig_s11_a2 + sfig_s11_b1 + sfig_s11_b2 + plot_layout(design = layout)
+s11
+pdf("figures/supplement/s11/s11v2.pdf",
+     width = 12,
+    height = 9)
 s11
 dev.off()
 ```
