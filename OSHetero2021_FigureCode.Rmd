@@ -602,7 +602,6 @@ dev.off()
 # Figure 3
 
 Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
-
 ## Figure 3B
 
 *statistical method subject to change*
@@ -612,27 +611,50 @@ B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown
 ```{r Fig3b}
 # Load OS data that was subsetted to be equal cell numbers across 
 load("Data/OSlist_1500_CCR.RData")
+merged_sobjs <-
+    SeuratObject:::merge.Seurat(x = OS.list_1500[[1]],
+                                y = OS.list_1500[2:length(OS.list_1500)],
+                                add.cell.ids = names(OS.list_1500)) %>%
+    NormalizeData(verbose = FALSE) %>%
+    FindVariableFeatures(verbose = FALSE) %>%
+    ScaleData(verbose = FALSE) %>%
+    RunPCA(verbose = FALSE)
 
-ITH.score <- list()
-for (i in 1:length(OS.list_1500)) {
-  z <- (Embeddings(OS.list_1500[[i]], reduction = "pca")[, 1:20])
+merged_sobjs$group <-
+    colnames(merged_sobjs) %>%
+    str_remove("_.+")
+
+group_names <-
+    merged_sobjs$group %>%
+    unique()
+
+raw_ith <- data.frame(matrix(, nrow = 1500, ncol = 0))
+for (i in seq_len(length(group_names))) {
+  better_name <-
+    group_names[i] %>%
+    str_replace("\\.", " ") %>%
+    str_replace("cx", "Culture") %>%
+    str_replace("OB", "Osteoblast") %>%
+    str_replace("t143", "143")
+  sub_obj <- subset(merged_sobjs, group == group_names[i])
+  z <- Embeddings(sub_obj, reduction = "pca")[, 1:20]
   mat <- dist(z, diag = TRUE, upper = FALSE)
   mat2 <- as.matrix(mat)
   mat2[upper.tri(mat2, diag = TRUE)] <- NA
-  ITH.score[[i]] <- colMeans(mat2, na.rm = TRUE)
+  raw_ith[[better_name]] <- colMeans(mat2, na.rm = TRUE)
 }
 
-#library(xlsx)
-for (i in c(1:12)){
-  as.data.frame(ITH.score[i]) %>%
-    write_excel_csv(file=paste("Data/ITH/",i,"test.csv"))
-}
-
-raw_ith <- read_pzfx("ITH_Scores_1500.pzfx",
-                     table = 1)
-
-ith <- melt(raw_ith)
-colnames(ith) <- c("Sample", "ITHScore")
+ith <- pivot_longer(na.omit(raw_ith),
+                    cols = everything(),
+                    names_to = "Sample",
+                    values_to = "ITHScore") %>%
+    mutate(Sample = as.factor(Sample) %>%
+                fct_relevel(group_names %>%
+                        str_replace("\\.", " ") %>%
+                        str_replace("cx", "Culture") %>%
+                        str_replace("OB", "Osteoblast") %>%
+                        str_replace("t143", "143")))
+    
 ith$logITH <- log10(ith$ITHScore)
 ridge_cols <- c("#B8B8B8FF",
                 "#D43F3AFF", "#D43F3AFF", "#D43F3AFF",
@@ -640,7 +662,8 @@ ridge_cols <- c("#B8B8B8FF",
                 "#357EBDFF", "#357EBDFF", "#357EBDFF",
                 "#5CB85CFF", "#5CB85CFF", "#5CB85CFF"
 )
-rplot <- ggplot(ith, aes(x = logITH, y = Sample, fill = Sample)) +
+rplot <-
+  ggplot(ith, aes(x = logITH, y = Sample, fill = Sample)) +
   geom_density_ridges(scale = 2) +
   scale_y_discrete(expand = c(0, 0), limits = rev) +
   scale_x_continuous(expand = c(0, 0)) +
@@ -648,7 +671,9 @@ rplot <- ggplot(ith, aes(x = logITH, y = Sample, fill = Sample)) +
   theme_ridges() +
   xlab("log[ITH Score]") +
   theme(legend.position = "none",
-        axis.title.x = element_text(hjust = 0.5),
+        axis.text.y = element_text(size = 6),
+        axis.text.x = element_text(size = 6),
+        axis.title.x = element_text(hjust = 0.5, size = 6),
         axis.title.y = element_blank())
 
 rplot
@@ -672,8 +697,8 @@ comps <- tribble(
 # Calculate Mann-Whitney test (in figure, p-value)
 stats <- matrix(nrow = 13, ncol = 2)
 mwu <- matrix(nrow = 13, ncol = 13)
-for(i in seq_along(comps$ctl)) {
-  s <- wilcox.test(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]])
+for (i in seq_along(comps$ctl)) {
+  s <- wilcox.test(raw_ith[, comps$ctl[i]], raw_ith[, comps$comp[i]])
   #P-value of comparison group (column)
   #correlated with its respective proper control (row)
   mwu[comps$ctl[i], comps$comp[i]] <- s$p.value
@@ -690,12 +715,6 @@ for(i in seq_along(comps$ctl)) {
   #Effect size for each group given proper comparison to respective controls
   stats[comps$comp[i], 2] <- s$estimate
 }
-# Other statistical test - permutation
-#per <- matrix(nrow = 13, ncol = 13)
-#for(i in seq_along(comps$ctl)) {
-#  s <- permTS(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]], alternative = "two.sided")
-#  per[comps$ctl[i], comps$comp[i]] <- s$p.value
-#}
 
 # Save table of comparison group (column) correlated with its proper control (row)
 as.data.frame(mwu) %>%
@@ -710,11 +729,16 @@ stats$Sample <- base::unique(ith[["Sample"]]) %>%
 stats <- stats[-1,]
 
 # Plot with p-values superimposed for each sample
-figure_3b <- rplot + geom_text(data=stats,
-                               aes(x=1.9, y=Sample),
-                               label = paste0("p=", format(stats$V1, digits=3, trim=TRUE),
-                                              ", effect size=", format(stats$V2, digits=3, trim=TRUE), "\n"),
-                               size = 3)
+figure_3b <-
+    rplot +
+    geom_text(data = stats,
+              aes(x = 1.75, y = Sample),
+              label = paste0("p=",
+                             format(stats$V1, digits = 3, trim = TRUE),
+                            ", eff. size=",
+                            format(stats$V2, digits = 3, trim = TRUE),
+                            "\n"),
+              size = 2)
 figure_3b
 
 # Save as PDF
@@ -723,6 +747,8 @@ pdf("figures/figure_3/figure_3b.pdf",
     height = 8)
 figure_3b
 dev.off()
+
+save(figure_3b, file = "figures/figure_3/figure_3b.RData")
 ```
 
 ## Figure 3C
@@ -771,6 +797,7 @@ sample_names <- c("OS17_TL",
                   "NCHOS2_TL",
                   "NCHOS7_TL")
 
+figure_3c_umaps <- list()
 for (s_obj in sample_names) {
   # Tibia plot with lung-derived cells greyed out
   temp_obj <- OS_list[[s_obj]]
@@ -779,23 +806,33 @@ for (s_obj in sample_names) {
                      expression = src == "Lung")
   lung <- append(lung, temp)
   Idents(temp_obj, cells = lung) <- " "
-  
-  tibia_plot <- DimPlot(temp_obj,
-                        reduction = "umap",
-                        pt.size = 1,
-                        label = T,
-                        cols = c("light grey",
-                                 "#E64B35FF",
-                                 "#4DBBD5FF",
-                                 "#00A087FF",
-                                 "#3C5488FF"),
-                        order = T) +
+
+  cust_dim_plot <- function(x_obj, title, subtitle) {
+      DimPlot(x_obj,
+              reduction = "umap",
+              pt.size = 0.1,
+              label = T,
+              label.size = 1,
+              cols = c("light grey",
+                       "#E64B35FF",
+                       "#4DBBD5FF",
+                       "#00A087FF",
+                       "#3C5488FF"),
+              order = T) +
     coord_fixed() +
     NoLegend() +
     NoAxes() +
-    ggtitle(s_obj, subtitle = "Tibia") +
-    theme(plot.title = element_text(hjust = 0.5))
-  
+    ggtitle(title, subtitle = subtitle) +
+    theme(plot.title = element_text(hjust = 0.5, size = 7),
+          plot.subtitle = element_text(hjust = 0.5, size = 6),
+          plot.margin = unit(c(0, 0, 0, 0), "pt"))
+  }
+
+  tibia_plot <-
+    cust_dim_plot(temp_obj,
+                  title = s_obj,
+                  subtitle = "Tibia")
+
   # Lung plot with lung-derived cells greyed out
   temp_obj2 <- OS_list[[s_obj]]
   tib <- vector(mode = "character")
@@ -803,39 +840,33 @@ for (s_obj in sample_names) {
                      expression = src == "Tibia")
   tib <- append(tib, temp)
   Idents(temp_obj2, cells = tib) <- " "
-  
-  lung_plot <- DimPlot(temp_obj2,
-                       reduction = "umap",
-                       pt.size = 1,
-                       label = T,
-                       cols = c("light grey",
-                                "#E64B35FF",
-                                "#4DBBD5FF",
-                                "#00A087FF",
-                                "#3C5488FF"),
-                       order = T) +
-    coord_fixed() +
-    NoLegend() +
-    NoAxes() +
-    ggtitle("", subtitle ="Lung") +
-    theme(plot.title = element_text(hjust = 0.5))
-  
-  combined <- tibia_plot + lung_plot
-  
+
+  lung_plot <-
+    cust_dim_plot(temp_obj2,
+                  title = "",
+                  subtitle = "Lung")
+
+  figure_3c_umaps[[s_obj]] <- tibia_plot + lung_plot
+
+
   pdf(paste0("figures/figure_3/figure_3c1_",
              s_obj,
              ".pdf"),
       width = 5,
       height = 5)
-  print(combined)
+  print(figure_3c_umaps[[s_obj]])
   dev.off()
 }
+
+save(figure_3c_umaps, file = "figures/figure_3/figure_3c_umaps.RData")
 
 #### Bar plots ####
 objlist <- c(OS_list$OS17_TL,
              OS_list$`143B_TL`,
              OS_list$NCHOS2_TL,
              OS_list$NCHOS7_TL)
+
+figure_3c_barplots <- list()
 
 for (sobj in objlist) {
   tident <- table(Idents(sobj),
@@ -845,32 +876,40 @@ for (sobj in objlist) {
     as.data.frame() %>%
     group_by(tissue) %>%
     mutate(perc = Freq / sum(Freq) * 100)
-  
+
   tident$cluster <- as.character(tident$cluster)
   tident$tissue <- factor(tident$tissue, levels = c("Tibia", "Lung"))
-  figure_3c2 <- ggplot(tident,
-                       aes(x = tissue,
-                           y = perc,
-                           fill = cluster)) +
+  figure_3c_barplots[[sobj$model[1]]] <-
+    ggplot(tident,
+           aes(x = tissue,
+               y = perc,
+               fill = cluster)) +
     theme_bw(base_size = 5) +
     geom_col(position = "fill", width = 0.5) +
     xlab("Tissue") +
     ylab("Proportion") +
     scale_fill_npg(alpha = 1) +
+    theme_minimal() +
     NoLegend() +
-    NoAxes() +
-    #scale_fill_manual(values = c("#E64B35FF","#00A087FF","#4DBBD5FF",)
-    theme(legend.title = element_blank())
-  
+    theme(panel.grid = element_blank(),
+          axis.text.y = element_text(size = 5),
+          axis.text.x = element_text(size = 5,
+                                     angle = 45,
+                                     hjust = 1),
+          axis.title.x = element_text(size = 6),
+          axis.title.y = element_text(size = 6))
+
   # Save plot as PDF
   pdf(paste0("figures/figure_3/figure_3c2_",
-             head(sobj$model,1),
+             head(sobj$model, 1),
              ".pdf"),
       width = 1,
       height = 2)
-  print(figure_3c2)
+  print(figure_3c_barplots[[sobj$model[1]]])
   dev.off()
 }
+
+save(figure_3c_barplots, file = "figures/figure_3/figure_3c_barplots.RData")
 
 # For Rmd visual
 figure_3c2 <- ggplot(tident,
@@ -971,8 +1010,9 @@ P1 <-
   cx.pd %>%
   ggplot(., aes(x = x_label, y = rn, fill = signif)) +
   geom_tile() +
-  geom_text(aes(label = sprintf("%0.2f", pval)), size = 3) +
-  scale_fill_manual(values = c("red", "gray"), name = "") +
+  geom_text(aes(label = sprintf("%0.2f", pval)), size = 2.2) +
+  scale_fill_manual(values = c("red", "gray"),
+                    name = "") +
   scale_y_discrete(limits = rev, position = "right") +
   theme(panel.background = element_blank(),
         strip.background = element_blank(),
@@ -982,13 +1022,18 @@ P1 <-
         axis.text.x = element_text(angle = 90,
                                    hjust = 1,
                                    vjust = 0.4,
-                                   size = 12),
-        axis.text.y = element_text(size = 12)) +
+                                   size = 8),
+        axis.text.y = element_text(size = 8),
+        legend.background = element_blank(),
+        legend.text = element_text(size = 8)) +
   labs(x = "",
        y = "") +
   facet_grid(. ~ sample,
              scales = "free_x",
              space = "free")
+
+P1_legend <- cowplot::get_legend(P1)
+P1 <- P1 + theme(legend.position = "none")
 
 P2 <-
   lung_percent %>%
@@ -1001,26 +1046,80 @@ P2 <-
   scale_fill_brewer(palette = "Set2") +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
+        axis.title.y = element_text(size = 6),
         panel.background = element_blank(),
         strip.background = element_blank(),
         strip.text.x = element_blank(),
         plot.margin = unit(c(0, 0, -0.2, 0), "cm"),
-        panel.border = element_rect(colour = "black", fill = NA)) +
+        panel.border = element_rect(colour = "black", fill = NA),
+        legend.text = element_text(size = 8)) +
   facet_grid(. ~ sample,
              scales = "free_x",
              space = "free")
 
-figure_3d <- cowplot::plot_grid(P2,
-                                P1,
-                                ncol = 1,
-                                align = "v",
-                                rel_heights = c(2, 10))
+P2_legend <- cowplot::get_legend(P2)
+P2 <- P2 + theme(legend.position = "none")
+
+
+figure_3d <-
+    cowplot::plot_grid(cowplot::plot_grid(P2,
+                                          P1,
+                                          align = "v",
+                                          rel_heights = c(2, 10),
+                                          ncol = 1),
+                       cowplot::plot_grid(P1_legend,
+                                          P2_legend,
+                                          ncol = 1,
+                                          axis = "t"),
+                        nrow = 1,
+                        rel_widths = c(0.95, 0.05))
 figure_3d
+
+save(figure_3d, file = "figures/figure_3/figure_3d.RData")
 
 pdf("figures/figure_3/figure_3d.pdf",
     width = 15,
     height = 8)
 figure_3d
+dev.off()
+```
+
+```{r assemblingFig3, eval=TRUE}
+load("figures/figure_3/figure_3b.RData")
+load("figures/figure_3/figure_3c_umaps.RData")
+load("figures/figure_3/figure_3c_barplots.RData")
+load("figures/figure_3/figure_3d.RData")
+
+layout_matrix <-
+    matrix(c(1,  1,  1,  1,  2,  2,  2,  6,  4,  4,  4,  8,
+             1,  1,  1,  1,  2,  2,  2,  6,  4,  4,  4,  8,
+             1,  1,  1,  1,  3,  3,  3,  7,  5,  5,  5,  9,
+             1,  1,  1,  1,  3,  3,  3,  7,  5,  5,  5,  9,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10),
+         nrow = 12,
+         byrow = TRUE)
+
+pdf("figures/figure_3/figure_3.pdf",
+    width = 8,
+    height = 12)
+gridExtra::grid.arrange(grobs = list(figure_3b,
+                                     patchwork::patchworkGrob(figure_3c_umaps$OS17_TL),
+                                     patchwork::patchworkGrob(figure_3c_umaps$`143B_TL`),
+                                     patchwork::patchworkGrob(figure_3c_umaps$NCHOS2_TL),
+                                     patchwork::patchworkGrob(figure_3c_umaps$NCHOS7_TL),
+                                     figure_3c_barplots$`OS-17`,
+                                     figure_3c_barplots$`143B`,
+                                     figure_3c_barplots$`NCH-OS-2`,
+                                     figure_3c_barplots$`NCH-OS-7`,
+                                     figure_3d),
+                        layout_matrix = layout_matrix)
 dev.off()
 ```
 
@@ -1049,6 +1148,7 @@ set.seed(108)
 os17.cx.raw <- subset(os17.cx.raw,
                       cells = sample(Cells(os17.cx.raw),
                                      2800))
+
 os17.tib.raw <- subset(os17.tib.raw,
                        cells = sample(Cells(os17.tib.raw),
                                       2800))
@@ -1076,12 +1176,19 @@ figure_5b <- DimPlot(os17,
                      group.by = "src",
                      pt.size = 1,
                      label = T,
-                     order = T) +
+                     label.size = 3,
+                     order = FALSE) +
   coord_fixed() +
   ggtitle(" ") +
-  scale_color_npg()
+  scale_color_npg() +
+  theme(axis.text = element_text(size = 6),
+        axis.title = element_text(size = 8),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 8))
 
 figure_5b
+
+save(figure_5b, file = "figures/figure_5/figure_5b.RData")
 
 # Save as PDF
 pdf("figures/figure_5/figure_5b.pdf",
@@ -1096,6 +1203,36 @@ dev.off()
 C) Frequency distribution of clones identified in each of the conditions. A high level of clonal diversity is maintained in the orthotopic tumors (78% unique clones in primary tumor compared to 86% unique clones in cell culture); though dominant clones emerge in the lung (only 33% unique clones). 
 
 ```{r Fig5c, dependson="Fig5load"}
+# There are exactly two cells in lung/tibia that cluster with the culture cells and throw off the DimPlots
+odd_2_cells <-
+  subset(os17, subset = src == "Tibia" | src == "Lung") %>%
+  Embeddings("umap") %>%
+  as.data.frame() %>%
+  dplyr::filter(UMAP_1 > 0) %>%
+  rownames()
+
+# kick out those two cells
+os17 <-
+  os17[, !colnames(os17) %in% odd_2_cells]
+
+dim_plot <- function(x, src_sub, color) {
+    sub_sobj <- subset(x, subset = src == src_sub)
+    sub_sobj <- subset(sub_sobj, cell = names(is.na(sub_sobj$lt) == FALSE))
+    DimPlot(sub_sobj,
+            group.by = "src",
+            pt.size = 0.1,
+            cols = color) +
+    theme_void() +
+    NoLegend() +
+    NoAxes() +
+    labs(title = NULL, x = NULL, y = NULL) +
+    theme(plot.background = element_rect(colour = "black"))
+}
+
+n_uniq_1 <-
+  (table(os17.cx.raw$lt) == 1) %>%
+  sum()
+
 # Plot histograms of lineage tracing tags in the Seurat objects
 figure_5c1 <- processLTBC(os17.cx.raw,
                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
@@ -1105,7 +1242,26 @@ figure_5c1 <- processLTBC(os17.cx.raw,
                           title = "Culture, Top 40 Clones",
                           ymax = 1.75,
                           col.fill = "#E64B35FF",
-                          relative = T)
+                          relative = T) +
+    theme(plot.title = element_text(size = 8),
+          axis.title = element_text(size = 6),
+          axis.text = element_text(size = 6)) +
+    labs(x = NULL) +
+    annotate("text",
+             label = paste(n_uniq_1,
+                           "out of every 1000 clones are unique"),
+            x = -Inf,
+            y = Inf,
+            hjust = -0.4,
+            vjust = 3,
+            size = 2)
+
+inset_1 <- dim_plot(os17, "Culture", color = "#E64B35FF")
+
+figure_5c1 <-
+    cowplot::ggdraw() +
+    cowplot::draw_plot(figure_5c1) +
+    cowplot::draw_plot(inset_1, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
 pdf("figures/figure_5/figure_5c1.pdf",
@@ -1113,6 +1269,11 @@ pdf("figures/figure_5/figure_5c1.pdf",
     height = 2)
 figure_5c1
 dev.off()
+
+
+n_uniq_2 <-
+  (table(os17.tib.raw$lt) == 1) %>%
+  sum()
 
 figure_5c2 <- processLTBC(os17.tib.raw,
                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
@@ -1122,7 +1283,26 @@ figure_5c2 <- processLTBC(os17.tib.raw,
                           title = "Tibia, Top 40 Clones",
                           ymax = 1.75,
                           col.fill = "#00A087FF",
-                          relative = T)
+                          relative = T) +
+    theme(plot.title = element_text(size = 8),
+          axis.title = element_text(size = 6),
+          axis.text = element_text(size = 6)) +
+    labs(x = NULL) +
+    annotate("text",
+             label = paste(n_uniq_2,
+                           "out of every 1000 clones are unique"),
+            x = -Inf,
+            y = Inf,
+            hjust = -0.4,
+            vjust = 3,
+            size = 2)
+
+inset_2 <- dim_plot(os17, "Tibia", color = "#00A087FF")
+
+figure_5c2 <-
+    cowplot::ggdraw() +
+    cowplot::draw_plot(figure_5c2) +
+    cowplot::draw_plot(inset_2, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
 pdf("figures/figure_5/figure_5c2.pdf",
@@ -1131,6 +1311,10 @@ pdf("figures/figure_5/figure_5c2.pdf",
 figure_5c2
 dev.off()
 
+n_uniq_3 <-
+  (table(os17.lung.raw$lt) == 1) %>%
+  sum()
+
 figure_5c3 <- processLTBC(os17.lung.raw,
                           lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
                           cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
@@ -1138,7 +1322,26 @@ figure_5c3 <- processLTBC(os17.lung.raw,
                           plot.only = T,
                           title = "Lung, Top 40 Clones",
                           ymax = 1.75,
-                          relative = T)
+                          relative = T) +
+    theme(plot.title = element_text(size = 8),
+          axis.title = element_text(size = 6),
+          axis.text = element_text(size = 6),
+          ) +
+    annotate("text",
+             label = paste(n_uniq_3,
+                           "out of every 1000 clones are unique"),
+            x = -Inf,
+            y = Inf,
+            hjust = -0.4,
+            vjust = 3,
+            size = 2)
+
+inset_3 <- dim_plot(os17, "Lung", color = "#4DBBD5FF")
+
+figure_5c3 <-
+    cowplot::ggdraw() +
+    cowplot::draw_plot(figure_5c3) +
+    cowplot::draw_plot(inset_3, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
 pdf("figures/figure_5/figure_5c3.pdf",
@@ -1146,23 +1349,14 @@ pdf("figures/figure_5/figure_5c3.pdf",
     height = 2)
 figure_5c3
 dev.off()
-```
 
-Determine number of unique clones for each tissue.
+figure_5c <-
+    gridExtra::grid.arrange(figure_5c1,
+                            figure_5c2,
+                            figure_5c3,
+                            ncol = 1)
 
-```{r uniquelt, dependson='Fig5b'}
-# Determine number of unique LTs
-length((os17.cx.raw$lt))
-length(unique(os17.cx.raw$lt))
-(length(unique(os17.cx.raw$lt))/length((os17.cx.raw$lt)))*1000
-
-length((os17.tib.raw$lt))
-length(unique(os17.tib.raw$lt))
-(length(unique(os17.tib.raw$lt))/length((os17.tib.raw$lt)))*1000
-
-length((os17.lung.raw$lt))
-length(unique(os17.lung.raw$lt))
-(length(unique(os17.lung.raw$lt))/length((os17.lung.raw$lt)))*1000
+save(figure_5c, file = "figures/figure_5/figure_5c.RData")
 ```
 
 ## Figure 5D
@@ -1202,31 +1396,18 @@ for (i in 1:nrow(cx.lt.list)) {
   Culture.LTcells <- append(Culture.LTcells,
                             temp)
 }
+
 cx.tagged <- subset(cx.sub,
                     cells = Culture.LTcells)
 
-figure_5c1_umap <- DimPlot(cx.tagged,
-                           group.by = "src") +
-  coord_fixed() +
-  scale_color_npg(alpha = 1) +
-  ggtitle(" ") +
-  NoLegend() + NoAxes()
-figure_5c1_umap
-
-# Save as PDF
-pdf("figures/figure_5/figure_5c1_umap.pdf",
-    width = 3,
-    height = 3)
-figure_5c1_umap
-dev.off()
-
 # Tibia
 # Remove outlier cells (names may vary in different runs of the code)
-tib.sub <- subset(tib.sub,
-                  idents = c("0",
-                             "1",
-                             "3",
-                             "6")) 
+# This doesn't appear to do anything since those are already the only clusters
+# tib.sub <- subset(tib.sub,
+#                   idents = c("0",
+#                              "1",
+#                              "3",
+#                              "6")) 
 
 tib.LTcells <- vector(mode = "character")
 for (i in 1:nrow(tib.lt.list)) {
@@ -1237,28 +1418,14 @@ for (i in 1:nrow(tib.lt.list)) {
 tib.tagged <- subset(tib.sub,
                      cells = tib.LTcells)
 
-figure_5c2_umap <- DimPlot(tib.tagged,
-                           group.by = "src",
-                           cols = "#00A087FF") +
-  coord_fixed() +
-  ggtitle(" ") +
-  NoLegend() + NoAxes()
-figure_5c2_umap
-
-# Save as PDF
-pdf("figures/figure_5/figure_5c2_umap.pdf",
-    width = 3,
-    height = 3)
-figure_5c2_umap
-dev.off()
-
 # Lung
 # Remove outlier cells (names may vary in different runs of the code)
-lung.sub <- subset(lung.sub,
-                   idents = c("0",
-                              "1",
-                              "3",
-                              "6"))
+# This doesn't appear to do anything since those are already the only clusters
+# lung.sub <- subset(lung.sub,
+#                    idents = c("0",
+#                               "1",
+#                               "3",
+#                               "6"))
 
 lung.LTcells <- vector(mode = "character")
 for (i in 1:nrow(lung.lt.list)) {
@@ -1269,127 +1436,61 @@ for (i in 1:nrow(lung.lt.list)) {
 }
 lung.tagged <- subset(lung.sub,
                       cells = lung.LTcells)
-
-figure_5c3_umap <- DimPlot(lung.tagged,
-                           group.by = "src",
-                           cols = "#4DBBD5FF") +
-  coord_fixed() +
-  ggtitle(" ") +
-  NoLegend() + NoAxes()
-figure_5c3_umap
-
-# Save as PDF
-pdf("figures/figure_5/figure_5c3_umap.pdf",
-    width = 3,
-    height = 3)
-figure_5c3_umap
-dev.off()
 ```
 
 
-### Culture Panel
+### Make enriched clone DimPlots
+```{r eval=FALSE}
+dataset_list <- list(cx.tagged,
+                     tib.tagged,
+                     lung.tagged)
 
-```{r Fig5d_cx, dependson='Fig5d_processing', fig.height=10, fig.width=10}
-# Culture
-vplayout <- function(x,y) viewport(layout.pos.row = x,
-                                   layout.pos.col = y)
+lt_list <- list(cx.lt.list,
+                tib.lt.list,
+                lung.lt.list)
 
-pdf("figures/figure_5/figure_5d1_grid_culture.pdf",
-    width = 10,
-    height = 6)
+sub_list <- list(cx.sub,
+                 tib.sub,
+                 lung.sub)
 
-grid.newpage()
+color_list <- list("#E64B35FF",
+                   "#00A087FF",
+                   "#4DBBD5FF")
 
-pushViewport(viewport(layout = grid.layout(1,4)))
+figure_5d_list <- list()
+plot_num = 1
 
-for (i in 1:4) {
-  p <- DimPlot(cx.tagged,
-               reduction = "umap",
-               pt.size = 1,
-               cells.highlight = WhichCells(cx.sub,
-                                            expression = lt == cx.lt.list[[i, 1]]),
-               cols.highlight = "#E64B35FF",
-               sizes.highlight = 3) +
-    coord_fixed() +
-    theme(legend.position = "none") +
-    ggtitle(paste("Clone",
-                  cx.lt.list[[i,1]])) +
-    NoLegend() +
-    NoAxes()
-  
-  print(p, vp = vplayout(ceiling(i/4), i))
+for (i in seq_len(length(dataset_list))) {
+    dataset <- dataset_list[[i]]
+    lt_data <- lt_list[[i]]
+    sub_data <- sub_list[[i]]
+    data_color <- color_list[[i]]
+    for (j in 1:4) {
+        figure_5d_list[[plot_num]] <-
+              patchwork::patchworkGrob(DimPlot(dataset,
+                                       reduction = "umap",
+                                       pt.size = 0.1,
+                                       cells.highlight = WhichCells(sub_data,
+                                                                    expression = lt == lt_data[[j, 1]]),
+                                       cols.highlight = data_color,
+                                       sizes.highlight = 1) +
+                            coord_fixed() +
+                            theme(legend.position = "none") +
+                            ggtitle(paste("Clone",
+                                          lt_data[[j, 1]])) +
+                            NoLegend() +
+                            NoAxes() +
+              theme(title = element_text(size = 6),
+                    plot.margin = unit(c(0, 0, 0, 0), "cm"),
+                    plot.title = element_text(hjust = 0.5)))
+        plot_num <- plot_num + 1
+    }
 }
-dev.off()
-```
 
-### Tibia Panel
+figure_5d <-
+    gridExtra::grid.arrange(grobs = figure_5d_list, ncol = 4)
 
-```{r Fig5d_tibia, dependson='Fig5d_processing'}
-# Tibia
-vplayout <- function(x,y) viewport(layout.pos.row = x,
-                                   layout.pos.col = y)
-
-pdf("figures/figure_5/figure_5d2_grid_tibia.pdf",
-    width = 10,
-    height = 6)
-
-grid.newpage()
-
-pushViewport(viewport(layout = grid.layout(1,4)))
-
-for (i in 1:4) {
-  p <- DimPlot(tib.tagged,
-               reduction = "umap",
-               pt.size = 1,
-               cells.highlight = WhichCells(tib.sub,
-                                            expression = lt == tib.lt.list[[i, 1]]),
-               cols.highlight = "#00A087FF",
-               sizes.highlight = 3) +
-    coord_fixed() +
-    theme(legend.position = "none") +
-    ggtitle(paste("Clone",
-                  tib.lt.list[[i,1]])) +
-    NoLegend() +
-    NoAxes()
-  
-  print(p, vp = vplayout(ceiling(i/4), i))
-}
-dev.off()
-```
-
-### Lung Panel
-
-```{r Fig5d_lung, dependson='Fig5d_processing'}
-# Lung
-vplayout <- function(x,y) viewport(layout.pos.row = x,
-                                   layout.pos.col = y)
-
-pdf("figures/figure_5/figure_5d3_grid_lung.pdf",
-    width = 10,
-    height = 6)
-
-grid.newpage()
-
-pushViewport(viewport(layout = grid.layout(1,4)))
-
-for (i in 1:4) {
-  p <- DimPlot(lung.tagged,
-               reduction = "umap",
-               pt.size = 1,
-               cells.highlight = WhichCells(lung.sub,
-                                            expression = lt == lung.lt.list[[i, 1]]),
-               cols.highlight = "#4DBBD5FF",
-               sizes.highlight = 3) +
-    coord_fixed() +
-    theme(legend.position = "none") +
-    ggtitle(paste("Clone",
-                  lung.lt.list[[i,1]])) +
-    NoLegend() +
-    NoAxes()
-  
-  print(p, vp = vplayout(ceiling(i/4), i))
-}
-dev.off()
+save(figure_5d, file = "figures/figure_5/figure_5d.RData")
 ```
 
 ## Figure 5E
@@ -1425,8 +1526,17 @@ figure_5e <- DimPlot(lung.sub,
                        type = c("#C3C3C3",
                                 "#E64B35FF"),
                        labels = c("Unselected" = "Non-enriched clones",
-                                  "Group_1" = "Enriched clones"))
+                                  "Group_1" = "Enriched clones")) +
+  theme(axis.text = element_text(size = 6),
+        axis.title = element_text(size = 8),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 8),
+        legend.position = c(0.9, 0.2),
+        legend.background = element_blank(),
+        plot.margin = unit(c(0, 0, 0, 0), "cm"))
 figure_5e
+
+save(figure_5e, file = "figures/figure_5/figure_5e.RData")
 
 pdf("figures/figure_5/figure_5e.pdf",
     width = 6,
@@ -1489,8 +1599,11 @@ temp1 <- rownames_to_column(temp1,
                             var = "Pathway")
 
 # Order by -log10pvalue for plotting
-temp1$Pathway <- factor(temp1$Pathway,
-                        levels = temp1$Pathway[order(temp1$pvalue)])
+temp1 <-
+    temp1 %>%
+    mutate(Pathway = str_wrap(Pathway, width = 30) %>%
+        as.factor() %>%
+        fct_reorder(pvalue))
 
 # Plot 
 figure_5f <- ggplot(temp1,
@@ -1503,9 +1616,13 @@ figure_5f <- ggplot(temp1,
   geom_vline(xintercept = 1.5,
              color = "gray",
              linetype = 2,
-             size = 1)
+             size = 1) +
+  theme(axis.text = element_text(size = 6),
+        axis.title = element_text(size = 8))
 
 figure_5f
+
+save(figure_5f, file = "figures/figure_5/figure_5f.RData")
 
 pdf("figures/figure_5/figure_5f.pdf",
     width = 8,
@@ -1513,6 +1630,33 @@ pdf("figures/figure_5/figure_5f.pdf",
 figure_5f
 dev.off()
 ```
+
+### Panel Figure 5
+```{r eval=FALSE}
+load("figures/figure_5/figure_5b.RData")
+load("figures/figure_5/figure_5c.RData")
+load("figures/figure_5/figure_5d.RData")
+load("figures/figure_5/figure_5e.RData")
+load("figures/figure_5/figure_5f.RData")
+
+layout_matrix <- matrix(c(NA, 1, 2, 3, 4, 5),
+                        ncol = 2,
+                        byrow = TRUE)
+
+pdf("figures/figure_5/figure_5.pdf",
+    width = 8,
+    height = 11)
+gridExtra::grid.arrange(grobs = list(figure_5b,
+                          figure_5c,
+                          figure_5d,
+                          figure_5e,
+                          figure_5f),
+             layout_matrix = layout_matrix,
+             ncol = 2,
+             nrow = 3)
+dev.off()
+```
+
 
 ```{r session}
 sessionInfo()
