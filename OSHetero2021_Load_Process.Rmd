@@ -1,0 +1,809 @@
+---
+title: "OSHetero2021 Loading and Processing"
+author: "Sanjana Rajan and Emily Franz"
+date: "`r format(Sys.time(), '%m/%d/%Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 5
+    number_sections: false
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  tidy = TRUE,
+  echo = TRUE,
+  cache = TRUE,
+  collapse = TRUE,
+  tidy.opts = list(width.cutoff = 95),
+  message = FALSE,
+  warning = FALSE,
+  cache.lazy = FALSE
+)
+```
+
+```{r Fig1_lib, cache=FALSE}
+setwd("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021")
+source("scSeurat.R")
+source("Downstream.v2.R")
+
+# loading libraries
+library(Seurat)
+library(future)
+library(ggplot2)
+# library(fgsea)
+library(msigdbr)
+library(clusterProfiler)
+library(SingleR)
+library(dplyr) # %<%
+library(pheatmap)
+library(RColorBrewer)
+library(viridis) # inferno color palette
+library(grid)
+library(ggsci)
+library(data.table)
+library(ggvenn)
+```
+
+# Load Seurat objects 
+
+Load Seurat objects here so only have to complete once (commented out elsewhere). 
+
+## Load Osteoblasts
+
+```{r load_ob}
+# Create Seurat objects and perform initial QC.  Label original source.
+# OB
+OB <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0031/outs/filtered_feature_bc_matrix/",
+                 spec = "human")
+
+OB <- subset(OB,
+             subset = nCount_RNA < 20000 &
+               percent.mt < 10)
+
+OB$src <- "OB"
+OB$model <- "OB"
+```
+
+## Load OS17
+
+```{r load_os17}
+# OS17
+## Culture
+os17.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/filtered_feature_bc_matrix/",
+                          spec = "mixHuman")
+
+os17.cx.raw <- subset(os17.cx.raw,
+                      subset = nFeature_RNA > 3500 &
+                        nCount_RNA < 50000 &
+                        percent.mt < 15)
+
+os17.cx.raw$src <- "Culture"
+os17.cx.raw$model <- "OS-17"
+
+## Tibia
+os17.tib.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/filtered_feature_bc_matrix/",
+                           spec = "mixHuman")
+os17.tib.raw <- subset(os17.tib.raw,
+                       subset = nFeature_RNA > 3000 &
+                         nCount_RNA < 60000 &
+                         percent.mt < 18)
+
+os17.tib.raw$src <- "Tibia"
+os17.tib.raw$model <- "OS-17"
+
+## Lung
+## double check usage throughout rest of code - Emily (fixed issue where coming from wrong file)
+os17.lung.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix",
+                            spec = "mixHuman")
+
+os17.lung.raw <- subset(os17.lung.raw,
+                        subset = nFeature_RNA > 1250 &
+                          nCount_RNA < 60000 &
+                          percent.mt < 25)
+
+os17.lung.raw$src <- "Lung"
+os17.lung.raw$model <- "OS-17"
+```
+
+### Process OS17 culture for Figure 1
+
+```{r Fig1a1_process, dependson='load_os17', fig.height=8, fig.width=8}
+os17.cx <- NormalizeData(os17.cx.raw) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = os17.cx@var.genes,
+         npcs = 20) %>%
+  RunUMAP(reduction = "pca",
+          dims = 1:20) %>%
+  FindNeighbors(reduction = "pca",
+                dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+DimPlot(os17.cx,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  scale_color_npg(alpha = 0.7)
+
+# Regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+os17.cx <- CellCycleScoring(object = os17.cx,
+                            s.features = s.genes,
+                            g2m.features = g2m.genes,
+                            set.ident = TRUE)
+os17.cx <- ScaleData(object = os17.cx,
+                     vars.to.regress = c("S.Score",
+                                         "G2M.Score"),
+                     features = rownames(x = os17.cx))
+
+os17.cx <- RunPCA(os17.cx,
+                  pc.genes = os17.cx@var.genes,
+                  npcs = 20) %>%
+  RunUMAP(reduction = "pca",
+          dims = 1:20) %>%
+  FindNeighbors(reduction = "pca",
+                dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+# Find optimal clustering resolution
+os17.cx.nC <- nRes(os17.cx, 
+                   res = seq(from = 0.1,
+                             to = 0.2,
+                             by = 0.05))
+plot <- pSil(os17.cx.nC,
+             0.15)
+plot
+
+# With res = 0.15, cells in cluster 3 do not have any significantly different genes that are deferentially regulated
+# Therefore, we decided to proceed with res = 0.1
+os17.cx <- FindClusters(os17.cx,
+                        resolution = 0.1)
+
+save(os17.cx,
+     file ="Data/os17.cx_CCR.RData")
+```
+
+### Add lineage tags to metadata for Figure 5
+
+For lineage analysis in Figure 5.
+
+```{r Fig5_tag, dependson='load_os17'}
+# Plot histograms of lineage tracing tags in the Seurat objects
+os17.cx.raw <- processLTBC(os17.cx.raw,
+                      lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
+                      cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
+                      histogram = F,
+                      relative = T)
+
+os17.tib.raw <- processLTBC(os17.tib.raw,
+                       lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
+                       cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
+                       histogram = F,
+                       relative = T)
+
+os17.lung.raw <- processLTBC(os17.lung.raw,
+                        lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
+                        cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
+                        histogram = F,
+                        relative = T)
+```
+
+### Create OS17 object for lineage analysis in Figure 5
+
+```{r Fig5_process, dependson='Fig5_tag', fig.height=8, fig.width=8}
+# Subset all to 2800 cells in each condition
+os17.cx <- subset(os17.cx.raw,
+                  cells = sample(Cells(os17.cx.raw),
+                                 2800))
+os17.tib <- subset(os17.tib.raw,
+                   cells = sample(Cells(os17.tib.raw),
+                                  2800))
+os17.lung <- subset(os17.lung.raw,
+                    cells = sample(Cells(os17.lung.raw),
+                                   2800))
+
+# Merge into a single Seurat object
+os17 <- merge(os17.cx,
+              y = c(os17.tib,
+                    os17.lung),
+              add.cell.ids = c("Culture",
+                               "Tibia",
+                               "Lung"),
+              project = "LineageTracing")
+
+# Process and cluster
+os17 <- NormalizeData(os17) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = os.17@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+# CCR Attempt to regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+
+os17 <- CellCycleScoring(object = os17,
+                         s.features = s.genes,
+                         g2m.features = g2m.genes,
+                         set.ident = TRUE)
+
+os17 <- ScaleData(object = os17,
+                  vars.to.regress = c("S.Score",
+                                      "G2M.Score"),
+                  features = rownames(x = os17))
+
+os17 <- RunPCA(os17, pc.genes = os17@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+DimPlot(os17,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("OS17 Clusters") +
+  scale_color_npg(alpha = 0.7)
+
+# Plot the data
+set.seed(100)
+cell.ids <- sample(colnames(os17))
+
+DimPlot(os17,
+        reduction = "umap",
+        group.by = "src",
+        pt.size = 1,
+        label = F,
+        order = cell.ids) +
+  coord_fixed() +
+  ggtitle("OS17 by Source") +
+  scale_color_npg()
+
+################## Find the optimum resolution for clustering
+os17.nC <- nRes(os17,
+                res = seq(from = 0.2,
+                          to = 0.3,
+                          by = 0.01))
+
+save(os17,
+     file = "Data/os17.RData")
+```
+
+## Load t143b
+
+```{r load_t143b}
+# t143b
+## Culture
+t143b.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0017/outs/filtered_feature_bc_matrix/",
+                           spec = "mixHuman")
+
+t143b.cx.raw <- subset(t143b.cx.raw,
+                       subset = nFeature_RNA > 4000 &
+                         nCount_RNA < 74000 &
+                         percent.mt < 17)
+
+VlnPlot(t143b.cx.raw,
+        features = c("nFeature_RNA",
+                     "nCount_RNA",
+                     "percent.mt"),
+        ncol = 3)
+
+t143b.cx.raw$src <- "Culture"
+t143b.cx.raw$model <- "143B"
+
+## Tibia
+t143b.tib.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0052/outs/filtered_feature_bc_matrix/",
+                            spec = "mixHuman")
+
+t143b.tib.raw <- subset(t143b.tib.raw,
+                        subset = nFeature_RNA > 1000 &
+                          nCount_RNA < 30000 &
+                          percent.mt < 22)
+VlnPlot(t143b.tib.raw,
+        features = c("nFeature_RNA",
+                     "nCount_RNA",
+                     "percent.mt"),
+        ncol = 3)
+
+t143b.tib.raw$src <- "Tibia"
+t143b.tib.raw$model <- "143B"
+
+# Lung
+t143b.lung.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0019-143B-lung/outs/filtered_feature_bc_matrix/",
+                             spec = "mixHuman")
+
+t143b.lung.raw <- subset(t143b.lung.raw,
+                         subset = nFeature_RNA > 1000 &
+                           nCount_RNA < 30000 &
+                           percent.mt < 22)
+
+VlnPlot(t143b.lung.raw,
+        features = c("nFeature_RNA",
+                     "nCount_RNA",
+                     "percent.mt"),
+        ncol = 3)
+
+t143b.lung.raw$src <- "Lung"
+t143b.lung.raw$model <- "143B"
+```
+
+## Load NCH-OS2
+
+```{r load_nchos2}
+# NCHOS2
+## Flank
+OS2.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0076/outs/filtered_feature_bc_matrix/",
+                         spec = "mixHuman")
+
+OS2.cx.raw <- subset(OS2.cx.raw,
+                     subset = nCount_RNA < 36000 &
+                       percent.mt < 50)
+
+VlnPlot(OS2.cx.raw,
+        features = c("nFeature_RNA",
+                     "nCount_RNA",
+                     "percent.mt"),
+        ncol = 3)
+
+OS2.cx.raw$src <- "Flank"
+OS2.cx.raw$model <- "NCH-OS-2"
+
+## Tibia
+OS2.tib.raw<- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0042/outs/filtered_feature_bc_matrix/",
+                         spec = "mixHuman")
+
+OS2.tib.raw <- subset(OS2.tib.raw,
+                      subset = nFeature_RNA > 2500 &
+                        nCount_RNA < 40000 &
+                        percent.mt < 20)
+
+VlnPlot(OS2.tib.raw,
+        features = c("nFeature_RNA",
+                     "nCount_RNA",
+                     "percent.mt"),
+        ncol = 3)
+
+OS2.tib.raw$src <- "Tibia"
+OS2.tib.raw$model <- "NCH-OS-2"
+
+## Lung
+OS2.lung.raw<- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0041/outs/filtered_feature_bc_matrix/",
+                          spec = "mixHuman")
+OS2.lung.raw <- subset(OS2.lung.raw,
+                       subset = nFeature_RNA > 2500 &
+                         nCount_RNA < 60000 &
+                         percent.mt < 30)
+
+VlnPlot(OS2.lung.raw,
+        features = c("nFeature_RNA",
+                     "nCount_RNA",
+                     "percent.mt"),
+        ncol = 3)
+
+OS2.lung.raw$src <- "Lung"
+OS2.lung.raw$model <- "NCH-OS-2"
+```
+
+## Load NCH-OS7
+
+```{r load_nchos7}
+# NCHOS7
+## Flank
+OS7.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0043/outs/filtered_feature_bc_matrix/",
+                         spec = "mixHuman")
+
+OS7.cx.raw <- subset(OS7.cx.raw,
+                     subset = nCount_RNA < 50000 &
+                       percent.mt < 25)
+
+VlnPlot(OS7.cx.raw,
+        features = c("nFeature_RNA",
+                     "nCount_RNA",
+                     "percent.mt"),
+        ncol = 3)
+
+OS7.cx.raw$src <- "Flank"
+OS7.cx.raw$model <- "NCH-OS-7"
+
+## Tibia
+OS7.tib.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0034/outs/filtered_feature_bc_matrix/",
+                          spec = "mixHuman")
+OS7.tib.raw <- subset(OS7.tib.raw,
+                      subset = nFeature_RNA > 2000 &
+                        nCount_RNA < 35000 &
+                        percent.mt < 14)
+
+VlnPlot(OS7.tib.raw,
+        features = c("nFeature_RNA",
+                     "nCount_RNA",
+                     "percent.mt"),
+        ncol = 3)
+
+OS7.tib.raw$src <- "Tibia"
+OS7.tib.raw$model <- "NCH-OS-7"
+
+## Lung
+OS7.lung.raw <- tenXLoadQC(path10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0055/outs/filtered_feature_bc_matrix/",
+                           spec = "mixHuman")
+OS7.lung.raw <- subset(OS7.lung.raw,
+                       subset = nCount_RNA < 42000 &
+                         percent.mt < 20)
+
+VlnPlot(OS7.lung.raw,
+        features = c("nFeature_RNA",
+                     "nCount_RNA",
+                     "percent.mt"),
+        ncol = 3)
+
+OS7.lung.raw$src <- "Lung"
+OS7.lung.raw$model <- "NCH-OS-7"
+```
+
+### Process NCHS-OS7 flank for Figure 1
+
+```{r Fig1a3_process, dependson='load_nchos7', fig.height=8, fig.width=8}
+OS7.cx <- NormalizeData(OS7.cx.raw) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = OS7.cx@var.genes,
+         npcs = 20) %>%
+  RunUMAP(reduction = "pca",
+          dims = 1:20) %>%
+  FindNeighbors(reduction = "pca",
+                dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+DimPlot(OS7.cx,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  scale_color_npg(alpha = 0.7)
+
+# Attempt to regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+OS7.cx <- CellCycleScoring(object = OS7.cx,
+                               s.features = s.genes,
+                               g2m.features = g2m.genes,
+                               set.ident = TRUE)
+OS7.cx <- ScaleData(object = OS7.cx,
+                        vars.to.regress = c("S.Score",
+                                            "G2M.Score"),
+                        features = rownames(x = OS7.cx))
+
+OS7.cx <- RunPCA(OS7.cx,
+                     pc.genes = OS7.cx@var.genes,
+                     npcs = 20) %>%
+  RunUMAP(reduction = "pca",
+          dims = 1:20) %>%
+  FindNeighbors(reduction = "pca",
+                dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+#Find optimal clustering resolution
+OS7.cx.nC <- nRes(OS7.cx, 
+                     res = seq(from = 0.1,
+                               to = 0.15,
+                               by = 0.01))
+plot <- pSil(OS7.cx.nC,
+             0.15)
+plot
+
+OS7.cx <- FindClusters(OS7.cx,
+                          resolution = 0.15)
+
+save(OS7.cx,
+     file ="Data/OS7.cx_CCR.RData")
+```
+
+
+## Save Raw Objects
+
+```{r save_raw, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7')}
+# Save raw objects
+
+# Make lists for easy loop saving
+sample_list <- c(OB,
+                 os17.cx.raw,
+                 os17.tib.raw,
+                 os17.lung.raw,
+                 t143b.cx.raw,
+                 t143b.tib.raw,
+                 t143b.lung.raw,
+                 OS2.cx.raw,
+                 OS2.tib.raw,
+                 OS2.lung.raw,
+                 OS7.cx.raw,
+                 OS7.tib.raw,
+                 OS7.lung.raw)
+
+sample_names <- c("OB",
+                  "os17.cx.raw",
+                  "os17.tib.raw",
+                  "os17.lung.raw",
+                  "t143b.cx.raw",
+                  "t143b.tib.raw",
+                  "t143b.lung.raw",
+                  "OS2.cx.raw",
+                  "OS2.tib.raw",
+                  "OS2.lung.raw",
+                  "OS7.cx.raw",
+                  "OS7.tib.raw",
+                  "OS7.lung.raw")
+
+# Correlate sample names and sample labels
+names(sample_list) <- sample_names
+
+# Save each raw object
+for (item in sample_names) {
+  # Save each sample as an individual Seurat object with proper name
+  assign(item, sample_list[[item]])
+  save(list = item, file = paste("Data/Raw/",
+                    item,
+                    ".RData",
+                    sep = ""))
+}
+```
+
+# Merge Objects
+
+Merge objects, process, and cell cycle regress. 
+
+```{r mergeallobj, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7'), fig.height=8, fig.width=8}
+# Merge into a single Seurat object
+OS <- merge(OB, y = c(os17.cx.raw,
+                      os17.tib.raw,
+                      os17.lung.raw,
+                      t143b.cx.raw,
+                      t143b.tib.raw,
+                      t143b.lung.raw,
+                      OS2.cx.raw,
+                      OS2.tib.raw,
+                      OS2.lung.raw,
+                      OS7.cx.raw,
+                      OS7.tib.raw,
+                      OS7.lung.raw),
+            add.cell.ids = c("OB",
+                             "OS-17_Culture",
+                             "OS-17_Tibia",
+                             "OS-17_Lung",
+                             "143B_Culture",
+                             "143B_Tibia",
+                             "143B_Lung",
+                             "NCH-OS-2_Flank",
+                             "NCH-OS-2_Tibia",
+                             "NCH-OS-2_Lung",
+                             "NCH-OS-7_Flank",
+                             "NCH-OS-7_Tibia",
+                             "NCH-OS-7_Lung"),
+            project = "Heterogeneity")
+
+# Process and cluster
+OS <- NormalizeData(OS) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = os.17@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+# rm(OB, os17.cx.raw, os17.tib.raw, os17.lung.raw, t143b.cx.raw, t143b.tib.raw,
+# t143b.lung.raw, OS2.cx.raw, OS2.tib.raw, OS2.lung.raw, OS7.cx.raw, OS7.tib.raw,
+# OS7.lung.raw)
+
+# CCR Attempt to regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+
+OS <- CellCycleScoring(object = OS,
+                       s.features = s.genes,
+                       g2m.features = g2m.genes,
+                       set.ident = TRUE)
+
+OS <- ScaleData(object = OS,
+                vars.to.regress = c("S.Score",
+                                    "G2M.Score"),
+                features = rownames(x = OS))
+
+OS <- RunPCA(OS, pc.genes = OS@var.genes, npcs = 20) %>%
+             RunUMAP(reduction = "pca", dims = 1:20) %>%
+             FindNeighbors(reduction = "pca", dims = 1:20) %>%
+             FindClusters(resolution = 0.3)
+
+save(OS,
+     file = "Data/OS_merged_postCCR.RData")
+
+OS$model <- as.factor(OS$model)
+OS$model <- factor(as.factor(OS$model),
+                  levels = c("OS-17",
+                             "143B",
+                             "NCH-OS-2",
+                             "NCH-OS-7",
+                             "OB"))
+
+# Plot the data
+DimPlot(OS,
+        reduction = "umap",
+        group.by = "model",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("OS by Model") +
+    scale_color_npg(alpha = 1)
+
+DimPlot(OS,
+        reduction = "umap",
+        group.by = "src",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("OS by Source")
+
+DimPlot(OS,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("OS by Clusters") +
+    scale_color_npg(alpha = 0.7)
+```
+
+# List Objects and Process
+
+List objects, process, and cell cycle regress. Used in Figure 3B - ITH code.
+
+```{r listallobj1500, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7')}
+# Create List to compute ITH scores (subset to 1500 cells for each)
+OS.list_1500 <- list(OB = OB,
+                     OS17.cx = os17.cx.raw,
+                     OS17.Tibia = os17.tib.raw, 
+                     OS17.Lung = os17.lung.raw, 
+                     t143B.cx = t143b.cx.raw,
+                     t143B.Tibia = t143b.tib.raw, 
+                     t143B.Lung = t143b.lung.raw,
+                     OS2.Flank = OS2.cx.raw,
+                     OS2.Tibia = OS2.tib.raw, 
+                     OS2.Lung = OS2.lung.raw, 
+                     OS7.Flank= OS7.cx.raw,
+                     OS7.Tibia = OS7.tib.raw, 
+                     OS7.Lung = OS7.lung.raw) 
+
+for (i in 1: length(OS.list_1500)) {
+  OS.list_1500[[i]] <- NormalizeData(OS.list_1500[[i]]) %>%
+    FindVariableFeatures(selection.method = "vst") %>%
+    ScaleData() %>%
+    RunPCA(pc.genes = OS.list_1500[[i]]@var.genes, npcs = 20) %>%
+    RunUMAP(reduction = "pca", dims = 1:20) %>%
+    FindNeighbors(reduction = "pca", dims = 1:20) %>%
+    FindClusters(resolution = 0.3) %>%
+    subset(cells = sample(Cells(OS.list_1500[[i]]), 1500))
+}
+
+# CCR
+# Attempt to regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+
+for (i in 1:length(OS.list_1500)) {
+  OS.list_1500[[i]] <- CellCycleScoring(object = OS.list_1500[[i]],
+                                   s.features = s.genes,
+                                   g2m.features = g2m.genes,
+                                   set.ident = TRUE)
+  
+  OS.list_1500[[i]] <- ScaleData(object = OS.list_1500[[i]],
+                            vars.to.regress = c("S.Score",
+                                                "G2M.Score"),
+                            features = rownames(x = OS.list_1500[[i]]))
+  
+  OS.list_1500[[i]] <- RunPCA(OS.list_1500[[i]],
+                         pc.genes = OS.list_1500[[i]]@var.genes, npcs = 20) %>%
+    RunUMAP(reduction = "pca", dims = 1:20) %>%
+    FindNeighbors(reduction = "pca", dims = 1:20) %>%
+    FindClusters(resolution = 0.3)
+}
+
+save(OS.list_1500,
+     file = "Data/OSlist_1500_CCR.RData")
+```
+
+List objects, process, and cell cycle regress. Used in Figure 3 C-D code.
+
+```{r listallobj, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7')}
+# Create list for usage in Figure 3
+tibia_list <- list(OS17.Tibia = os17.tib.raw,
+                   t143B.Tibia = t143b.tib.raw,
+                   OS2.Tibia = OS2.tib.raw,
+                   OS7.Tibia = OS7.tib.raw)
+
+lung_list <- list(OS17.Lung = os17.lung.raw,
+                  t143B.Lung = t143b.lung.raw,
+                  OS2.Lung = OS2.lung.raw,
+                  OS7.Lung = OS7.lung.raw)
+
+OS_list <- list()
+
+for (i in 1:length(tibia_list)) {
+  message(i, head(paste(tibia_list[[i]]$model,
+                      "_TL",
+                      sep = ""),
+                1))
+  # Subset number of cells in each Seurat object to the least in the group
+  a <- table(tibia_list[[i]]$orig.ident)
+  b <- table(lung_list[[i]]$orig.ident)
+  list <- c(a, b)
+  min <- min(list)
+
+  tibia_list[[i]] <- subset(tibia_list[[i]],
+                        cells = sample(Cells(tibia_list[[i]]), min))
+  lung_list[[i]] <- subset(lung_list[[i]],
+                         cells = sample(Cells(lung_list[[i]]), min))
+
+  title <- head(paste(tibia_list[[i]]$model,
+                      "_TL",
+                      sep = ""),
+                      1)
+  title <- gsub("-", "", title)
+
+  OS_list[[title]] <- merge(tibia_list[[i]],
+                              y = c(lung_list[[i]]),
+                              add.cell.ids = c(head(paste(tibia_list[[i]]$model,
+                                                          "_",
+                                                          tibia_list[[i]]$src,
+                                                          sep = ""),
+                                                    1),
+                                               head(paste(lung_list[[i]]$model,
+                                                          "_",
+                                                          lung_list[[i]]$src,
+                                                          sep = ""),
+                                                    1)),
+                              project = "Heterogeneity")
+}
+```
+
+```{r listallobjccr, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7','listallobj')}
+# CCR
+# Attempt to regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+
+for (i in 1:length(OS_list)) {
+  OS_list[[i]] <- NormalizeData(OS_list[[i]]) %>%
+    FindVariableFeatures(selection.method = "vst") %>%
+    ScaleData() %>%
+    RunPCA(pc.genes = OS_list[[i]]@var.genes, npcs = 20) %>%
+    RunUMAP(reduction = "pca", dims = 1:20) %>%
+    FindNeighbors(reduction = "pca", dims = 1:20) %>%
+    FindClusters(resolution = 0.3)
+  
+  OS_list[[i]] <- CellCycleScoring(object = OS_list[[i]],
+                                   s.features = s.genes,
+                                   g2m.features = g2m.genes,
+                                   set.ident = TRUE)
+  
+  OS_list[[i]] <- ScaleData(object = OS_list[[i]],
+                            vars.to.regress = c("S.Score",
+                                                "G2M.Score"),
+                            features = rownames(x = OS_list[[i]]))
+  
+  OS_list[[i]] <- RunPCA(OS_list[[i]],
+                         pc.genes = OS_list[[i]]@var.genes, npcs = 20) %>%
+    RunUMAP(reduction = "pca", dims = 1:20) %>%
+    FindNeighbors(reduction = "pca", dims = 1:20) %>%
+    FindClusters(resolution = 0.3)
+}
+
+save(OS_list,
+     file = "Data/OS_list_CCR.RData")
+```
+
+```{r versions}
+sessionInfo()
+```
