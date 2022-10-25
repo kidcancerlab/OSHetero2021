@@ -1,0 +1,1158 @@
+---
+title: "Supplemental Figures"
+author: "Sanjana Rajan, Emily Franz, Matthew Cannon"
+date: "`r format(Sys.time(), '%m/%d/%Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 5
+    number_sections: false
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  tidy = TRUE,
+  echo = TRUE,
+  cache = TRUE,
+  collapse = TRUE,
+  tidy.opts = list(width.cutoff = 95),
+  message = FALSE,
+  warning = FALSE,
+  cache.lazy = FALSE
+)
+```
+
+```{r lib, cache=FALSE}
+source("scSeurat.R")
+source("Downstream.v2.R")
+set.seed(888)
+# loading libraries
+library(Seurat)
+library(future)
+library(ggplot2)
+library(msigdbr)
+library(clusterProfiler)
+library(SingleR)
+library(dplyr)
+library(pheatmap)
+library(RColorBrewer)
+library(viridis) # inferno color palette
+library(grid)
+library(ggsci)
+library(data.table)
+library(ggvenn)
+library(tibble)
+library(tidyr)
+library(tidyverse)
+library(stringr)
+library(reshape2)
+library(pzfx)
+library(ggridges)
+library(effsize)
+library(perm)
+options(future.globals.maxSize= 891289600)
+
+```
+
+# S1
+
+```{r s1}
+library(rrrSingleCellUtils)
+
+# Prior to cell-cycle regression
+load("Data/Raw/os17.cx.raw.RData")
+
+os17.cx_noccr <- NormalizeData(os17.cx.raw) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = os17.cx.raw@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+os17.cx_noccr <- kill_cc(os17.cx_noccr,
+                         cc_regress = "N",
+                         find_pcs = 20,
+                         use_pcs = 3,
+                         use_res = 0.3,
+                         method = "umap")
+os17.cx_noccr$Phase <- factor(os17.cx_noccr$Phase,
+                              levels = c("G1",
+                                         "G2M",
+                                         "S"))
+# UMAP
+sfig_s1_a1 <- DimPlot(os17.cx_noccr,
+                      group.by = "Phase",
+                      label = T) +
+  scale_color_npg(alpha = 1) +
+  coord_fixed() +
+  ggtitle("")
+sfig_s1_a1
+
+pdf("figures/supplement/s1/sfig_s1_a1.pdf",
+       height = 5,
+       width = 5)
+sfig_s1_a1
+dev.off()
+
+# Post-cell cycle regression
+load("Data/os17.cx_CCR.RData")
+os17.cx$Phase <- factor(os17.cx$Phase,
+                     levels = c("G1",
+                                "G2M",
+                                "S"))
+# UMAP
+sfig_s1_a2 <- DimPlot(os17.cx,
+                      group.by = "Phase",
+                      label = F) +
+  scale_color_npg(alpha = 1) +
+  coord_fixed() +
+  ggtitle("")
+
+pdf("figures/supplement/s1/sfig_s1_a2.pdf",
+       height = 5,
+       width = 5)
+sfig_s1_a2
+dev.off()
+
+# PCA
+# Prior to cell-cycle regression
+sfig_s1_b1 <- DimPlot(os17.cx_noccr,
+                      group.by = "Phase",
+                      label = T,
+                      reduction = "pca") +
+  scale_color_npg(alpha = 1) +
+  coord_fixed() +
+  ggtitle("")
+sfig_s1_a1
+
+pdf("figures/supplement/s1/sfig_s1_b1.pdf",
+       height = 5,
+       width = 5)
+sfig_s1_b1
+dev.off()
+
+# PCA
+# Post-cell cycle regression
+os17.cx$Phase <- factor(os17.cx$Phase,
+                     levels = c("G1",
+                                "G2M",
+                                "S"))
+sfig_s1_b2 <- DimPlot(os17.cx,
+                      group.by = "Phase",
+                      label = F,
+                      reduction = "pca") +
+  scale_color_npg(alpha = 1) +
+  coord_fixed() +
+  ggtitle("")
+
+pdf("figures/supplement/s1/sfig_s1_b2.pdf",
+       height = 5,
+       width = 5)
+sfig_s1_b2
+dev.off()
+
+# Cell-cycle genes
+RidgePlot(os17.cx,
+          features = c("PCNA",
+                       "TOP2A",
+                       "MCM6",
+                       "MKI67"),
+          group.by = "Phase",
+          ncol = 2,
+          same.y.lims = T,
+          slot = "scale.data",
+          combine = T)
+
+pdf("figures/supplement/s1/sfig_s1_b2.pdf",
+       height = 5,
+       width = 6)
+sfig_s1_b2
+dev.off()
+```
+
+# S2
+
+```{r s2}
+load("Data/Raw/OB.RData")
+set.seed(100)
+
+OB <- NormalizeData(OB) %>%
+  FindVariableFeatures(selection.method = "vst") %>% 
+  ScaleData() %>%
+  RunPCA(pc.genes = OB@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.1)
+
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+OB <- CellCycleScoring(object = OB,
+                       s.features = s.genes,
+                       g2m.features = g2m.genes,
+                       set.ident = TRUE)
+
+# Prior to cell cycle regression
+DimPlot(OB, reduction = "umap",
+        group.by = "Phase",
+        pt.size = 1) +
+  coord_fixed()
+
+# Regress out cell cycle genes
+OB_ccr <- ScaleData(object = OB,
+                vars.to.regress = c("S.Score",
+                                    "G2M.Score"),
+                features = rownames(x = OB))
+
+# Save
+save(OB_ccr, file = "Data/Supplement/OB_ccr.RData")
+
+#### S2 A1: OB UMAP ####
+OB_ccr <- RunPCA(OB_ccr, pc.genes = OB_ccr@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.1)
+
+OB.nC <- nRes(OB_ccr, res = seq(from = 0.04, to = 0.5, by = 0.01))
+# Optimal resolution identified as 0.07
+pSil(OB.nC, 0.07)
+pSil(OB.nC, 0.06)
+OB_ccr <- OB_ccr %>%
+  FindClusters(resolution = 0.05)
+
+sfig_s2_a1 <- DimPlot(OB_ccr,
+                      label = T) +
+  coord_fixed() +
+  ggtitle("Osteoblasts") +
+  NoLegend() +
+  NoAxes() +
+  scale_color_npg()
+
+pdf("figures/supplement/s2/sfig_s2_a1.pdf",
+    height = 5,
+    width = 5)
+sfig_s2_a1
+dev.off()
+
+#### S2 A2: OB Cell Cycle Pie ####
+cid <- sort(unique(OB_ccr@active.ident))
+
+vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+pdf("figures/supplement/s2/sfig_s2_a2_OB_pie.pdf",
+    width = 3,
+    height = 2)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 2)))
+
+for (i in 1:2) {
+  temp <- WhichCells(OB_ccr, idents = cid[[i]])
+  LT.cells <- subset(OB_ccr, cells = temp)
+  df <- table(LT.cells$Phase)
+  bp <- ggplot(as.data.frame(df), aes(x = "", y = Freq, fill = Var1)) + geom_bar(width = 1, stat = "identity")
+  pie <- bp +
+    coord_polar("y", start = 0) +
+    scale_fill_brewer(palette = "Blues") +
+    theme_minimal() +
+    NoAxes() + NoLegend() +
+    ggtitle(paste("Cluster", cid[[i]]))
+  
+  print(pie, vp = vplayout(ceiling(i/2), i))
+}
+dev.off()
+
+
+#### S2 B Heatmap of OB markers ####
+
+## Pathways associated with OB clusters
+set.seed(108)
+source("Downstream.v3.R")
+
+em.hm.list <- DGEA(OB_ccr,
+                   category = "C2",
+                   subcategory = "CP")
+
+temp1 <- -log10(em.hm.list)
+# remove '_' by removing special characters
+c <- rownames(temp1)
+c <- gsub("_", " ", c)
+c <- gsub("SIG ", "", c)
+c <- gsub("NABA ", "", c)
+c <- gsub("SA ", "", c)
+rownames(temp1) <- c
+# remove negative 0 values due to number of decimal points displayed
+temp1 <- abs(temp1)
+
+sfig_s2_b <- temp1 %>%
+  t() %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "Sample") %>%
+  pivot_longer(c(-Sample),
+               names_to = "Pathway",
+               values_to = "pval",
+               names_repair = "minimal") %>%
+  mutate(Signif = pval >= (-1 * log10(0.05))) %>%
+  ggplot(., aes(x = Sample,
+              y = Pathway,
+              fill = Signif)) +
+  geom_tile() +
+  geom_text(aes(label = sprintf("%0.2f", pval))) +
+  scale_fill_manual(values = c("gray", "red"))  +
+  scale_y_discrete(limits = rev, position = "right") +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.x = element_blank()) +
+  ylab("")
+
+# View in Rmd output
+sfig_s2_b
+
+# Save plot as PDF
+pdf("figures/supplement/s2/sfig_s2_b_OB_Pathway.pdf", height = 8, width = 8)
+plot(sfig_s2_b)
+dev.off()
+```
+
+# S3
+
+```{r S3}
+# Load merged OS models
+load("Data/OS_merged_postCCR.RData")
+
+# Rename ob
+OS$model[grep("OB", OS$model)] <- "Osteoblast"
+OS$src[grep("OB", OS$src)] <- "Culture"
+
+OS$model <- factor(as.factor(OS$model),
+                   levels = c("Osteoblast",
+                              "OS-17",
+                              "143B",
+                              "NCH-OS-2",
+                              "NCH-OS-7"))
+
+#### S3 A ####
+# Plot the data
+sfig_s3_a_temp <- DimPlot(OS,
+                          reduction = "umap",
+                          group.by = "src",
+                          pt.size = 1,
+                          label = F) +
+  coord_fixed() +
+  ggtitle("OS by Tissue Source") +
+  scale_color_npg(alpha = 1)
+sfig_s3_a_temp
+
+sfig_s3_a <- DimPlot(OS,
+                     reduction = "umap",
+                     group.by = "model",
+                     pt.size = 1, label = T) +
+  coord_fixed() +
+  ggtitle("OS by Model") +
+  scale_color_npg(alpha = 1)
+sfig_s3_a
+
+pdf("figures/supplement/s3/sfig_s3_a",
+    height = 5,
+    width = 5)
+sfig_s3_a
+dev.off()
+
+#### S3 B: Harmony ####
+set.seed(108)
+library("harmony")
+
+# Run Harmony
+OS_harmony <- OS %>%
+  RunPCA(pc.genes = OS@var.genes, npcs = 20) %>%
+  RunHarmony(group.by.vars = "model", plot_convergence = T) %>%
+  RunUMAP(reduction = "harmony", dims = 1:20) %>%
+  FindNeighbors(reduction = "harmony", dims = 1:20) %>%
+  FindClusters(resolution = 0.2)
+
+# Plot the data
+sfig_s3_b <- DimPlot(OS_harmony,
+                     reduction = "umap",
+                     group.by = "model",
+                     pt.size = 1,
+                     label = T,
+                     repel = T) +
+  coord_fixed() +
+  ggtitle("OS by Model") +
+  scale_color_npg(alpha = 1)
+sfig_s3_b
+
+pdf("figures/supplement/s3/sfig_s3_b",
+    height = 5,
+    width = 5)
+sfig_s3_b
+dev.off()
+```
+
+# S4
+## Batch Correction Test
+
+```{r s4}
+# Determine overlay of replicates with or without the use batch-effect correction methods such
+# as Harmony, FastMNN
+options(future.globals.maxSize= 8912896000)
+
+# Clean up environment
+rm(list=setdiff(ls(), "tenXLoadQC"))
+source("scSeurat.R")
+source("Downstream.v2.R")
+# loading libraries
+library(Seurat)
+library(future)
+library(tidyverse)
+library(msigdbr)
+set.seed(108)
+library(harmony)
+#library(SeuratData)
+library(SeuratWrappers)
+
+# Cellecta - Replicate 1 Load cell culture data
+#cellecta.cx.raw <- tenXLoadQC("R:/RESRoberts/Bioinformatics/scRNAOuts/S0015-cellecta/outs/filtered_feature_bc_matrix/",
+#    spec = "mixHuman")
+cellecta.cx.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/filtered_feature_bc_matrix/",
+                              spec = "mixHuman")
+cellecta.cx.raw <- subset(cellecta.cx.raw,
+                          subset = nFeature_RNA > 2500 &
+                            nCount_RNA < 40000 &
+                            percent.mt < 14)
+cellecta.cx.raw$src <- "Cellecta_Cx"
+cellecta.cx.raw$cond <- "Plate"
+cellecta.cx.raw$rep <- "Rep1"
+
+# Load orthotopic lung data
+cellecta.lung.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/filtered_feature_bc_matrix/",
+                                spec = "mixHuman")
+cellecta.lung.raw <- subset(cellecta.lung.raw,
+                            subset = percent.mt < 20 &
+                              percent.mt > 2)
+cellecta.lung.raw$src <- "Cellecta_Lung"
+cellecta.lung.raw$cond <- "Lung"
+cellecta.lung.raw$rep <- "Rep1"
+
+# Zymo - Replicate 2
+zymo.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0016-zymo/outs/filtered_feature_bc_matrix/",
+                          spec = "mixHuman")
+zymo.cx.raw <- subset(zymo.cx.raw,
+                      subset = nFeature_RNA > 3500 &
+                        nCount_RNA < 50000 &
+                        percent.mt < 15)
+zymo.cx.raw$src <- "Zymo_Cx"
+zymo.cx.raw$cond <- "Plate"
+zymo.cx.raw$rep <- "Rep2"
+
+# Load orthotopic bone data
+zymo.tib.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0018xS0028/outs/filtered_feature_bc_matrix/",
+                           spec = "mixHuman")
+zymo.tib.raw <- subset(zymo.tib.raw,
+                       subset = nFeature_RNA > 3000 &
+                         nCount_RNA < 60000 &
+                         percent.mt < 18)
+zymo.tib.raw$src <- "Zymo_Tib"
+zymo.tib.raw$cond <- "Bone"
+zymo.tib.raw$rep <- "Rep2"
+
+# Load orthotopic lung data
+zymo.lung.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix/",
+                            spec = "mixHuman")
+zymo.lung.raw <- subset(zymo.lung.raw,
+                        subset = nFeature_RNA > 1250 &
+                          nCount_RNA < 60000 &
+                          percent.mt < 25)
+zymo.lung.raw$src <- "Zymo_Lung"
+zymo.lung.raw$cond <- "Lung"
+zymo.lung.raw$rep <- "Rep2"
+
+# Subset to least number of cells across all conditions (Cell culture and orthotopic lung)
+# Subset all to #1900 cells
+
+cellecta.cx.raw <- subset(cellecta.cx.raw,
+                          cells = sample(Cells(cellecta.cx.raw),
+                                         1900))
+cellecta.lung.raw <- subset(cellecta.lung.raw,
+                            cells = sample(Cells(cellecta.lung.raw),
+                                           1900))
+zymo.cx.raw <- subset(zymo.cx.raw,
+                      cells = sample(Cells(zymo.cx.raw),
+                                     1900))
+zymo.lung.raw <- subset(zymo.lung.raw,
+                        cells = sample(Cells(zymo.lung.raw),
+                                       1900))
+
+# Merge raw count matrices of these four datsets into a single Seurat object
+Rep1_H <- merge(cellecta.cx.raw,
+                y = c(cellecta.lung.raw,
+                      zymo.cx.raw,
+                      zymo.lung.raw),
+                add.cell.ids = c("Cellecta_Cx",
+                                 "Cellecta_Lung",
+                                 "Zymo_Cx",
+                                 "Zymo_Lung"), 
+                project = "Heterogeneity")
+
+# Dimensionality reduction and clustering
+Rep1_H <- NormalizeData(Rep1_H) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = Rep1_H@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.2)  ##Note change in resolution
+
+# Determine contribution of cell cycle related genes to variation in the datasets
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+Rep1_H <- CellCycleScoring(object = Rep1_H,
+                           s.features = s.genes,
+                           g2m.features = g2m.genes,
+                           set.ident = TRUE)
+DimPlot(Rep1_H,
+        reduction = "umap",
+        pt.size = 1,
+        label = F,
+        group.by = "Phase") +
+  coord_fixed() +
+  ggtitle("Reps by Source") +
+  scale_color_npg(alpha = 0.7)
+
+# Mitigate effects of cell cycle heterogeneity by regressing out canonical G2/M- and S-Phase
+# genes
+Rep1_H <- ScaleData(object = Rep1_H,
+                    vars.to.regress = c("S.Score",
+                                        "G2M.Score"),
+                    features = rownames(x = Rep1_H))
+
+# Re-do dimensionality reduction and clustering
+Rep1_H_v1 <- Rep1_H %>%
+  RunPCA(pc.genes = Rep1_H_v1@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.2)  ##Note change in resolution
+
+# Visualize the data
+DimPlot(Rep1_H_v1,
+        reduction = "umap",
+        pt.size = 1,
+        label = F,
+        group.by = "Phase") +
+  coord_fixed() +
+  ggtitle("Reps by Source") +
+  scale_color_npg(alpha = 0.7)
+
+# Run Harmony
+Rep1_H_v2 <- Rep1_H %>%
+  RunPCA(pc.genes = Rep1_H_v2@var.genes, npcs = 20) %>%
+  RunHarmony(group.by.vars = "src", plot_convergence = T) %>%
+  RunUMAP(reduction = "harmony", dims = 1:20) %>%
+  FindNeighbors(reduction = "harmony", dims = 1:20) %>%
+  FindClusters(resolution = 0.2)  ##Note change in resolution
+
+# Visualize the data
+DimPlot(Rep1_H_v2,
+        reduction = "umap",
+        pt.size = 1,
+        label = F,
+        group.by = "src") +
+  coord_fixed() +
+  scale_color_npg(alpha = 0.7)
+
+# Run FastMNN
+Rep1_H_v3 <- NormalizeData(Rep1_H) %>%
+  FindVariableFeatures(selection.method = "vst")
+
+Rep1_H_v3 <- RunFastMNN(object.list = SplitObject(Rep1_H_v3,
+                                                  split.by = "cond"))
+Rep1_H_v3 <- RunUMAP(Rep1_H_v3,reduction = "mnn", dims = 1:20)
+Rep1_H_v3 <- FindNeighbors(Rep1_H_v3, reduction = "mnn", dims = 1:20)
+Rep1_H_v3 <- FindClusters(Rep1_H_v3, resolution = 0.2)
+
+DimPlot(Rep1_H_v3,
+        reduction = "umap",
+        pt.size = 1,
+        label = F,
+        group.by = "rep") +
+  coord_fixed() +
+  scale_color_npg(alpha = 0.7)
+
+# DimPlot(Rep1_H_v3, reduction = 'umap', pt.size = 1, label = F, group.by = c('src', 'Phase'),
+# ncol = 2) + coord_fixed() + scale_color_npg(alpha = 0.7)
+```
+
+```{r s4_1}
+# BatchEffectCorrectionSCTransform - all
+source("scSeurat.R")
+library(dplyr)
+library(ggplot2)
+library(harmony)
+library(cowplot)
+library(Seurat)
+set.seed(100)
+
+load("Data/OS_merged_postCCR.RData")
+# Integrate using Seurats SCTransform Integration workflow
+OSrep.list <- SplitObject(OS, split.by = "src")
+
+for (i in 1:length(OSrep.list)) {
+  OSrep.list[[i]] <- SCTransform(OSrep.list[[i]], verbose = FALSE)
+}
+
+OSrep.features <- SelectIntegrationFeatures(object.list = OSrep.list, nfeatures = 3000)
+OSrep.list <- PrepSCTIntegration(object.list = OSrep.list, anchor.features = OSrep.features, verbose = FALSE)
+OSrep.anchors <- FindIntegrationAnchors(object.list = OSrep.list, normalization.method = "SCT",
+    anchor.features = OSrep.features, verbose = FALSE)
+OSrep.integrated <- IntegrateData(anchorset = OSrep.anchors, normalization.method = "SCT", verbose = FALSE)
+
+OSrep.integrated <- RunPCA(OSrep.integrated, verbose = FALSE)
+OSrep.integrated <- RunUMAP(OSrep.integrated, dims = 1:30)
+
+saveRDS(OSrep.integrated, file = "Data/Supplement/OSrep.integrated.rds")
+
+pdf("figures/supplement/s4/OSrep.integrated.Phase_v2.pdf")
+DimPlot(OSrep.integrated, reduction = "umap", group.by = "Phase", pt.size = 1, label = F) + coord_fixed() + ggtitle("OS by Source") +
+    scale_color_npg(alpha = 1)
+dev.off()
+
+pdf("figures/supplement/s4/OSrep.integrated_v2.pdf")
+DimPlot(OSrep.integrated, reduction = "umap", pt.size = 1, label = T) + coord_fixed() + ggtitle("OS Clusters")
+scale_color_npg(alpha = 1)
+dev.off()
+```
+
+```{r s4_2}
+# BatchEffectCorrectionSCTransform - all
+source("scSeurat.R")
+library(dplyr)
+library(ggplot2)
+library(harmony)
+library(cowplot)
+library(Seurat)
+set.seed(100)
+
+load("Data/OS_merged_postCCR.RData")
+
+# Integrate using Seurats SCTransform Integration workflow
+OSrep.list <- SplitObject(OS, split.by = "src")
+
+for (i in 1:length(OSrep.list)) {
+    OSrep.list[[i]] <- SCTransform(OSrep.list[[i]], verbose = FALSE)
+}
+
+OSrep.features <- SelectIntegrationFeatures(object.list = OSrep.list,
+                                            nfeatures = 3000)
+OSrep.list <- PrepSCTIntegration(object.list = OSrep.list,
+                                 anchor.features = OSrep.features,
+                                 verbose = FALSE)
+OSrep.anchors <- FindIntegrationAnchors(object.list = OSrep.list,
+                                        normalization.method = "SCT",
+                                        anchor.features = OSrep.features,
+                                        verbose = FALSE)
+OSrep.integrated <- IntegrateData(anchorset = OSrep.anchors,
+                                  normalization.method = "SCT",
+                                  verbose = FALSE)
+
+OSrep.integrated <- RunPCA(OSrep.integrated, verbose = FALSE)
+OSrep.integrated <- RunUMAP(OSrep.integrated, dims = 1:30)
+
+saveRDS(OSrep.integrated, file = "Data/Supplement/OSrep.integrated_v2.rds")
+
+pdf("figures/supplement/s4/OSrep.integrated.Phase.pdf")
+DimPlot(OSrep.integrated,
+        reduction = "umap",
+        group.by = "Phase",
+        pt.size = 1,
+        label = F) +
+  coord_fixed() +
+  ggtitle("OS by Phase") +
+  scale_color_npg(alpha = 1)
+dev.off()
+
+pdf("figures/supplement/s4/OSrep.integrated.pdf")
+DimPlot(OSrep.integrated,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("OS Clusters")
+scale_color_npg(alpha = 1)
+dev.off()
+
+```
+
+# S5 & S6 & S7
+Patient data
+
+```{r patientdata_5-6-7}
+library(rrrSingleCellUtils)
+library(Seurat)
+library(ggplot2)
+library(tidyverse)
+library(stringr)
+# library(future)
+library(harmony)
+library(devtools)
+
+set.seed(888)
+
+# Make a list of sample names
+s <- c("BC5",
+       "BC6",
+       "BC10",
+       "BC11",
+       "BC16",
+       "BC17",
+       "BC20",
+       "BC21",
+       "BC22")
+qc <- c(18000,
+        25000,
+        25000,
+        30000,
+        70000,
+        40000,
+        70000,
+        50000,
+        50000)
+path <- c("Conventional",
+          "Conventional",
+          "Conventional",
+          "Conventional",
+          "Conventional",
+          "Chondroblastic",
+          "Chondroblastic",
+          "Intraosseous",
+          "Chondroblastic")
+type <- c("Primary",
+          "Primary",
+          "Lung Met",
+          "Primary",
+          "Primary",
+          "Lung Met",
+          "Primary",
+          "Primary",
+          "Primary")
+
+# Download, file, and extract the files from GEO
+tar_dir <- "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/tar_dir"
+geo_pre <- "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE152nnn/GSE152048/suppl/GSE152048_"
+
+for (i in 1:length(s)) {
+  gse_path <- str_c(geo_pre,
+                    s[i],
+                    ".matrix.tar.gz")
+  tar_file <- str_c(tar_dir,
+                    "/",
+                    s[i],
+                    ".tar.gz ")
+  download.file(gse_path,
+                destfile = tar_file,
+                method = "auto")
+  untar(tar_file,
+        exdir = tar_dir)
+  file.remove(tar_file)
+}
+
+# Create a vector that contains normalized Seurat objects for all samples
+raw <- c()
+for (i in 1:9) {
+  s_obj <- tenx_load_qc(str_c("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/tar_dir/",
+                              s[i],
+                              "/"))
+  s_obj <- subset(s_obj,
+                  subset = nCount_RNA < qc[i] &
+                    percent.mt < 13)
+  s_obj$src <- s[i]
+  s_obj$type <- type[i]
+  s_obj$path <- path[i]
+  s_obj <- s_obj %>%
+    NormalizeData() %>%
+    FindVariableFeatures() %>%
+    ScaleData() %>%
+    RunPCA(verbose = F) %>%
+    FindNeighbors(dims = 1:20) %>%
+    FindClusters(resolution = 0.3) %>%
+    RunUMAP(dims = 1:20)
+  print(DimPlot(s_obj,
+                pt.size = 1,
+                label = T) +
+          coord_fixed() +
+          theme(legend.position = "none") +
+          ggtitle(str_c(s[i],
+                        " basic clustering")))
+  raw <- c(raw, s_obj)
+}
+
+rm(s_obj)
+
+# Save a stopping point - individual objects save(raw, file =
+# 'R:/RESRoberts/Bioinformatics/Analysis/Sanjana/tar_dir/raw.RData')
+save(raw, file = "Data/Supplement/tar_dir/raw.RData")
+
+# For s5
+# Apply Glycolysis module score to each of the primary tumor cells
+gl <- list()
+Glycolysis <- read.table(file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/Glycolysis.txt",
+                         header = FALSE,
+                         sep = ",")
+Glycolysis <- Glycolysis[, 1]
+
+# OxPhos <- read.table(file =
+# '/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/OxPhos.txt', header = FALSE, sep =
+# ',') OxPhos <- OxPhos[,1]
+
+# for s6
+Hypoxia <- read.table(file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/Hypoxia.txt",
+                      header = FALSE,
+                      sep = ",")
+Hypoxia <- Hypoxia[, 1]
+
+# SASP <- read.table(file =
+# '/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/SASP.txt', header = FALSE, sep =
+# ',') SASP <- SASP[,1]
+
+# For S7
+EMT <- read.table(file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/EMT.txt",
+                  header = FALSE,
+                  sep = ",")
+EMT <- EMT[, 1]
+
+# For s8
+TNFA <- read.table(file = "/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/TNFA.txt",
+                   header = FALSE,
+                   sep = ",")
+TNFA <- TNFA[, 1]
+
+# growth <- read.table(file =
+# '/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/pathways/growth.txt', header = FALSE, sep =
+# ',') growth <- growth[,1]
+
+gl$Glycolysis <- Glycolysis
+gl$Hypoxia <- Hypoxia
+gl$EMT <- EMT
+gl$TNFA <- TNFA
+# gl$growth <- growth
+
+mod_names <- names(gl)
+
+#### S5 ####
+# Glycolysis - Added min.cutoff to isolate for cells most module like
+for (i in 1:length(raw)) {
+  raw[[i]] <- AddModuleScore(raw[[i]],
+                             gl[1],
+                             name = names(gl[1]))
+  p <- FeaturePlot(raw[[i]],
+                   features = str_c(names(gl[1]),
+                                    "1"),
+                   min.cutoff = 0.1,
+                   pt.size = 1,
+                   order = T,
+                   cols = c("lightgoldenrod",
+                            "darkred")) +
+    ggtitle(paste0(s[i])) +
+    coord_fixed()
+  
+  pdf(file = paste0("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s5/",
+             names(gl[1]),
+             "_FeaturePlot_",
+             s[i],
+             ".pdf"))
+  print(p)
+  dev.off()
+}
+#### S6 ####
+# Hypoxia - Added min.cutoff to isolate for cells most module like
+for (i in 1:length(raw)) {
+  raw[[i]] <- AddModuleScore(raw[[i]],
+                             gl[2],
+                             name = names(gl[2]))
+  p <- FeaturePlot(raw[[i]],
+                   features = str_c(names(gl[2]),
+                                    "1"),
+                   min.cutoff = 0.1,
+                   pt.size = 1,
+                   order = T,
+                   cols = c("lightgoldenrod",
+                            "darkred")) +
+    ggtitle(paste0(s[i])) +
+    coord_fixed()
+  
+  pdf(file = paste0("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s5/",
+             names(gl[2]),
+             "_FeaturePlot_",
+             s[i],
+             ".pdf"))
+  print(p)
+  dev.off()
+}
+#### S7 ####
+# EMT - Added min.cutoff to isolate for cells most module like
+for (i in 1:length(raw)) {
+  raw[[i]] <- AddModuleScore(raw[[i]],
+                             gl[3],
+                             name = names(gl[3]))
+  p <- FeaturePlot(raw[[i]],
+                   features = str_c(names(gl[3]),
+                                    "1"),
+                   min.cutoff = 0.1,
+                   pt.size = 1,
+                   order = T,
+                   cols = c("lightgoldenrod",
+                            "darkred")) +
+    ggtitle(paste0(s[i])) +
+    coord_fixed()
+  
+  pdf(file = paste0("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s5/",
+             names(gl[3]),
+             "_FeaturePlot_",
+             s[i],
+             ".pdf"))
+  print(p)
+  dev.off()
+}
+#### S8 ####
+# TNFA - Added min.cutoff to isolate for cells most module like
+for (i in 1:length(raw)) {
+  raw[[i]] <- AddModuleScore(raw[[i]],
+                             gl[4],
+                             name = names(gl[4]))
+  p <- FeaturePlot(raw[[i]],
+                   features = str_c(names(gl[4]),
+                                    "1"),
+                   min.cutoff = 0.1,
+                   pt.size = 1,
+                   order = T,
+                   cols = c("lightgoldenrod",
+                            "darkred")) +
+    ggtitle(paste0(s[i])) +
+    coord_fixed()
+  
+  pdf(file = paste0("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021/figures/supplement/s5/",
+             names(gl[4]),
+             "_FeaturePlot_",
+             s[i],
+             ".pdf"))
+  print(p)
+  dev.off()
+}
+```
+
+#S9 & S10 - Imaging
+
+#S11
+
+```{r s11_1}
+source("scSeurat.R")
+#loading libraries
+library(Seurat)
+library(future)
+library(ggplot2)
+# library(fgsea)
+library(msigdbr)
+library(clusterProfiler)
+library(SingleR)
+library(dplyr) # %<%
+library(pheatmap)
+library(RColorBrewer)
+library(viridis) # inferno color palette
+
+#Cellecta and Zymo, Cell culture 
+#Cellecta
+cellecta.cx.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
+cellecta.cx.raw <- subset(cellecta.cx.raw, subset = nFeature_RNA >2500 & nCount_RNA <40000 & percent.mt <14)
+cellecta.cx.raw$src <- "Replicate_01"
+cellecta.cx.raw$cond <- "Culture"
+
+#Zymo
+zymo.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0016-zymo/outs/filtered_feature_bc_matrix/", spec = "mixHuman")
+zymo.cx.raw <- subset(zymo.cx.raw, subset = nFeature_RNA >3500 & nCount_RNA <50000 & percent.mt <15)
+zymo.cx.raw$src <- "Replicate_02"
+zymo.cx.raw$cond <- "Culture"
+
+
+# Add lineage tracing tags to the Seurat objects
+cellecta.cx.raw <- processLTBC(cellecta.cx.raw,
+                               lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/S0015-cellecta/lt.fq",
+                               cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0015-cellecta/outs/S0015-cellecta/cid.fq",
+                               histogram = T,
+                               title = "Cx - Cellecta, Top 40 Clones",
+                               ymax = 10,
+                               col.fill = "#E64B35FF",
+                               relative = T)
+
+zymo.cx.raw <- processLTBC(zymo.cx.raw,
+                           lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0016-zymo/outs/lt.fq",
+                           cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0016-zymo/outs/cid.fq",
+                           histogram = T,
+                           title = "Cx - Zymo, Top 40 Clones",
+                           ymax = 2.5,
+                           col.fill = "#00A087FF",
+                           relative = T)
+
+
+# Merge into a single Seurat object
+Reps <- merge(cellecta.cx.raw, y = zymo.cx.raw,
+              add.cell.ids = c("Cellecta_Cx", "Zymo_Cx"),
+              project = "Heterogeneity")
+
+# Process and cluster
+Reps <- NormalizeData(Reps) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = Reps@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.2) ##Note change in resolution
+
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
+                         g2m.features = g2m.genes, set.ident = TRUE)
+DimPlot(Reps, reduction = "umap", pt.size = 1, label = F) + 
+  coord_fixed() + 
+  ggtitle("Reps by Source") + 
+  scale_color_npg(alpha = 0.7)
+
+# Attempt to regress out the effects of cell cycle on these tumor cells
+Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
+                         g2m.features = g2m.genes, set.ident = TRUE)
+
+Reps <- ScaleData(object = Reps, vars.to.regress = c("S.Score", "G2M.Score"),
+                  features = rownames(x = Reps)) 
+Reps <- RunPCA(Reps, pc.genes = Reps@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+# Plot the data 
+DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F) + 
+  coord_fixed() + 
+  ggtitle("Reps by Source") + 
+  scale_color_npg(alpha = 1)
+DimPlot(Reps, reduction = "umap", pt.size = 1, label = T) + 
+  coord_fixed() + 
+  ggtitle("Reps Clusters") + 
+  scale_color_npg(alpha = 0.7)
+
+#Identify clones that are most enriched in the two replicates
+# Show where cells with common ancestors fall within the transcriptional phenotype clusters
+DimPlot(Reps, reduction = "umap", group.by = "Phase", pt.size = 1)+coord_fixed()
+DimPlot(Reps, reduction = "umap", label = T, pt.size = 1)+coord_fixed()
+#cell.ids <- sample(colnames(Reps))
+
+```
+
+```{r s11_2}
+rm(Reps)
+
+cellecta.lung.raw <- tenXLoadQC("/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/filtered_feature_bc_matrix/", 
+                                spec = "mixHuman")
+cellecta.lung.raw <- subset(cellecta.lung.raw, subset = percent.mt <20 & percent.mt > 2)
+cellecta.lung.raw$src <- "Replicate_01"
+cellecta.lung.raw$cond <- "Lung"
+
+#Zymo
+
+zymo.lung.raw<- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/filtered_feature_bc_matrix/", 
+                           spec = "mixHuman")
+zymo.lung.raw <- subset(zymo.lung.raw, subset = nFeature_RNA >1250 & nCount_RNA <60000 & percent.mt <25)
+zymo.lung.raw$src <- "Replicate_02"
+zymo.lung.raw$cond <- "Lung"
+
+# Add lineage tracing tags to the Seurat objects
+cellecta.lung.raw <- processLTBC(cellecta.lung.raw,
+                                 lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/lt.fq",
+                                 cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0023-cellecta-lung/outs/cid.fq",
+                                 histogram = T,
+                                 title = "Lung - Cellecta, Top 40 Clones",
+                                 ymax = 10,
+                                 col.fill = "#E64B35FF",
+                                 relative = T)
+
+
+zymo.lung.raw <- processLTBC(zymo.lung.raw,
+                             lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
+                             cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
+                             histogram = T,
+                             title = "Lung - Zymo, Top 40 Clones",
+                             ymax = 2.5,
+                             col.fill = "#00A087FF",
+                             relative = T)
+
+# Merge into a single Seurat object
+Reps <- merge(cellecta.lung.raw, y = zymo.lung.raw,
+              add.cell.ids = c("Cellecta_lung", "Zymo_lung"),
+              project = "Heterogeneity")
+
+
+# Process and cluster
+Reps <- NormalizeData(Reps) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = Reps@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.2) ##Note change in resolution
+
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
+                         g2m.features = g2m.genes, set.ident = TRUE)
+DimPlot(Reps, reduction = "umap", pt.size = 1, label = F) + 
+  coord_fixed() + 
+  ggtitle("Reps by Source") + 
+  scale_color_npg(alpha = 0.7)
+
+# Attempt to regress out the effects of cell cycle on these tumor cells
+Reps <- CellCycleScoring(object = Reps, s.features = s.genes,
+                         g2m.features = g2m.genes, set.ident = TRUE)
+
+Reps <- ScaleData(object = Reps, vars.to.regress = c("S.Score", "G2M.Score"),
+                  features = rownames(x = Reps)) 
+Reps <- RunPCA(Reps, pc.genes = Reps@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+# Plot the data 
+DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F) + 
+  coord_fixed() + 
+  ggtitle("Reps by Source") + 
+  scale_color_npg(alpha = 1)
+DimPlot(Reps, reduction = "umap", pt.size = 1, label = T) + 
+  coord_fixed() + 
+  ggtitle("Reps Clusters") + 
+  scale_color_npg(alpha = 0.7)
+
+#Identify clones that are most enriched in the two replicates
+# Show where cells with common ancestors fall within the transcriptional phenotype clusters
+DimPlot(Reps, reduction = "umap", group.by = "Phase", pt.size = 1)+coord_fixed()
+DimPlot(Reps, reduction = "umap", label = T, pt.size = 1)+coord_fixed()
+#cell.ids <- sample(colnames(Reps))
+```s = c("S.Score", "G2M.Score"),
+                  features = rownames(x = Reps)) 
+Reps <- RunPCA(Reps, pc.genes = Reps@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+# Plot the data 
+DimPlot(Reps, reduction = "umap", group.by = "src", pt.size = 1, label = F) + 
+  coord_fixed() + 
+  ggtitle("Reps by Source") + 
+  scale_color_npg(alpha = 1)
+DimPlot(Reps, reduction = "umap", pt.size = 1, label = T) + 
+  coord_fixed() + 
+  ggtitle("Reps Clusters") + 
+  scale_color_npg(alpha = 0.7)
+
+#Identify clones that are most enriched in the two replicates
+# Show where cells with common ancestors fall within the transcriptional phenotype clusters
+DimPlot(Reps, reduction = "umap", group.by = "Phase", pt.size = 1)+coord_fixed()
+DimPlot(Reps, reduction = "umap", label = T, pt.size = 1)+coord_fixed()
+#cell.ids <- sample(colnames(Reps))
+```
+
