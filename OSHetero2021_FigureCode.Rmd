@@ -644,7 +644,9 @@ for (i in seq_len(length(group_names))) {
   raw_ith[[better_name]] <- colMeans(mat2, na.rm = TRUE)
 }
 
-ith <- pivot_longer(na.omit(raw_ith),
+raw_ith <- na.omit(raw_ith)
+
+ith <- pivot_longer(raw_ith,
                     cols = everything(),
                     names_to = "Sample",
                     values_to = "ITHScore") %>%
@@ -654,7 +656,7 @@ ith <- pivot_longer(na.omit(raw_ith),
                         str_replace("cx", "Culture") %>%
                         str_replace("OB", "Osteoblast") %>%
                         str_replace("t143", "143")))
-    
+
 ith$logITH <- log10(ith$ITHScore)
 ridge_cols <- c("#B8B8B8FF",
                 "#D43F3AFF", "#D43F3AFF", "#D43F3AFF",
@@ -743,7 +745,7 @@ figure_3b
 
 # Save as PDF
 pdf("figures/figure_3/figure_3b.pdf",
-    width = 8,
+    width = 9,
     height = 8)
 figure_3b
 dev.off()
