@@ -734,13 +734,14 @@ stats <- stats[-1,]
 figure_3b <-
     rplot +
     geom_text(data = stats,
-              aes(x = 1.75, y = Sample),
+              aes(x = 1.5, y = Sample),
               label = paste0("p=",
                              format(stats$V1, digits = 3, trim = TRUE),
                             ", eff. size=",
                             format(stats$V2, digits = 3, trim = TRUE),
                             "\n"),
-              size = 2)
+              size = 1.8,
+              color = "#2b2a2a")
 figure_3b
 
 # Save as PDF
@@ -1067,7 +1068,7 @@ figure_3d <-
     cowplot::plot_grid(cowplot::plot_grid(P2,
                                           P1,
                                           align = "v",
-                                          rel_heights = c(2, 10),
+                                          rel_heights = c(1, 8),
                                           ncol = 1),
                        cowplot::plot_grid(P1_legend,
                                           P2_legend,
@@ -1103,14 +1104,13 @@ layout_matrix <-
              10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
              10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
              10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
-             10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
              10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10),
-         nrow = 12,
+         nrow = 11,
          byrow = TRUE)
 
 pdf("figures/figure_3/figure_3.pdf",
     width = 8,
-    height = 12)
+    height = 9)
 gridExtra::grid.arrange(grobs = list(figure_3b,
                                      patchwork::patchworkGrob(figure_3c_umaps$OS17_TL),
                                      patchwork::patchworkGrob(figure_3c_umaps$`143B_TL`),
