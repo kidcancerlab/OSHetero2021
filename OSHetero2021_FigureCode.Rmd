@@ -637,13 +637,22 @@ for (i in seq_len(length(group_names))) {
     str_replace("OB", "Osteoblast") %>%
     str_replace("t143", "143")
   sub_obj <- subset(merged_sobjs, group == group_names[i])
-  z <- Embeddings(sub_obj, reduction = "pca")[, 1:20]
+  z <-
+    GetAssayData(sub_obj, slot = "scale.data") %>%
+    as.data.frame() %>%
+    rownames_to_column("gene") %>%
+    as_tibble() %>%
+    filter(gene %in% VariableFeatures(sub_obj)) %>%
+    select(-gene) %>%
+    t()
+
   mat <- dist(z, diag = TRUE, upper = FALSE)
   mat2 <- as.matrix(mat)
   mat2[upper.tri(mat2, diag = TRUE)] <- NA
   raw_ith[[better_name]] <- colMeans(mat2, na.rm = TRUE)
 }
 
+# the last row will be all NAs because we removed the diagonal from the matrix
 raw_ith <- na.omit(raw_ith)
 
 ith <- pivot_longer(raw_ith,
@@ -709,13 +718,15 @@ for (i in seq_along(comps$ctl)) {
 }
 # Calculate effect size (in figure)
 efs <- matrix(nrow = 13, ncol = 13)
-for(i in seq_along(comps$ctl)) {
-  s <- cohen.d(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]])
+for (i in seq_along(comps$ctl)) {
+  effect_size <-
+    overlapping::overlap(list(ctrl = raw_ith[, comps$ctl[i]],
+                              comp = raw_ith[, comps$comp[i]]))$OV
   #Effect size of comparison group (column)
   #correlated with its respective proper control (row)
-  efs[comps$ctl[i], comps$comp[i]] <- s$estimate
+  efs[comps$ctl[i], comps$comp[i]] <- effect_size
   #Effect size for each group given proper comparison to respective controls
-  stats[comps$comp[i], 2] <- s$estimate
+  stats[comps$comp[i], 2] <- effect_size
 }
 
 # Save table of comparison group (column) correlated with its proper control (row)
@@ -734,11 +745,11 @@ stats <- stats[-1,]
 figure_3b <-
     rplot +
     geom_text(data = stats,
-              aes(x = 1.5, y = Sample),
+              aes(x = 1.8, y = Sample),
               label = paste0("p=",
                              format(stats$V1, digits = 3, trim = TRUE),
                             ", eff. size=",
-                            format(stats$V2, digits = 3, trim = TRUE),
+                            format(stats$V2, digits = 1, trim = TRUE),
                             "\n"),
               size = 1.8,
               color = "#2b2a2a")
