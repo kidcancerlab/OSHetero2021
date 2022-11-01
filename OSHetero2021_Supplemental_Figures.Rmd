@@ -1448,7 +1448,7 @@ DimPlot(tumor_comb, reduction = "umap", group.by = "type") +
 
 s <- c("BC5", "BC6", "BC11", "BC16",
        "BC20", "BC21", "BC22")
-raw <- c()
+primarytumor <- c()
 for(i in 1:7) {
   x <- subset(tumor_comb, subset = src == s[i])
   x <- x %>%
@@ -1463,27 +1463,27 @@ for(i in 1:7) {
           coord_fixed() +
           theme(legend.position = "none") +
           ggtitle(str_c(s[i], " basic clustering")))
-  raw <- c(raw, x)
+  primarytumor <- c(primarytumor, x)
 }
 rm(x)
-names(raw) <- s
+names(primarytumor) <- s
 ################################Set optimum number of clusters using Silhoutte scoring
 
-data <-raw[[7]] 
+data <-primarytumor[[7]] 
 #data.nC <- nRes(data, 
 #                res = seq(from = 0.1, to = 0.9, by = 0.1))
 # Optimum resolution for all samples is 0.1, except for BC21 (res = 0.7)
 for (i in c(1:5,7)){
-  # raw[[i]] <- raw[[i]] %>% FindClusters(resolution = 0.1)
-  print(DimPlot(raw[[i]], pt.size = 1, label = T) +
+  # primarytumor[[i]] <- primarytumor[[i]] %>% FindClusters(resolution = 0.1)
+  print(DimPlot(primarytumor[[i]], pt.size = 1, label = T) +
           coord_fixed() +
           theme(legend.position = "none") +
           ggtitle(str_c(s[i], " basic clustering")))
 }
 
 for(i in 6){
-  raw[[i]] <- raw[[i]] %>% FindClusters(resolution = 0.7)
-  print(DimPlot(raw[[i]], pt.size = 1, label = T) +
+  primarytumor[[i]] <- primarytumor[[i]] %>% FindClusters(resolution = 0.7)
+  print(DimPlot(primarytumor[[i]], pt.size = 1, label = T) +
           coord_fixed() +
           theme(legend.position = "none") +
           ggtitle(str_c(s[i], " basic clustering")))
@@ -1527,11 +1527,11 @@ mod_names <- names(gl)
 #### S5 ####
 # Glycolysis - Added min.cutoff to isolate for cells most module like
 gly <- list()
-for (i in 1:length(raw)) {
-  raw[[i]] <- AddModuleScore(raw[[i]],
+for (i in 1:length(primarytumor)) {
+  primarytumor[[i]] <- AddModuleScore(primarytumor[[i]],
                              gl[1],
                              name = names(gl[1]))
-  p <- FeaturePlot(raw[[i]],
+  p <- FeaturePlot(primarytumor[[i]],
                    features = str_c(names(gl[1]),
                                     "1"),
                    min.cutoff = 0.1,
@@ -1551,6 +1551,7 @@ for (i in 1:length(raw)) {
   dev.off()
   
   gly[[i]] <- p
+  
 }
 
 s5 <- gly[[1]] +
@@ -1571,11 +1572,11 @@ dev.off()
 #### S6 ####
 # Hypoxia - Added min.cutoff to isolate for cells most module like
 hypx <- list()
-for (i in 1:length(raw)) {
-  raw[[i]] <- AddModuleScore(raw[[i]],
+for (i in 1:length(primarytumor)) {
+  primarytumor[[i]] <- AddModuleScore(primarytumor[[i]],
                              gl[2],
                              name = names(gl[2]))
-  p <- FeaturePlot(raw[[i]],
+  p <- FeaturePlot(primarytumor[[i]],
                    features = str_c(names(gl[2]),
                                     "1"),
                    min.cutoff = 0.1,
@@ -1614,11 +1615,11 @@ dev.off()
 #### S7 ####
 # EMT - Added min.cutoff to isolate for cells most module like
 emt <- list()
-for (i in 1:length(raw)) {
-  raw[[i]] <- AddModuleScore(raw[[i]],
+for (i in 1:length(primarytumor)) {
+  primarytumor[[i]] <- AddModuleScore(primarytumor[[i]],
                              gl[3],
                              name = names(gl[3]))
-  p <- FeaturePlot(raw[[i]],
+  p <- FeaturePlot(primarytumor[[i]],
                    features = str_c(names(gl[3]),
                                     "1"),
                    min.cutoff = 0.1,
@@ -1658,11 +1659,11 @@ dev.off()
 #### S8 ####
 # TNFA - Added min.cutoff to isolate for cells most module like
 tnf <- list()
-for (i in 1:length(raw)) {
-  raw[[i]] <- AddModuleScore(raw[[i]],
+for (i in 1:length(primarytumor)) {
+  primarytumor[[i]] <- AddModuleScore(primarytumor[[i]],
                              gl[4],
                              name = names(gl[4]))
-  p <- FeaturePlot(raw[[i]],
+  p <- FeaturePlot(primarytumor[[i]],
                    features = str_c(names(gl[4]),
                                     "1"),
                    min.cutoff = 0.1,
@@ -1698,6 +1699,74 @@ pdf(file = "figures/supplement/s8/s8.pdf",
     width=15)
 s8
 dev.off()
+
+save(primarytumor, file = "Data/Supplement/PrimaryTumor/primarytumor.RData")
+```
+
+```{r s5-s6-s7-s8_scatter}
+# testing <- as.data.frame(primarytumor[["BC22"]]$Glycolysis1) %>% rownames_to_column(testing)
+# colnames(testing) <- c("cellid", "Glycolysis")
+# testing2 <- as.data.frame(primarytumor[["BC22"]]$Hypoxia1) %>% rownames_to_column()
+# colnames(testing) <- c("cellid", "Hypoxia")
+# combo <- merge(x=testing, y=testing2, by="rowname")
+
+colors <- c("#F8766D",
+            "#C49A00",
+            "#53B400",
+            "#00C094",
+            "#00B6EB",
+            "#A58AFF",
+            "#FB61D7")
+
+combo <- list()
+for (j in 1:3) {
+  for (i in 1:length(primarytumor)) {
+    p <- FeatureScatter(primarytumor[[i]],
+                        feature1 = str_c(names(gl[1]),
+                                         "1"),
+                        
+                        feature2 = str_c(names(gl[j+1]),
+                                         "1"),
+                        group.by = "src",
+                        cols = colors[[i]],
+                        pt.size = 0.5) +
+      theme(aspect.ratio = 1)
+    print(p)
+    
+    pdf(file = paste0("figures/supplement/s5-",
+                      j+5,
+                      "/",
+                      names(gl[1]),
+                      names(gl[j+1]),
+                      "_ScatterPlot_",
+                      s[i],
+                      ".pdf"),
+        height = 5,
+        width = 5)
+    print(p)
+    dev.off()
+    
+    combo[[i]] <- p
+  }
+    sfig <- combo[[1]] +
+      combo[[2]] +
+      combo[[3]] +
+      combo[[4]] +
+      combo[[5]] +
+      combo[[6]] +
+      combo[[7]] +
+      plot_layout(ncol = 3)
+    
+    pdf(file = paste0("figures/supplement/s5-",
+                      j+5,
+                      "/s5-",
+                      j+5,
+                      ".pdf"),
+        height=13,
+        width=15)
+    print(sfig)
+    dev.off()
+}
 ```
 
 # S9 & S10 - Imaging
