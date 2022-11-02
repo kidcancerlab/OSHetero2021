@@ -1717,7 +1717,7 @@ colors <- c("#F8766D",
             "#00B6EB",
             "#A58AFF",
             "#FB61D7")
-
+#### Glycolysis vs all others ####
 combo <- list()
 for (j in 1:3) {
   for (i in 1:length(primarytumor)) {
@@ -1767,6 +1767,101 @@ for (j in 1:3) {
     print(sfig)
     dev.off()
 }
+#### Hypoxia vs Remaining ####
+combo <- list()
+for (j in 1:2) {
+  for (i in 1:length(primarytumor)) {
+    p <- FeatureScatter(primarytumor[[i]],
+                        feature1 = str_c(names(gl[2]),
+                                         "1"),
+                        
+                        feature2 = str_c(names(gl[j+2]),
+                                         "1"),
+                        group.by = "src",
+                        cols = colors[[i]],
+                        pt.size = 0.5) +
+      theme(aspect.ratio = 1)
+    print(p)
+    
+    pdf(file = paste0("figures/supplement/s6-",
+                      j+6,
+                      "/",
+                      names(gl[2]),
+                      names(gl[j+2]),
+                      "_ScatterPlot_",
+                      s[i],
+                      ".pdf"),
+        height = 5,
+        width = 5)
+    print(p)
+    dev.off()
+    
+    combo[[i]] <- p
+  }
+    sfig <- combo[[1]] +
+      combo[[2]] +
+      combo[[3]] +
+      combo[[4]] +
+      combo[[5]] +
+      combo[[6]] +
+      combo[[7]] +
+      plot_layout(ncol = 3)
+    
+    pdf(file = paste0("figures/supplement/s6-",
+                      j+6,
+                      "/s6-",
+                      j+6,
+                      ".pdf"),
+        height=13,
+        width=15)
+    print(sfig)
+    dev.off()
+}
+
+#### Last Two vs Each other ####
+combo <- list()
+
+  for (i in 1:length(primarytumor)) {
+    p <- FeatureScatter(primarytumor[[i]],
+                        feature1 = str_c(names(gl[3]),
+                                         "1"),
+                        
+                        feature2 = str_c(names(gl[4]),
+                                         "1"),
+                        group.by = "src",
+                        cols = colors[[i]],
+                        pt.size = 0.5) +
+      theme(aspect.ratio = 1)
+    print(p)
+    
+    pdf(file = paste0("figures/supplement/s7-8/",
+                      names(gl[3]),
+                      names(gl[4]),
+                      "_ScatterPlot_",
+                      s[i],
+                      ".pdf"),
+        height = 5,
+        width = 5)
+    print(p)
+    dev.off()
+    
+    combo[[i]] <- p
+  }
+    sfig <- combo[[1]] +
+      combo[[2]] +
+      combo[[3]] +
+      combo[[4]] +
+      combo[[5]] +
+      combo[[6]] +
+      combo[[7]] +
+      plot_layout(ncol = 3)
+    
+    pdf(file = paste0("figures/supplement/s7-8/s7-8.pdf"),
+        height=13,
+        width=15)
+    print(sfig)
+    dev.off()
+
 ```
 
 # S9 & S10 - Imaging
