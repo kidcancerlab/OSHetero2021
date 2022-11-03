@@ -440,7 +440,7 @@ sfig_s3_a2 <- DimPlot(OS,
                                "#E64B35FF",
                                "#4DBBD5FF",
                                "#00A087FF",
-                               "#3C5488FF")) +
+                               "#3C5488FF"))  +
   theme(aspect.ratio = 1) +
   ggtitle("OS by Model") 
 sfig_s3_a2
@@ -469,12 +469,13 @@ sfig_s3_b <- DimPlot(OS_harmony,
                      group.by = "model",
                      pt.size = 1,
                      label = F,
+                     shuffle = T,
                      cols = c("#828282",
                               "#E64B35FF",
                               "#4DBBD5FF",
                               "#00A087FF",
-                              "#3C5488FF")) +
-  coord_fixed() +
+                              "#3C5488FF"))  +
+  theme(aspect.ratio = 1) +
   ggtitle("OS by Model") 
 sfig_s3_b
 
@@ -486,21 +487,6 @@ dev.off()
 ```
 
 ```{r s3_group}
-sfig_s3_b <- DimPlot(OS_harmony,
-                     reduction = "umap",
-                     group.by = "model",
-                     pt.size = 1,
-                     label = F,
-                     shuffle = T,
-                     cols = c("#828282",
-                              "#E64B35FF",
-                              "#4DBBD5FF",
-                              "#00A087FF",
-                              "#3C5488FF")) +
-  coord_fixed() +
-  ggtitle("OS by Model") 
-sfig_s3_b
-
 s3 <- (sfig_s3_a2 | sfig_s3_b)
 s3
 
@@ -708,6 +694,9 @@ save(Rep1_H, file = "Data/Supplement/Rep1_H.RData")
 ```
 
 ```{r s4_correctedplots}
+library(Seurat)
+library(tidyverse)
+
 load("Data/Supplement/Rep1_H_v3-FastMNN.RData")
 
 # By rep
@@ -715,7 +704,8 @@ sfig_s4_a1 <- DimPlot(Rep1_H_v3,
                       reduction = "umap",
                       pt.size = 1,
                       label = F,
-                      group.by = "rep") +
+                      group.by = "rep",
+                      shuffle = T) +
   theme(aspect.ratio = 1) +
   scale_color_npg(alpha = 1) +
   ggtitle("FastMNN by Replicate") +
@@ -733,7 +723,8 @@ sfig_s4_a2 <- DimPlot(Rep1_H_v3,
                       reduction = "umap",
                       pt.size = 1,
                       label = F,
-                      group.by = "Phase") +
+                      group.by = "Phase",
+                      shuffle = T) +
   theme(aspect.ratio = 1) +
   scale_color_npg(alpha = 1) +
   ggtitle("FastMNN by Phase") +
@@ -757,7 +748,8 @@ sfig_s4_a3 <- DimPlot(Rep1_H_v3,
                       reduction = "umap",
                       pt.size = 1,
                       label = F,
-                      group.by = "src") +
+                      group.by = "src",
+                      shuffle = T) +
   theme(aspect.ratio = 1) +
   #scale_color_npg(alpha = 1) +
   ggtitle("FastMNN by Type") +
@@ -806,13 +798,14 @@ Rep1_H_sct.integrated <- RunUMAP(Rep1_H_sct.integrated, dims = 1:30)
 
 saveRDS(Rep1_H_sct.integrated,
         file = "Data/Supplement/Rep1_H_sct.integrated.rds")
-
+#Rep1_H_sct.integrated <- readRDS("Data/Supplement/Rep1_H_sct.integrated.rds")
 
 sfig_s4_b1 <- DimPlot(Rep1_H_sct.integrated,
                       reduction = "umap",
                       group.by = "rep",
                       pt.size = 1,
-                      label = F) +
+                      label = F,
+                      shuffle = T) +
   theme(aspect.ratio = 1) +
   ggtitle("SCTransform by Replicate") +
   NoAxes()
@@ -828,7 +821,8 @@ sfig_s4_b2 <- DimPlot(Rep1_H_sct.integrated,
                       reduction = "umap",
                       group.by = "Phase",
                       pt.size = 1,
-                      label = F) +
+                      label = F,
+                      shuffle = T) +
   theme(aspect.ratio = 1) +
   ggtitle("SCTransform by Phase") +
   scale_color_npg(alpha = 1) +
@@ -859,7 +853,8 @@ sfig_s4_b3 <- DimPlot(Rep1_H_sct.integrated,
                       reduction = "umap",
                       group.by = "src",
                       pt.size = 1,
-                      label = F) +
+                      label = F,
+                      shuffle = T) +
   theme(aspect.ratio = 1) +
   ggtitle("SCTransform by Type") +
   NoAxes()
@@ -874,22 +869,15 @@ dev.off()
 
 ### Group
 
-```{r s4_group}
-s4 <- (sfig_s4_a1 | sfig_s4_a2 | sfig_s4_a3) /
+```{r s4_abgroup}
+s4_ab <- (sfig_s4_a1 | sfig_s4_a2 | sfig_s4_a3) /
   (sfig_s4_b1 | sfig_s4_b2 | sfig_s4_b3)
 
-pdf("figures/supplement/s4/s4.pdf",
-    height=5,
-    width=20)
-s4
+pdf("figures/supplement/s4/s4_ab.pdf",
+    height=8,
+    width=12)
+s4_ab
 dev.off()
-```
-
-```{r clean2, cache=FALSE}
-# BatchEffectCorrectionSCTransform - all
-options(future.globals.maxSize= 8912896000000)
-# Clean up environment
-rm(list=setdiff(ls(), "tenXLoadQC"))
 ```
 
 ### 4C
@@ -917,7 +905,8 @@ for (i in 1:length(OS_list)) {
                           reduction = "umap",
                           group.by = "src",
                           pt.size = 1,
-                          label = F) +
+                          label = F,
+                          shuffle = T) +
     theme(aspect.ratio = 1) +
     ggtitle(paste0(head(OS_list_harmony[[i]]@meta.data$model,
                         1),
@@ -926,8 +915,8 @@ for (i in 1:length(OS_list)) {
 }
 
 pdf("figures/supplement/s4/sfig_s4_c.pdf",
-    width = 20,
-    height = 5)
+    width = 16,
+    height = 4)
 sfig_s4_c[[1]] |
   sfig_s4_c[[2]] |
   sfig_s4_c[[3]] |
@@ -935,7 +924,28 @@ sfig_s4_c[[1]] |
 dev.off()
 ```
 
-```{r s4_c_original}
+### Group
+
+```{r s4_group}
+s4 <- (sfig_s4_a1 | sfig_s4_a2 | sfig_s4_a3) /
+  (sfig_s4_b1 | sfig_s4_b2 | sfig_s4_b3) /
+  (sfig_s4_c[[1]] | sfig_s4_c[[2]] | sfig_s4_c[[3]] | sfig_s4_c[[4]])
+
+pdf("figures/supplement/s4/s4.pdf",
+    height=12,
+    width=16)
+s4
+dev.off()
+```
+
+```{r clean2, cache=FALSE}
+# BatchEffectCorrectionSCTransform - all
+options(future.globals.maxSize= 8912896000000)
+# Clean up environment
+rm(list=setdiff(ls(), "tenXLoadQC"))
+```
+
+```{r s4_c_previous}
 source("scSeurat.R")
 library("harmony")
 set.seed(100)
