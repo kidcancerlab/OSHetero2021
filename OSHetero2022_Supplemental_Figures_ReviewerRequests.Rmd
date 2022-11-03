@@ -513,6 +513,100 @@ figure_5f_down
 dev.off()
 ```
 
+### Test if clones tend to be enriched within a single cluster
+
+```{r bootstrapCloneEnrich, eval=TRUE}
+load("Data/os17.RData")
+n_clones <- 30
+top_clones <-
+  tibble(src = os17$src,
+         clone = os17$lt,
+         cluster = paste0("c_", os17$seurat_clusters)) %>%
+  na.omit() %>%
+  group_by(src, clone, cluster) %>%
+  mutate(n_cells_in_cluster = n()) %>%
+  ungroup() %>%
+  group_by(src, clone) %>%
+  mutate(n_cells_in_clone = n()) %>%
+  ungroup() %>%
+  group_by(src) %>%
+  arrange(desc(n_cells_in_clone), clone, .by_group = TRUE) %>%
+  unique() %>%
+  pivot_wider(id_cols = c(src, clone, n_cells_in_clone),
+              names_from = cluster,
+              values_from = n_cells_in_cluster) %>%
+  filter(n_cells_in_clone >= 5) %>%
+  #slice_head(n = n_clones) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("c_"),
+               names_to = "cluster",
+               values_to = "n_cells_in_cluster") %>%
+  na.omit() %>%
+  mutate(clone = fct_reorder(clone, n_cells_in_clone))
+cell_counts_to_test <-
+  top_clones$n_cells_in_clone %>%
+  unique() %>%
+  sort()
+names(cell_counts_to_test) <- paste0("c_", cell_counts_to_test)
+# Get the number of clusters represented by n randomly selected cells
+max_per_cluster_n_cells <- function(sobj, n_cells) {
+  selected_cell_indexes <-
+    sample(seq_len(ncol(sobj)),
+           size = n_cells,
+           replace = FALSE)
+  max_n_per_cluster <-
+    sobj$seurat_clusters[selected_cell_indexes] %>%
+    table() %>%
+    max()
+  return(max_n_per_cluster)
+}
+# bootstrap the data n_perms times to get a distribution
+perm_n_times <- function(sobj, n_cells, n_perms = 1000) {
+  message("Testing ", n_cells, " cells")
+  n_clusters <- replicate(n_perms, max_per_cluster_n_cells(sobj, n_cells))
+  return(n_clusters)
+}
+# Do this for all observed cells/clone
+n_perms <- 100000
+perm_table <-
+  sapply(cell_counts_to_test,
+         function(cell_num) perm_n_times(os17,
+                                         cell_num,
+                                         n_perms = n_perms),
+         USE.NAMES = TRUE) %>%
+  as.data.frame()
+
+contin <- top_clones %>%
+  rowwise() %>%
+  mutate(p_value = (
+    sum(perm_table[[paste0("c_", n_cells_in_clone)]] >=
+          n_cells_in_cluster) /
+      n_perms
+  ),
+  signif = p_value <= 0.05,
+  cluster = str_remove(cluster, "c_")) %>%
+  ggplot(aes(x = cluster,
+             y = clone,
+             fill = n_cells_in_cluster)) +
+  geom_tile() +
+  geom_text(aes(label = n_cells_in_cluster,
+                color = signif)) +
+  scale_color_manual(values = c("gray", "red")) +
+  facet_grid(src ~ ., scales = "free_y", space = "free") +
+  labs(x = "Cluster",
+       y = "Clone",
+       fill = "Cells in Cluster",
+       color = "Enriched Cluster") +
+  theme_bw()
+contin
+
+pdf("figures/supplement/requests/contingencytable.pdf",
+    height = 10,
+    width = 6)
+contin
+dev.off()
+```
+
 ## Replicates in other cell lines
 
 ### K7M2
