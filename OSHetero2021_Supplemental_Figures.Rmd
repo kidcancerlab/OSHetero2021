@@ -518,6 +518,7 @@ options(future.globals.maxSize= 8912896000000)
 
 # S4
 ## Batch Correction Test
+### 4A
 
 ```{r s4}
 # Determine overlay of replicates with or without the use
@@ -770,6 +771,8 @@ sfig_s4_a3
 dev.off()
 ```
 
+### 4B
+
 ```{r s4_b}
 library(sctransform)
 library(Seurat)
@@ -869,6 +872,8 @@ sfig_s4_b3
 dev.off()
 ```
 
+### Group
+
 ```{r s4_group}
 s4 <- (sfig_s4_a1 | sfig_s4_a2 | sfig_s4_a3) /
   (sfig_s4_b1 | sfig_s4_b2 | sfig_s4_b3)
@@ -887,6 +892,8 @@ options(future.globals.maxSize= 8912896000000)
 rm(list=setdiff(ls(), "tenXLoadQC"))
 ```
 
+### 4C
+
 ```{r s4_c}
 set.seed(108)
 library(harmony)
@@ -894,15 +901,8 @@ library(Seurat)
 library(tidyverse)
 load("Data/OS_list_CCR.RData")
 
-vplayout <- function(x, y) viewport(layout.pos.row = x,
-                                    layout.pos.col = y)
-pdf("figures/supplement/s2/sfig_s4_c.pdf",
-    width = 20,
-    height = 5)
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1, 4)))
-
 OS_list_harmony <- list()
+sfig_s4_c <- list()
 for (i in 1:length(OS_list)) {
   # Run Harmony
   OS_list_harmony[[paste0(head(OS_list[[i]]@meta.data$model, 1))]] <- 
@@ -913,7 +913,7 @@ for (i in 1:length(OS_list)) {
     FindNeighbors(reduction = "harmony", dims = 1:20) %>%
     FindClusters(resolution = 0.2)
   
-  sfig_s4_temp <- DimPlot(OS_list_harmony[[i]],
+  sfig_s4_c[[i]] <- DimPlot(OS_list_harmony[[i]],
                           reduction = "umap",
                           group.by = "src",
                           pt.size = 1,
@@ -923,15 +923,15 @@ for (i in 1:length(OS_list)) {
                         1),
                    " Harmony")) +
     NoAxes()
-  
-  #pdf(paste0("figures/supplement/s4/sfig_s4_c",
-  # i,
-  # ".pdf"))
-  # print(sfig_s4_temp)
-  #dev.off()
-  
-  print(sfig_s4_temp, vp = vplayout(ceiling(i/4), i))
 }
+
+pdf("figures/supplement/s4/sfig_s4_c.pdf",
+    width = 20,
+    height = 5)
+sfig_s4_c[[1]] |
+  sfig_s4_c[[2]] |
+  sfig_s4_c[[3]] |
+  sfig_s4_c[[4]]
 dev.off()
 ```
 
