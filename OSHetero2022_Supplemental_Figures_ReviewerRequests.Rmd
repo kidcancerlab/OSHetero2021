@@ -193,13 +193,16 @@ write_tsv(lung_prop_tbl, "Data/Supplement/requests/Fig3d_lung_prop_tbl.tsv")
 
 ```{r Fig3d_down_process, dependson='Fig3_down'}
 library(data.table)
+library(msigdbr)
+library(clusterProfiler)
 source("Downstream.v3.R")
+
 #library(pheatmap)
 #Create list of objects used in Figure 3 heatmap
-B.list <- c(OS_list$OS17_TL,
-                OS_list$`143B_TL`,
-                OS_list$NCHOS2_TL,
-                OS_list$NCHOS7_TL)
+B.list <- list(OS17 = OS_list$`OS17_TL`,
+               t143b = OS_list$`143B_TL`,
+               OS2 = OS_list$`NCHOS2_TL`,
+               OS7 = OS_list$`NCHOS7_TL`)
 # Use DGEA function to find hallmark pathway expression (downregulated)
 em.hm.list <- list()
 set.seed(1337)
@@ -313,8 +316,8 @@ figure_3d_down <- cowplot::plot_grid(P2,
 figure_3d_down
 
 pdf("figures/supplement/requests/figure_3d_down.pdf",
-       width = 15,
-       height = 8)
+       width = 14,
+       height = 7)
 figure_3d_down
 dev.off()
 ```
@@ -867,6 +870,7 @@ pdf("figures/supplement/requests/k7m2_f420/F420_umap.pdf",
 F420_umap
 dev.off()
 ```
+
 ### Replicate Analyses
 
 #### Figure 2C
