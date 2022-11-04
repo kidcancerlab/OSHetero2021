@@ -1,0 +1,1699 @@
+---
+title: "Supplemental Figures - Reviewer Requests"
+author: "Emily Franz, Matthew Cannon"
+date: "`r format(Sys.time(), '%m/%d/%Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 5
+    number_sections: false
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  tidy = TRUE,
+  echo = TRUE,
+  cache = TRUE,
+  collapse = TRUE,
+  tidy.opts = list(width.cutoff = 95),
+  message = FALSE,
+  warning = FALSE,
+  cache.lazy = FALSE
+)
+```
+
+```{r lib, cache=FALSE}
+source("scSeurat.R")
+source("Downstream.v2.R")
+set.seed(888)
+# loading libraries
+library(Seurat)
+library(future)
+library(ggplot2)
+library(msigdbr)
+library(clusterProfiler)
+library(SingleR)
+library(dplyr)
+library(pheatmap)
+library(RColorBrewer)
+library(viridis) # inferno color palette
+library(grid)
+library(ggsci)
+library(data.table)
+library(ggvenn)
+library(tibble)
+library(tidyr)
+library(tidyverse)
+library(stringr)
+library(reshape2)
+library(pzfx)
+library(ggridges)
+library(effsize)
+library(perm)
+```
+
+# Reviewer Requests
+
+
+## Add downregulated pathways
+
+*6. Figure 1C, 3D, 5F— please include the pathway enrichment analysis on the downregulated genes, or please clarify the reason for only focusing on the upregulated genes for pathway enrichment analysis.*
+
+### 1C
+
+```{r 1c3d5fdown}
+source("Downstream.v3.R")
+#### 1C ####
+load("Data/os17.cx_CCR.RData")
+load(file ="Data/OS7.cx_CCR.RData")
+# Pathway enrichment analysis
+# Display adjust p-values
+B.list <- list(OS17 = os17.cx,
+               NCHOS7 = OS7.cx)
+
+em.hm.list <- list()
+
+for (i in 1:length(B.list)) {
+  em.hm.list[[i]] <- DGEA(B.list[[i]],
+                          direction = "down")
+}
+
+for(i in 1:(length(em.hm.list))) {
+  em.hm.list[[i]] <- setDT(em.hm.list[[i]],
+                           keep.rownames = TRUE)[]
+}
+
+temp1 <- em.hm.list[[1]]
+temp2 <- em.hm.list[[2]]
+cx.pd <- full_join(temp1,
+                   temp2,
+                   by = "rn")
+
+cx.pd <- column_to_rownames(cx.pd,
+                            var = "rn")
+cx.pd[is.na(cx.pd)] <- 1
+
+#remove "HALLMARK_"
+c <- rownames(cx.pd)
+c <- gsub("HALLMARK_",
+          "",
+          c)
+
+#remove "_" by removing special characters
+c <- gsub("_",
+          " ",
+          c)
+rownames(cx.pd) <- c
+
+# Take the -log10
+cx.pd.log <- -log10(cx.pd)
+colnames(cx.pd.log) <- c("A0",
+                         "A1",
+                         "A2",
+                         "B0",
+                         "B1",
+                         "B2",
+                         "B3")
+
+# To prevent values that show up as -0.00, we take the absolute values
+cx.pd.log <- abs(cx.pd.log)
+
+figure_1c_down <- cx.pd.log %>%
+  t() %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "Sample") %>%
+  pivot_longer(c(-Sample),
+               names_to = "Pathway",
+               values_to = "pval",
+               names_repair = "minimal") %>%
+  mutate(Signif = pval >= (-1 * log10(0.05))) %>%
+  ggplot(.,
+         aes(x = Sample,
+             y = Pathway,
+             fill = Signif)) +
+  geom_tile() +
+  geom_text(aes(label = sprintf("%0.2f",
+                                pval))) + 
+  scale_fill_manual(values = c("gray",
+                               "#56B4E9")) +
+  scale_y_discrete(limits = rev) +
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.x = element_blank()) +
+  ylab("")
+figure_1c_down
+
+#Save as PDF
+pdf("figures/supplement/requests/figure_1c_down.pdf",
+    width = 8,
+    height = 8)
+figure_1c_down
+dev.off()
+```
+
+### 3D
+
+```{r Fig3_down}
+load("Data/OS_list_CCR.RData")
+
+OS_list$OS17_TL <- OS_list$OS17_TL %>%
+    FindClusters(resolution = 0.2)
+OS_list$`143B_TL` <- OS_list$`143B_TL` %>%
+    FindClusters(resolution = 0.15)
+OS_list$NCHOS2_TL <- OS_list$NCHOS2_TL %>%
+    FindClusters(resolution = 0.15)
+OS_list$NCHOS7_TL <- OS_list$NCHOS7_TL %>%
+    FindClusters(resolution = 0.2)
+
+# Cluster distribution in each sample
+# proportion of cells in lung in each cluster
+lung_prop_tbl <- tibble()
+for (s_obj in c(OS_list$OS17_TL,
+                OS_list$`143B_TL`,
+                OS_list$NCHOS2_TL,
+                OS_list$NCHOS7_TL)) {
+    s_obj$src <- factor(s_obj$src, levels = c("Tibia", "Lung"))
+    lung_prop_tbl <-
+        s_obj@meta.data %>%
+        as_tibble() %>%
+        select(model, src, seurat_clusters) %>%
+        group_by(model, seurat_clusters) %>%
+        summarize(lung_perc = sum(grepl("Lung", src)) / n() * 100,
+                  .groups = "drop") %>%
+        dplyr::rename(sample = model,
+                      cluster = seurat_clusters) %>%
+        bind_rows(lung_prop_tbl)
+}
+
+write_tsv(lung_prop_tbl, "Data/Supplement/requests/Fig3d_lung_prop_tbl.tsv")
+```
+
+```{r Fig3d_down_process, dependson='Fig3_down'}
+library(data.table)
+library(msigdbr)
+library(clusterProfiler)
+source("Downstream.v3.R")
+
+#library(pheatmap)
+#Create list of objects used in Figure 3 heatmap
+B.list <- list(OS17 = OS_list$`OS17_TL`,
+               t143b = OS_list$`143B_TL`,
+               OS2 = OS_list$`NCHOS2_TL`,
+               OS7 = OS_list$`NCHOS7_TL`)
+# Use DGEA function to find hallmark pathway expression (downregulated)
+em.hm.list <- list()
+set.seed(1337)
+for (i in seq_len(length(B.list))) {
+  em.hm.list[[i]] <- DGEA(B.list[[i]],
+                          direction = "down") %>%
+    setDT(keep.rownames = TRUE) %>%
+    as_tibble() %>%
+    rename_with(.cols = where(is.numeric), ~ str_c(names(B.list[i]), "_", .x))
+}
+
+cx.pd <- inner_join(inner_join(em.hm.list[[1]],
+                               em.hm.list[[2]],
+                               by = "rn"),
+                    inner_join(em.hm.list[[3]],
+                               em.hm.list[[4]],
+                               by = "rn"),
+                    by = "rn")
+
+head(cx.pd)
+##Write table to edit rownames to easily convert to dataframe
+write_tsv(cx.pd, file = "Data/Supplement/requests/cxpd.tsv")
+```
+
+
+```{r Fig3d_down}
+lung_percent <-
+    read_tsv("Data/Supplement/requests/Fig3d_lung_prop_tbl.tsv") %>%
+    mutate(sample_order = rank(sample) * 1000 - lung_perc,
+           x_label = paste0(sample, " c", cluster) %>%
+                reorder(sample_order))
+lung_percent$sample <- factor(lung_percent$sample,
+                              levels = c("OS-17",
+                                         "143B",
+                                         "NCH-OS-2",
+                                         "NCH-OS-7"))
+cx.pd <-
+    read_tsv("Data/Supplement/requests/cxpd.tsv",
+             show_col_types = FALSE) %>%
+    pivot_longer(c(-rn),
+                 names_to = "sample",
+                 values_to = "pval") %>%
+    mutate(cluster = str_remove(sample, ".+_") %>%
+                as.numeric(),
+           sample = str_replace(sample, "OS2", "NCH-OS-2") %>%
+                str_replace("OS7", "NCH-OS-7") %>%
+                str_replace("t143b", "143B") %>%
+                str_replace("OS17", "OS-17") %>%
+                str_remove("_.+"),
+            rn = str_remove(rn, "HALLMARK_") %>%
+                str_replace("_", " ")) %>%
+    left_join(lung_percent) %>%
+    mutate(pval = -log10(pval),
+           sample_order = rank(sample) * 1000 - lung_perc,
+           signif_bool = pval >= (-1 * log10(0.05)),
+           signif = if_else(signif_bool == TRUE, "p-value < 0.05", "p-value > 0.05"))
+
+cx.pd$sample <- factor(cx.pd$sample,
+                              levels = c("OS-17",
+                                         "143B",
+                                         "NCH-OS-2",
+                                         "NCH-OS-7"))
+P1 <-
+  cx.pd %>%
+  ggplot(., aes(x = x_label, y = rn, fill = signif)) +
+    geom_tile() +
+    geom_text(aes(label = sprintf("%0.2f", pval)), size = 3) +
+    scale_fill_manual(values = c("#56B4E9", "gray"), name = "") +
+    scale_y_discrete(limits = rev, position = "right") +
+    theme(panel.background = element_blank(),
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.margin = unit(c(0, 0, 0, 0), "cm"),
+          panel.border = element_rect(colour = "black", fill = NA),
+          axis.text.x = element_text(angle = 90,
+                                     hjust = 1,
+                                     vjust = 0.4,
+                                     size = 12),
+          axis.text.y = element_text(size = 12)) +
+    labs(x = "",
+         y = "") +
+    facet_grid(. ~ sample,
+               scales = "free_x",
+               space = "free")
+
+P2 <-
+  lung_percent %>%
+  ggplot(., aes(x = x_label, y = lung_perc, fill = sample)) +
+    geom_bar(stat = "identity") +
+    ylab("Percent\nin lung") +
+    xlab("") +
+    labs(fill = "Model",
+         y = "Percent in\nmetastases(%)") +
+    scale_fill_brewer(palette = "Set2") +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          panel.background = element_blank(),
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.margin = unit(c(0, 0, -0.2, 0), "cm"),
+          panel.border = element_rect(colour = "black", fill = NA)) +
+    facet_grid(. ~ sample,
+               scales = "free_x",
+               space = "free")
+
+figure_3d_down <- cowplot::plot_grid(P2,
+                   P1,
+                   ncol = 1,
+                   align = "v",
+                   rel_heights = c(2, 10))
+figure_3d_down
+
+pdf("figures/supplement/requests/figure_3d_down.pdf",
+       width = 14,
+       height = 7)
+figure_3d_down
+dev.off()
+```
+
+### 5F
+
+```{r Fig5load}
+source("scSeurat.R")
+
+# Load raw objects for lineage tag analysis
+load("Data/Raw/os17.cx.raw.RData")
+load("Data/Raw/os17.tib.raw.RData")
+load("Data/Raw/os17.lung.raw.RData")
+
+# Subset all to 2800 cells in each condition
+set.seed(108)
+os17.cx.raw <- subset(os17.cx.raw,
+                  cells = sample(Cells(os17.cx.raw),
+                                 2800))
+os17.tib.raw <- subset(os17.tib.raw,
+                   cells = sample(Cells(os17.tib.raw),
+                                  2800))
+os17.lung.raw <- subset(os17.lung.raw,
+                    cells = sample(Cells(os17.lung.raw),
+                                   2800))
+
+# Load merged and cell cycle regressed OS17 object
+load("Data/os17.RData")
+
+# Set cell identities to proper cluster resolution 
+Idents(os17) <- os17$RNA_snn_res.0.3
+
+# Plot os17
+set.seed(100)
+os17$src <- factor(os17$src, levels = c("Culture", "Tibia", "Lung"))
+figure_5b <- DimPlot(os17,
+                     reduction = "umap",
+                     group.by = "src",
+                     pt.size = 1,
+                     label = T,
+                     order = T) +
+  coord_fixed() +
+  ggtitle(" ") +
+  scale_color_npg()
+
+figure_5b
+
+# Extract the barcode frequency lists
+cx.lt.list <- processLTBC(os17.cx.raw,
+                          lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
+                          cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
+                          ret.list = TRUE)
+
+tib.lt.list <- processLTBC(os17.tib.raw,
+                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
+                           cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
+                           ret.list = TRUE)
+
+lung.lt.list <- processLTBC(os17.lung.raw,
+                            lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
+                            cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
+                            ret.list = TRUE)
+
+# Subset the three samples, but retain the current umap data
+cx.sub <- subset(os17, subset = src == "Culture")
+tib.sub <- subset(os17, subset = src == "Tibia")
+lung.sub <- subset(os17, subset = src == "Lung")
+
+# Lung
+# Remove outlier cells (names may vary in different runs of the code)
+lung.sub <- subset(lung.sub,
+                   idents = c("0",
+                              "1",
+                              "3",
+                              "6"))
+
+lung.LTcells <- vector(mode = "character")
+for (i in 1:nrow(lung.lt.list)) {
+  temp <- WhichCells(lung.sub,
+                     expression = lt == lung.lt.list[[i, 1]])
+  lung.LTcells <- append(lung.LTcells,
+                         temp)
+}
+lung.tagged <- subset(lung.sub,
+                      cells = lung.LTcells)
+
+# Compare Enriched vs non-enriched 
+# Group first 10 against the tagged Lung
+LT <- vector(mode = "character")
+
+for (i in 1:10) {
+  temp <- WhichCells(lung.tagged,
+                     expression = lt == lung.lt.list[[i, 1]])
+  LT <- append(LT, temp)
+}
+
+Idents(lung.tagged, cells = LT) <- "Enriched clones"
+
+cell.ids <- sample(colnames(lung.tagged))
+
+figure_5e <- DimPlot(lung.sub,
+                     reduction = "umap",
+                     pt.size = 1,
+                     cells.highlight = WhichCells(lung.tagged,
+                                                  idents = "Enriched clones"),
+                     cols.highlight = "#E64B35FF",
+                     sizes.highlight = 2,
+                     order = cell.ids) +
+  coord_fixed() + 
+  scale_color_discrete(name = "Clones",
+                       type = c("#C3C3C3",
+                                "#E64B35FF"),
+                       labels = c("Unselected" = "Non-enriched clones",
+                                  "Group_1" = "Enriched clones"))
+figure_5e
+
+```
+
+```{r Fig5f_down, dependson='Fig5e'}
+# Pathways associated with Enriched clonal families
+source("Downstream.v3.R")
+
+# Rename identities from the total lung tumor to include enriched clones
+lung.sub.enr <- SetIdent(lung.sub,
+                         cells = WhichCells(lung.tagged,
+                                            idents = "Enriched clones"),
+                         value = "Enriched clones")
+
+# Analyze enriched clones against the remaining tumor cells in the lung
+lung.sub.enr <- RenameIdents(lung.sub.enr,
+                             "0" = "Remaining Tumor Cells",
+                             "1" = "Remaining Tumor Cells",
+                             "3" = "Remaining Tumor Cells",
+                             "6" = "Remaining Tumor Cells")
+
+B.list <- list(OS17 = lung.sub.enr)
+
+# Perform differential gene expression analysis for hallmark pathways
+set.seed(100)
+em.hm.list <- list()
+for (i in 1:length(B.list)) {
+  em.hm.list[[i]] <- DGEA(B.list[[i]],
+                          direction = "down")
+}
+
+# Achieve -log10 of the p-value
+temp1 <- em.hm.list[[1]]
+temp1 <- -log10(temp1)
+
+# Remove unnecessary characters
+c <- rownames(temp1)
+c <- gsub("_", " ", c)
+c <- gsub("HALLMARK ", "", c) 
+rownames(temp1) <- c
+
+# Remove negative 0 values due to number of decimal points displayed
+temp1 <- abs(temp1)
+temp1 <- temp1["Enriched clones"]
+
+# Subset to only pathways with significant pvalue (-1 * log10(0.05)) = 1.30103)
+temp1["Enriched clones"] >= 1.30103 -> temp1$logical
+colnames(temp1) <- c("pvalue",
+                     "significant")
+logical <- temp1$significant
+temp1 <- temp1[logical, ]
+temp1 <- rownames_to_column(temp1,
+                            var = "Pathway")
+
+# Order by -log10pvalue for plotting
+temp1$Pathway <- factor(temp1$Pathway,
+                        levels = temp1$Pathway[order(temp1$pvalue)])
+
+# Plot 
+figure_5f_down <- ggplot(temp1,
+                    aes(x = pvalue,
+                        y = Pathway)) +
+  geom_bar(stat = "identity") +
+  theme_bw() +
+  ylab("") +
+  xlab("-log10(p-value)") +
+  geom_vline(xintercept = 1.5,
+               color = "gray",
+               linetype = 2,
+               size = 1) +
+  ggtitle("Downregulated Pathways in Enriched Clonal Populations")
+
+figure_5f_down
+
+pdf("figures/supplement/requests/figure_5f_down.pdf",
+        width = 8,
+        height = 3)
+figure_5f_down
+dev.off()
+```
+
+### Test if clones tend to be enriched within a single cluster
+
+```{r bootstrapCloneEnrich, eval=TRUE}
+load("Data/os17.RData")
+n_clones <- 30
+top_clones <-
+  tibble(src = os17$src,
+         clone = os17$lt,
+         cluster = paste0("c_", os17$seurat_clusters)) %>%
+  na.omit() %>%
+  group_by(src, clone, cluster) %>%
+  mutate(n_cells_in_cluster = n()) %>%
+  ungroup() %>%
+  group_by(src, clone) %>%
+  mutate(n_cells_in_clone = n()) %>%
+  ungroup() %>%
+  group_by(src) %>%
+  arrange(desc(n_cells_in_clone), clone, .by_group = TRUE) %>%
+  unique() %>%
+  pivot_wider(id_cols = c(src, clone, n_cells_in_clone),
+              names_from = cluster,
+              values_from = n_cells_in_cluster) %>%
+  filter(n_cells_in_clone >= 5) %>%
+  #slice_head(n = n_clones) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("c_"),
+               names_to = "cluster",
+               values_to = "n_cells_in_cluster") %>%
+  na.omit() %>%
+  mutate(clone = fct_reorder(clone, n_cells_in_clone))
+cell_counts_to_test <-
+  top_clones$n_cells_in_clone %>%
+  unique() %>%
+  sort()
+names(cell_counts_to_test) <- paste0("c_", cell_counts_to_test)
+# Get the number of clusters represented by n randomly selected cells
+max_per_cluster_n_cells <- function(sobj, n_cells) {
+  selected_cell_indexes <-
+    sample(seq_len(ncol(sobj)),
+           size = n_cells,
+           replace = FALSE)
+  max_n_per_cluster <-
+    sobj$seurat_clusters[selected_cell_indexes] %>%
+    table() %>%
+    max()
+  return(max_n_per_cluster)
+}
+# bootstrap the data n_perms times to get a distribution
+perm_n_times <- function(sobj, n_cells, n_perms = 1000) {
+  message("Testing ", n_cells, " cells")
+  n_clusters <- replicate(n_perms, max_per_cluster_n_cells(sobj, n_cells))
+  return(n_clusters)
+}
+# Do this for all observed cells/clone
+n_perms <- 100000
+perm_table <-
+  sapply(cell_counts_to_test,
+         function(cell_num) perm_n_times(os17,
+                                         cell_num,
+                                         n_perms = n_perms),
+         USE.NAMES = TRUE) %>%
+  as.data.frame()
+
+contin <- top_clones %>%
+  rowwise() %>%
+  mutate(p_value = (
+    sum(perm_table[[paste0("c_", n_cells_in_clone)]] >=
+          n_cells_in_cluster) /
+      n_perms
+  ),
+  signif = p_value <= 0.05,
+  cluster = str_remove(cluster, "c_")) %>%
+  ggplot(aes(x = cluster,
+             y = clone,
+             fill = n_cells_in_cluster)) +
+  geom_tile() +
+  geom_text(aes(label = n_cells_in_cluster,
+                color = signif)) +
+  scale_color_manual(values = c("gray", "red")) +
+  facet_grid(src ~ ., scales = "free_y", space = "free") +
+  labs(x = "Cluster",
+       y = "Clone",
+       fill = "Cells in Cluster",
+       color = "Enriched Cluster") +
+  theme_bw()
+contin
+
+pdf("figures/supplement/requests/contingencytable.pdf",
+    height = 10,
+    width = 6)
+contin
+dev.off()
+```
+
+## Replicates in other cell lines
+
+### K7M2
+
+```{r load_k7m2}
+# k7m2
+## Culture
+k7m2.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0201/filtered_feature_bc_matrix/",
+                          spec = "mouse")
+
+k7m2.cx.raw <- subset(k7m2.cx.raw,
+                      subset = nFeature_RNA > 2500 &
+                        nCount_RNA < 40000 &
+                        percent.mt < 10)
+
+k7m2.cx.raw$src <- "Culture"
+k7m2.cx.raw$model <- "K7M2"
+
+## Tibia
+k7m2.tib.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0105/filtered_feature_bc_matrix/",
+                           spec = "mouse")
+k7m2.tib.raw <- subset(k7m2.tib.raw,
+                       subset = nFeature_RNA > 800 &
+                         nCount_RNA < 50000 &
+                         percent.mt < 15)
+
+k7m2.tib.raw$src <- "Tibia"
+k7m2.tib.raw$model <- "K7M2"
+
+## Lung
+k7m2.lung.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0075-Balb-C-K7M2-Epcam-enriched/outs/filtered_feature_bc_matrix/",
+                            spec = "mouse")
+
+k7m2.lung.raw <- subset(k7m2.lung.raw,
+                        subset = nFeature_RNA > 1000 &
+                          nCount_RNA < 55000 &
+                          percent.mt < 15)
+
+k7m2.lung.raw$src <- "Lung"
+k7m2.lung.raw$model <- "K7M2"
+```
+
+```{r k7m2_1}
+set.seed(100)
+# Merge into a single Seurat object
+k7m2_all <- merge(k7m2.cx.raw,
+              y = c(k7m2.tib.raw,
+                    k7m2.lung.raw),
+              add.cell.ids = c("Culture",
+                               "Tibia",
+                               "Lung"),
+              project = "LineageTracing")
+
+# Process and cluster
+k7m2_all <- NormalizeData(k7m2_all) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = k7m2_all@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+save(k7m2_all, file = "Data/Supplement/k7m2_f420/k7m2_all.RData")
+```
+
+```{r k7m2_2}
+load("Data/Supplement/k7m2_f420/k7m2_all.RData")
+set.seed(100)
+
+DimPlot(k7m2_all,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("K7M2 Clusters") +
+  scale_color_npg(alpha = 0.7)
+
+# Select clusters showing broad expression of all of the following OS gene markers
+FeaturePlot(k7m2_all,
+	    features = c("Col1a1","Col1a2","Spp1"),
+	    split.by = "src")
+
+set.seed(100)
+k7m2 <- subset(k7m2_all, subset = RNA_snn_res.0.3  == c(1, 2, 3))
+
+k7m2 <- RunPCA(k7m2, pc.genes = k7m2@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+# CCR Attempt to regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+
+## Convert mouse genes to human genes
+library(nichenetr)
+s.genes <- convert_human_to_mouse_symbols(s.genes)
+g2m.genes <- convert_human_to_mouse_symbols(g2m.genes)
+
+k7m2 <- CellCycleScoring(object = k7m2 ,
+                         s.features = s.genes,
+                         g2m.features = g2m.genes,
+                         set.ident = TRUE)
+
+k7m2 <- ScaleData(object = k7m2,
+                  vars.to.regress = c("S.Score",
+                                      "G2M.Score"),
+                  features = rownames(x = k7m2))
+
+k7m2 <- RunPCA(k7m2, pc.genes = k7m2@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+## Find the optimum resolution for clustering
+k7m2.nC <- nRes(k7m2,
+                res = seq(from = 0.1,
+                          to = 0.3,
+                          by = 0.01))
+
+k7m2 <- RunPCA(k7m2, pc.genes = k7m2@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.1)
+
+save(k7m2, file = "Data/Supplement/k7m2_f420/k7m2_tumor.RData")
+```
+
+```{r k7m2_3}
+load("Data/Supplement/k7m2_f420/k7m2_tumor.RData")
+
+DimPlot(k7m2,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("K7M2 Clusters") +
+  scale_color_npg(alpha = 1)
+
+DimPlot(k7m2,
+        reduction = "umap",
+        pt.size = 1,
+	group.by = "Phase") +
+  coord_fixed() +
+  ggtitle("K7M2 by Phase") +
+  scale_color_npg(alpha = 1)
+
+
+# Plot the data
+set.seed(100)
+k7m2$src <- factor(k7m2$src,
+                      levels = c("Culture",
+				 "Tibia",
+                                 "Lung"))
+k7m2_umap <- DimPlot(k7m2,
+        reduction = "umap",
+        group.by = "src",
+        pt.size = 1,
+        label = F) +
+  coord_fixed() +
+  ggtitle("K7M2 by Source") +
+  scale_color_npg()
+k7m2_umap
+
+pdf("figures/supplement/requests/k7m2_f420/k7m2_umap.pdf",
+        width = 5,
+        height = 5)
+k7m2_umap
+dev.off()
+```
+
+### F420
+
+```{r load_F420}
+# F420
+## Culture
+F420.cx.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0200/filtered_feature_bc_matrix/",
+                          spec = "mouse")
+
+F420.cx.raw <- subset(F420.cx.raw,
+                      subset = nFeature_RNA > 2500 &
+                        nCount_RNA < 45000 &
+                        percent.mt < 10)
+
+F420.cx.raw$src <- "Culture"
+F420.cx.raw$model <- "F420"
+
+## Tibia
+F420.tib.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0104/filtered_feature_bc_matrix/",
+                           spec = "mouse")
+F420.tib.raw <- subset(F420.tib.raw,
+                       subset = nFeature_RNA > 800 &
+                         nCount_RNA < 50000 &
+                         percent.mt < 15)
+
+F420.tib.raw$src <- "Tibia"
+F420.tib.raw$model <- "F420"
+
+## Lung
+## double check usage throughout rest of code - Emily (fixed issue where coming from wrong file)
+F420.lung.raw <- tenXLoadQC(path10x = "/gpfs0/home2/gdrobertslab/lab/Counts/S0067/filtered_feature_bc_matrix/",
+                            spec = "mouse")
+
+F420.lung.raw <- subset(F420.lung.raw,
+                        subset = nFeature_RNA > 1500 &
+                          nCount_RNA < 55000 &
+                          percent.mt < 20)
+
+F420.lung.raw$src <- "Lung"
+F420.lung.raw$model <- "F420"
+```
+
+```{r F420_2}
+# Merge into a single Seurat object
+F420_all <- merge(F420.cx.raw,
+              y = c(F420.tib.raw,
+                    F420.lung.raw),
+              add.cell.ids = c("Culture",
+                               "Tibia",
+                               "Lung"),
+              project = "LineageTracing")
+
+# Process and cluster
+F420_all <- NormalizeData(F420_all) %>%
+  FindVariableFeatures(selection.method = "vst") %>%
+  ScaleData() %>%
+  RunPCA(pc.genes = F420_all@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+DimPlot(F420_all,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("F420 Clusters") +
+  scale_color_npg(alpha = 0.7)
+
+# Plot the data
+set.seed(100)
+cell.ids <- sample(colnames(F420_all))
+
+DimPlot(F420_all,
+        reduction = "umap",
+        group.by = "src",
+        pt.size = 1,
+        label = F,
+        order = cell.ids) +
+  coord_fixed() +
+  ggtitle("F420 by Source") +
+  scale_color_npg()
+
+save(F420_all, file = "Data/Supplement/k7m2_f420/F420_all.RData")
+```
+
+```{r f420_3}
+load("Data/Supplement/k7m2_f420/F420_all.RData")
+
+DimPlot(F420_all,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("F420 Clusters") 
+
+# Select clusters showing broad expression of all of the following OS gene markers
+FeaturePlot(F420_all,
+	    features = c("Col1a1","Col1a2","Spp1"),
+	    split.by = "src")
+
+set.seed(100)
+F420 <- subset(F420_all, subset = RNA_snn_res.0.3  == c(0, 2))
+
+F420 <- RunPCA(F420 , pc.genes = F420 @var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+# CCR Attempt to regress out the effects of cell cycle on these tumor cells
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+
+# Convert mouse genes to human genes
+library(nichenetr)
+s.genes <- convert_human_to_mouse_symbols(s.genes)
+g2m.genes <- convert_human_to_mouse_symbols(g2m.genes)
+
+F420 <- CellCycleScoring(object = F420,
+                         s.features = s.genes,
+                         g2m.features = g2m.genes,
+                         set.ident = TRUE)
+
+F420 <- ScaleData(object = F420,
+                  vars.to.regress = c("S.Score",
+                                      "G2M.Score"),
+                  features = rownames(x = F420))
+
+F420 <- RunPCA(F420, pc.genes = F420@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.3)
+
+## Find the optimum resolution for clustering
+F420.nC <- nRes(F420,
+                res = seq(from = 0.1,
+                          to = 0.3,
+                          by = 0.01))
+
+F420 <- RunPCA(F420, pc.genes = F420@var.genes, npcs = 20) %>%
+  RunUMAP(reduction = "pca", dims = 1:20) %>%
+  FindNeighbors(reduction = "pca", dims = 1:20) %>%
+  FindClusters(resolution = 0.1)
+save(F420, file = "Data/Supplement/k7m2_f420/F420_tumor.RData")
+```
+
+```{r f420_4}
+DimPlot(F420,
+        reduction = "umap",
+        pt.size = 1,
+        label = T) +
+  coord_fixed() +
+  ggtitle("F420 Clusters") +
+  scale_color_npg(alpha = 1)
+
+DimPlot(F420,
+        reduction = "umap",
+        pt.size = 1,
+	group.by = "Phase") +
+  coord_fixed() +
+  ggtitle("F420 by Phase") +
+  scale_color_npg(alpha = 1)
+
+
+# Plot the data
+set.seed(100)
+F420$src <- factor(F420$src,
+                      levels = c("Culture",
+				 "Tibia",
+                                 "Lung"))
+
+F420_umap <- DimPlot(F420,
+        reduction = "umap",
+        group.by = "src",
+        pt.size = 1,
+        label = F) +
+  coord_equal() +
+  ggtitle("F420 by Source") +
+  scale_color_npg()
+F420_umap
+
+pdf("figures/supplement/requests/k7m2_f420/F420_umap.pdf",
+        width = 5,
+        height = 5)
+F420_umap
+dev.off()
+```
+
+### Replicate Analyses
+
+#### Figure 2C
+
+C) Pathway enrichment analysis with adjusted p values for hallmark gene sets associated with these shared genes
+
+```{r Fig2c_repeat, fig.height=6, fig.width=10}
+### Extract genes that are shared in these datasets
+load("Data/OS_merged_postCCR.RData")
+# Set seed before subsetting and DE analysis to ensure consistent results
+set.seed(100)
+
+k7m2$tissue <- k7m2$src 
+F420$tissue <- F420$src 
+data <- list(
+  os17 = subset(OS, cells = WhichCells(OS, expression = model == "OS-17")),
+  t143B = subset(OS, cells = WhichCells(OS, expression = model == "143B")),
+  NCHOS2 = subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-2")),
+  NCHOS7 = subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-7")),
+  K7M2 = k7m2,
+  F420 = F420)
+
+# Rename "Flank" to "Culture" for NCHOS samples
+data$NCHOS2$src[grep("Flank", data$NCHOS2$src)] <- "Culture"
+data$NCHOS7$src[grep("Flank", data$NCHOS7$src)] <- "Culture"
+
+repfig_2c_data <- tibble()
+
+for (tissue_name in c("Tibia", "Lung")) {
+  for (direction in c("up", "down")) {
+    de_genes <- list()
+    for (i in seq_len(length(data))) {
+      Idents(data[[i]]) <- data[[i]]$src
+      de_genes[[i]] <-
+        FindMarkers(data[[i]],
+                    ident.1 = tissue_name,
+                    ident.2 = "Culture",
+                    only.pos = FALSE,
+                    min.pct = 0.1)
+      
+      # Select genes that change in the direction of interest
+      if (direction == "up") {
+        de_genes[[i]] <-
+          de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
+                          de_genes[[i]]$avg_log2FC > 0, ]
+      } else {
+        de_genes[[i]] <-
+          de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
+                          de_genes[[i]]$avg_log2FC < 0, ]
+      }
+    }
+    
+    # Convert mouse genes to human genes
+    library(nichenetr)
+    rowname_df <- tibble(human = convert_mouse_to_human_symbols(rownames(de_genes[[5]])) %>%
+                           as.vector(), mouse = rownames(de_genes[[5]]))
+    #table(rowname_df$human) %>% as.data.frame() %>% arrange(Freq * -1) %>% head()
+    #summary(as.factor(rowname_df$human))
+    
+    rowname_df2 <- tibble(human = convert_mouse_to_human_symbols(rownames(de_genes[[6]])) %>%
+                            as.vector(), mouse = rownames(de_genes[[6]]))
+    #table(rowname_df2$human) %>% as.data.frame() %>% arrange(Freq * -1) %>% head()
+    #summary(as.factor(rowname_df2$human))
+    
+    if (tissue_name == "Tibia") {
+      if (direction == "up") {
+        de_genes[[5]] <- de_genes[[5]] %>%
+          rownames_to_column("mouse") %>%
+          full_join(rowname_df) %>%
+          select(-mouse) %>%
+          # Remove NAs and repeated genes (from conversion)
+          filter(!is.na(human) & human != "HLA-A") %>%
+          column_to_rownames("human")
+	message(paste0(tissue_name, " ",  direction, " for de_genes_5 DONE"))
+
+        
+        de_genes[[6]] <- de_genes[[6]] %>%
+          rownames_to_column("mouse") %>%
+          full_join(rowname_df2) %>%
+          select(-mouse) %>%
+          # Remove NAs and repeated genes (from conversion)
+          filter(!is.na(human) & human != "H3F3A" & human != "HLA-A") %>%
+          column_to_rownames("human")
+        message(paste0(tissue_name, " ",  direction, " for de_genes_6 DONE"))
+
+      } else {
+        de_genes[[5]] <- de_genes[[5]] %>%
+          rownames_to_column("mouse") %>%
+          full_join(rowname_df) %>%
+          select(-mouse) %>%
+          # Remove NAs and repeated genes (from conversion)
+          filter(!is.na(human) & human != "EIF3J") %>%
+          column_to_rownames("human")
+	message(paste0(tissue_name, " ",  direction, " for de_genes_5 DONE"))
+        
+        de_genes[[6]] <- de_genes[[6]] %>%
+          rownames_to_column("mouse") %>%
+          full_join(rowname_df2) %>%
+          select(-mouse) %>%
+          # Remove NAs and repeated genes (from conversion)
+          filter(!is.na(human)) %>%
+          column_to_rownames("human")
+	message(paste0(tissue_name, " ",  direction, " for de_genes_6 DONE"))
+
+      }
+    }
+    
+    if (tissue_name == "Lung") {
+      if (direction == "up") {
+        de_genes[[5]] <- de_genes[[5]] %>%
+          rownames_to_column("mouse") %>%
+          full_join(rowname_df) %>%
+          select(-mouse) %>%
+          # Remove NAs and repeated genes (from conversion)
+          filter(!is.na(human) & human != "H3F3A" & human != "HLA-A") %>%
+          column_to_rownames("human")
+	message(paste0(tissue_name, " ", direction, " for de_genes_5 DONE"))
+        
+        de_genes[[6]] <- de_genes[[6]] %>%
+          rownames_to_column("mouse") %>%
+          full_join(rowname_df2) %>%
+          select(-mouse) %>%
+          # Remove NAs and repeated genes (from conversion)
+          filter(!is.na(human) & human != "BCL2A1" & human != "HLA-A" & human != "HBA2") %>% 
+          column_to_rownames("human")
+        message(paste0(tissue_name, " ", direction, " for de_genes_6 DONE"))
+
+      } else {
+        de_genes[[5]] <- de_genes[[5]] %>%
+          rownames_to_column("mouse") %>%
+          full_join(rowname_df) %>%
+          select(-mouse) %>%
+          # Remove NAs and repeated genes (from conversion)
+          filter(!is.na(human) & human != "EIF3J") %>%
+          column_to_rownames("human")
+	message(paste0(tissue_name, " ", direction, " for de_genes_5 DONE"))
+        
+        de_genes[[6]] <- de_genes[[6]] %>%
+          rownames_to_column("mouse") %>%
+          full_join(rowname_df2) %>%
+          select(-mouse) %>%
+          # Remove NAs and repeated genes (from conversion)
+          filter(!is.na(human)) %>%
+          column_to_rownames("human")
+	message(paste0(tissue_name, " ", direction, " for de_genes_6 DONE"))
+      }
+    }
+    
+    A <- rownames(de_genes[[1]])
+    B <- rownames(de_genes[[2]])
+    C <- rownames(de_genes[[3]])
+    D <- rownames(de_genes[[4]])
+    E <- rownames(de_genes[[5]]) #interprets F as FALSE
+    G <- rownames(de_genes[[6]])
+    
+    # Preparing clusterProfiler to perform hypergeometric test on msigdb signatures 
+    msig.gene.set <-
+      msigdbr(species = "Homo sapiens", category = "H") %>%
+      dplyr::select(gs_name, human_gene_symbol)
+    msig.name <-
+      msigdbr(species = "Homo sapiens", category = "H") %>%
+      dplyr::select(gs_id, gs_name)
+    
+    # Getting the middle "flower" of the Venn diagram
+    intersect <- c((intersect(intersect(intersect(intersect(intersect(A, B), C), D), E), G)),
+                   (intersect(intersect(intersect(A, B), C), E)),
+                   (intersect(intersect(intersect(A, B), D), E)),
+                   (intersect(intersect(intersect(A, D), C), E)),
+                   (intersect(intersect(intersect(B, D), C), E)),
+                   (intersect(intersect(intersect(A, B), C), G)),
+                   (intersect(intersect(intersect(A, B), D), G)),
+                   (intersect(intersect(intersect(A, D), C), G)),
+                   (intersect(intersect(intersect(B, D), C), G)),
+                   (intersect(intersect(intersect(A, B), E), G)),
+                   (intersect(intersect(intersect(A, C), E), G)),
+                   (intersect(intersect(intersect(A, D), E), G))) %>%
+      unique()
+    temp <-
+      enricher(intersect,
+               TERM2GENE = msig.gene.set,
+               TERM2NAME = msig.name)@result %>%
+      as_tibble() %>%
+      select(ID, p.adjust) %>%
+      dplyr::rename(pathway = ID) %>%
+      arrange(p.adjust) %>%
+      slice_head(n = 5) %>%
+      mutate(tissue = tissue_name,
+             label_y = if_else(direction == "up", 1, -1),
+             p.adjust = -log10(p.adjust),
+             pathway = str_remove(pathway, "HALLMARK_") %>%
+               str_replace_all("_", " "),
+             order = seq_len(n()))
+    
+    if (direction == "down") {
+      temp$p.adjust <- temp$p.adjust * -1
+    }
+    
+    repfig_2c_data <- bind_rows(repfig_2c_data, temp)
+  }
+}
+
+################ Two sided Barplot
+# Properly name and order tissue types
+repfig_2c_data <- repfig_2c_data %>%
+  mutate(tissue = stringr::str_replace(tissue,
+                                       "Tibia",
+                                       "Tibia Gene Sets") %>%
+           stringr::str_replace("Lung",
+                                "Lung Gene Sets"),
+         pathway = stringr::str_wrap(pathway, width = 25))
+
+repfig_2c_data$tissue <- factor(as.factor(repfig_2c_data$tissue),
+                                levels = c("Tibia Gene Sets",
+                                           "Lung Gene Sets"))
+
+# Create tibble that is properly ordered to use in proper plotting of tibia and lung data
+lab4plot <- tibble(y = c(-4, 4, -4, 4),
+                   x = c(0.5, 0.5, 0.5, 0.5),
+                   label = as.factor(c("Downregulated\nduring tibia colonization",
+                                       "Upregulated\nduring tibia colonization",
+                                       "Downregulated\nduring lung colonization",
+                                       "Upregulated\nduring lung colonization")),
+                   tissue = factor(as.factor(c("Tibia Gene Sets",
+                                               "Tibia Gene Sets",
+                                               "Lung Gene Sets",
+                                               "Lung Gene Sets")),
+                                   levels = c("Tibia Gene Sets",
+                                              "Lung Gene Sets")))
+
+repfigure_2c <-
+  ggplot() +
+  geom_bar(data = repfig_2c_data,
+           aes(x = -1 * order,
+               y = p.adjust,
+               fill = p.adjust > 0),
+           stat = "identity",
+           alpha = 0.8) +
+  coord_flip() +
+  facet_wrap(~tissue,
+             ncol = 1,
+             scales = "free") +
+  geom_hline(yintercept = c(-1.5, 1.5),
+             color = "gray",
+             linetype = 2,
+             size = 1) +
+  geom_hline(yintercept = 0,
+             color = "black",
+             size = 1) +
+  geom_text(data = repfig_2c_data,
+            aes(x = -1 * order,
+                y = label_y * 4,
+                label = pathway)) +
+  geom_text(data = lab4plot,
+            aes(x = x,
+                y = y,
+                label = label),
+            fontface = "bold") +
+  scale_fill_manual(values = c("#377eb8", "#e41a1c")) +
+  theme_bw() +
+  theme(strip.background = element_rect(color = "white", fill = "white"),
+        strip.text.x = element_text(size = 20, face = "bold"),
+        legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line.x = element_line(color = "black"),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(title = "",
+       y = "",
+       x = "") +
+  ylim(-7, 7) +
+  xlim(-5.5, 1)
+
+repfigure_2c
+
+# Save as PDF
+pdf("figures/supplement/requests/k7m2_f420/repeat_figure_2c_k7m2-f420.pdf",
+    width = 6,
+    height = 9)
+repfigure_2c
+dev.off()
+
+save(repfigure_2c, file = "figures/supplement/requests/k7m2_f420/repfigure_2c.RData")
+```
+
+### Repeat Figure 3
+
+Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
+
+#### Repeat Figure 3B
+
+*statistical method subject to change*
+
+B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown in cell culture (####p <0.001). Within model comparison, identified increase in ITH scores as cells colonize tibia and lung microenvironments, with the exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák multiple comparisons test.
+
+```{r repfig3b}
+# Load OS data that was subsetted to be equal cell numbers across 
+load("Data/Supplement/k7m2_f420/F420_tumor.RData")
+load("Data/Supplement/k7m2_f420/k7m2_tumor.RData")
+load("Data/OSlist_1500_CCR.RData")
+
+OS.list_1500 <- c(OS.list_1500,
+		  k7m2.Cx = subset(k7m2, subset = src == "Culture"),
+		  k7m2.Tibia = subset(k7m2, subset = src == "Tibia"),
+		  k7m2.Lung = subset(k7m2, subset = src == "Lung"),
+		  F420.Cx = subset(F420, subset = src == "Culture"),
+		  F420.Tibia = subset(F420, subset = src == "Tibia"),
+		  F420.Lung = subset(F420, subset = src == "Lung"))
+
+# k7m2d[, .N, by = "src"]
+#       src    N
+#1: Culture 2271
+#2:   Tibia  605
+#3:    Lung  393
+# F420.d[, .N, by = "src"]
+#       src    N
+#1: Culture 4067
+#2:   Tibia 1600
+#3:    Lung   15
+
+for (i in 1:length(OS.list_1500)) {
+    OS.list_1500[[i]] <- subset(OS.list_1500[[i]], cells = sample(Cells(OS.list_1500[[i]]), 15))
+}
+#may need to put all in to same seurat object and then do PCA; or pull out Counts and calc dist
+#merge all objects in 1, rescale, renormalize, redo PCA,
+#pull out Counts directly (GetAssayData() slot=scaled) and calc dist or pull PCA via Embeddings
+ITH.score <- list()
+for (i in 1:length(OS.list_1500)) {
+  z <- (Embeddings(OS.list_1500[[i]], reduction = "pca")[, 1:20])
+  mat <- dist(z, diag = TRUE, upper = FALSE)
+  mat2 <- as.matrix(mat)
+  mat2[upper.tri(mat2, diag = TRUE)] <- NA
+  ITH.score[[i]] <- colMeans(mat2, na.rm = TRUE)
+}
+scores <- list()
+#library(xlsx)
+for (i in 1:length(OS.list_1500)){
+  as.data.frame(ITH.score[i]) %>%
+    write_excel_csv(file=paste("Data/Supplement/k7m2_f420/ITH/",
+                               head(OS.list_1500[[i]]$model, 1),
+                               head(OS.list_1500[[i]]$src, 1),
+                               "test.csv"))
+  }
+for (i in 1:length(OS.list_1500)){
+  test <- read.csv(file=paste("Data/Supplement/k7m2_f420/TH/",
+                              head(OS.list_1500[[i]]$model, 1),
+                              head(OS.list_1500[[i]]$src, 1),
+                              "test.csv"))
+  
+  names(test) <- paste(head(OS.list_1500[[i]]$model, 1),
+                       head(OS.list_1500[[i]]$src, 1))
+
+  scores[paste(head(OS.list_1500[[i]]$model, 1),
+               head(OS.list_1500[[i]]$src, 1))] <- test
+  
+}
+raw_ith <- as.data.frame(scores,
+                         col.names = c("Osteoblast", "OS-17 Culture",
+                                       "OS-17 Tibia", "OS-17 Lung",
+                                       "143B Culture", "142B Tibia",
+                                       "143B Lung", "NCH-OS-2 Flank",
+                                       "NCH-OS-2 Tibia", "NCH-OS-2 Lung",
+                                       "NCH-OS-7 Flank", "NCH-OS-7 Tibia",
+                                       "NCH-OS-7 Lung", "K7M2 Culture",
+                                       "K7M2 Tibia", "K7M2 Lung",
+                                       "F420 Culture", "F420 Tibia",
+                                       "F420 Lung"),
+                         optional = TRUE) %>% na.omit()
+
+#raw_ith <- read_pzfx("ITH_Scores_1500.pzfx",
+#                     table = 1)
+
+ith <- melt(raw_ith)
+colnames(ith) <- c("Sample","ITHScore")
+ith$logITH <- log10(ith$ITHScore)
+ridge_cols <- c("#B8B8B8FF",
+                "#D43F3AFF", "#D43F3AFF", "#D43F3AFF",
+                "#EEA236FF", "#EEA236FF", "#EEA236FF",
+                "#357EBDFF", "#357EBDFF", "#357EBDFF",
+                "#5CB85CFF", "#5CB85CFF", "#5CB85CFF",
+		"#E495A5", "#E495A5", "#E495A5",
+		"#ABB065", "#ABB065", "#ABB065" 
+)
+rplot <- ggplot(ith, aes(x = logITH, y = Sample, fill = Sample)) +
+  geom_density_ridges(scale = 2) +
+  scale_y_discrete(expand = c(0, 0), limits = rev) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_fill_manual(values = ridge_cols) +
+  theme_ridges() +
+  xlab("log[ITH Score]") +
+  theme(legend.position = "none",
+        axis.title.x = element_text(hjust = 0.5),
+        axis.title.y = element_blank()) 
+rplot
+
+# Perform a Mann-Whitney U for each group
+comps <- tribble(
+  ~ctl, ~comp,
+  1, 2,
+  1, 5,
+  1, 8,
+  1, 11,
+  1, 14,
+  1, 17,
+  2, 3,
+  2, 4,
+  5, 6,
+  5, 7,
+  8, 9,
+  8, 10,
+  11, 12,
+  11, 13,
+  14, 15,
+  14, 16,
+  17, 18,
+  17, 19
+)
+
+# Calculate Mann-Whitney test (in figure, p-value)
+stats <- matrix(nrow = 19, ncol = 2)
+mwu <- matrix(nrow = 19, ncol = 19)
+for(i in seq_along(comps$ctl)) {
+  s <- wilcox.test(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]])
+  #P-value of comparison group (column)
+  #correlated with its respective proper control (row)
+  mwu[comps$ctl[i], comps$comp[i]] <- s$p.value
+  #P-value for each group given proper comparison to respective controls
+  stats[comps$comp[i]] <- s$p.value
+}
+# Calculate effect size (in figure)
+efs <- matrix(nrow = 19, ncol = 19)
+for(i in seq_along(comps$ctl)) {
+  s <- cohen.d(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]])
+  #Effect size of comparison group (column)
+  #correlated with its respective proper control (row)
+  efs[comps$ctl[i], comps$comp[i]] <- s$estimate
+  #Effect size for each group given proper comparison to respective controls
+  stats[comps$comp[i], 2] <- s$estimate
+}
+# Other statistical test - permutation
+#per <- matrix(nrow = 19, ncol = 19)
+#for(i in seq_along(comps$ctl)) {
+#  s <- permTS(raw_ith[,comps$ctl[i]], raw_ith[,comps$comp[i]], alternative = "two.sided")
+#  per[comps$ctl[i], comps$comp[i]] <- s$p.value
+#}
+
+# # Save table of comparison group (column) correlated with its proper control (row)
+# as.data.frame(mwu) %>%
+#   write_excel_csv(file="Data/ITH/mwu.csv")
+# as.data.frame(efs) %>%
+#   write_excel_csv(file="Data/ITH/efs.csv")
+
+# Correlate p-values with Sample name
+stats <- as.data.frame(stats)
+stats$Sample <- base::unique(ith[["Sample"]]) %>%
+  as.vector()
+stats <- stats[-1,]
+
+# Plot with p-values superimposed for each sample
+repfigure_3b_15 <- rplot + xlim(0.8, 2.5) + geom_text(data=stats,
+                  aes(x=2.3, y=Sample),
+                  label = paste0("p=", format(stats$V1, digits=3, trim=TRUE),
+                                  ", effect size=", format(stats$V2, digits=3, trim=TRUE), "\n"),
+                  size = 3)
+repfigure_3b_15
+
+# Save as PDF
+pdf("figures/supplement/requests/k7m2_f420/repfigure_3b_15.pdf",
+       width = 8,
+       height = 8)
+repfigure_3b_15
+dev.off()
+```
+
+### Repeat Figure 3C
+
+C) UMAP analysis for merged primary and metastatic samples in each of the four models. Cells in grey represent remaining cells in merged sample. Cluster enrichment analysis shows distribution of cells in each cluster in the two microenvironment conditions (tibia, lung). While some cells in the primary and metastatic lesions adopted shared phenotypes, others adopted distinct phenotypes.
+
+```{r repfig3c, eval=FALSE}
+load("Data/OS_list_CCR.RData")
+
+OS_list$OS17_TL <- OS_list$OS17_TL %>%
+    FindClusters(resolution = 0.2)
+OS_list$`143B_TL` <- OS_list$`143B_TL` %>%
+    FindClusters(resolution = 0.15)
+OS_list$NCHOS2_TL <- OS_list$NCHOS2_TL %>%
+    FindClusters(resolution = 0.15)
+OS_list$NCHOS7_TL <- OS_list$NCHOS7_TL %>%
+    FindClusters(resolution = 0.2)
+
+# Cluster distribution in each sample
+# proportion of cells in lung in each cluster
+lung_prop_tbl <- tibble()
+for (s_obj in c(OS_list$OS17_TL,
+                OS_list$`143B_TL`,
+                OS_list$NCHOS2_TL,
+                OS_list$NCHOS7_TL,
+		k7m2,
+		F420)) {
+    s_obj$src <- factor(s_obj$src, levels = c("Tibia", "Lung"))
+    lung_prop_tbl <-
+        s_obj@meta.data %>%
+        as_tibble() %>%
+        select(model, src, seurat_clusters) %>%
+        group_by(model, seurat_clusters) %>%
+        summarize(lung_perc = sum(grepl("Lung", src)) / n() * 100,
+                  .groups = "drop") %>%
+        dplyr::rename(sample = model,
+                      cluster = seurat_clusters) %>%
+        bind_rows(lung_prop_tbl)
+}
+
+write_tsv(lung_prop_tbl, "Data/Supplement/k7m2_f420/repfig3d_lung_prop_tbl.tsv")
+
+# UMAP Plots 
+sample_names <- c("OS-17_TL",
+                  "143B_TL",
+                  "NCH-OS-2_TL",
+                  "NCH-OS-7_TL")
+
+for (s_obj in sample_names) {
+  # Tibia plot with lung-derived cells greyed out
+  temp_obj <- OS_list[[s_obj]]
+  lung <- vector(mode = "character")
+  temp <- WhichCells(temp_obj,
+                     expression = src == "Lung")
+  lung <- append(lung, temp)
+  Idents(temp_obj, cells = lung) <- " "
+
+  tibia_plot <- DimPlot(temp_obj, reduction = "umap", pt.size = 1, label = T,
+                cols = c("light grey", "#E64B35FF",  "#4DBBD5FF", "#00A087FF", "#3C5488FF"), order = T) + 
+                coord_fixed() + NoLegend() + NoAxes() +
+                ggtitle("Tibia") + theme(plot.title = element_text(hjust = 0.5))
+  
+  # Lung plot with lung-derived cells greyed out
+  temp_obj2 <- OS_list[[s_obj]]
+  tib <- vector(mode = "character")
+  temp <- WhichCells(temp_obj2,
+                     expression = src == "Tibia")
+  tib <- append(tib, temp)
+  Idents(temp_obj2, cells = tib) <- " "
+
+  lung_plot <- DimPlot(temp_obj2, reduction = "umap", pt.size = 1, label = T,
+                cols = c("light grey", "#E64B35FF",  "#4DBBD5FF", "#00A087FF", "#3C5488FF"), order = T) + 
+                coord_fixed() + NoLegend() + NoAxes() +
+                ggtitle("Lung") + theme(plot.title = element_text(hjust = 0.5))
+
+  combined_plot <- tibia_plot + lung_plot
+
+  pdf(paste0("figures/supplement/k7m2_f420/repfigure_3c1_",
+                s_obj,
+                ".pdf"),
+       width = 5,
+       height = 3)
+  combined_plot
+  dev.off()
+
+}
+
+# Bar plots
+objlist <- c(OS_list$`OS-17_TL`,
+                OS_list$`143B_TL`,
+                OS_list$`NCH-OS-2_TL`,
+                OS_list$`NCH-OS-7_TL`)
+
+for (sobj in objlist) {
+  tident <- table(Idents(sobj),
+                  sobj$src,
+                  dnn = c("cluster",
+                          "tissue")) %>%
+             as.data.frame() %>%
+            group_by(tissue) %>%
+            mutate(perc = Freq / sum(Freq) * 100)
+
+  tident$cluster <- as.character(tident$cluster)
+
+  repfigure_3c2 <- ggplot(tident, aes(x = tissue, y = perc, fill = cluster)) +
+    theme_bw(base_size = 5) +
+    geom_col(position = "fill", width = 0.5) +
+    xlab("Tissue") +
+    ylab("Proportion") +
+    scale_fill_npg(alpha = 1) + 
+    NoLegend() + NoAxes() +
+    #scale_fill_manual(values = c("#E64B35FF","#00A087FF","#4DBBD5FF",)
+    theme(legend.title = element_blank())
+  plot(repfigure_3c2)
+  
+    # Save plot as PDF
+  pdf(paste0("figures/supplement/k7m2_f420/repfigure_3c2_",
+                head(sobj$model,1),
+                head(sobj$src, 1),
+                ".pdf"),
+       width = 2,
+       height = 5)
+  repfigure_3c2
+  dev.off()
+}
+```
+
+### Repeat Figure 3D
+
+D) Metabolic heterogeneity in glycolysis activation. We used a pathway enrichment
+analysis for hallmark gene sets using genes differentially upregulated in each
+cluster relative to every other cluster within the same model. P values were
+adjusted for multiple comparisons. Boxes in grey identify non-significant pathway
+enrichments, whereas boxes in red identify statistically significant enrichments.
+Bar plot shows percentage of cells identified per cluster in lung metastases.
+In B-D, samples subset to equal number of cells to allow inter-model comparison
+(n=1500 per condition).
+
+```{r repfig3d_process, dependson='repfig3c', eval=FALSE}
+library(data.table)
+#library(pheatmap)
+#Create list of objects used in repfigure 3 heatmap
+B.list <- list(OS17 = OS_list$`OS-17_TL`,
+               t143b = OS_list$`143B_TL`,
+               OS2 = OS_list$`NCH-OS-2_TL`,
+               OS7 = OS_list$`NCH-OS-7_TL`)
+
+# Use DGEA function to find hallmark pathway expression
+em.hm.list <- list()
+set.seed(1337)
+for (i in seq_len(length(B.list))) {
+  em.hm.list[[i]] <- DGEA(B.list[[i]]) %>%
+    setDT(keep.rownames = TRUE) %>%
+    as_tibble() %>%
+    rename_with(.cols = where(is.numeric), ~ str_c(names(B.list[i]), "_", .x))
+}
+
+cx.pd <- inner_join(inner_join(em.hm.list[[1]],
+                               em.hm.list[[2]],
+                               by = "rn"),
+                    inner_join(em.hm.list[[3]],
+                               em.hm.list[[4]],
+                               by = "rn"),
+                    by = "rn")
+
+# Make the "rn" column the rownames -Emily
+# cx.pd <- cx.pd %>%
+#     column_to_rownames("rn")
+
+head(cx.pd)
+##Write table to edit rownames to easily convert to dataframe
+write_tsv(cx.pd, file = "Data/Supplement/k7m2_f420/cxpd.tsv")
+```
+
+
+```{r repfig3d, eval=FALSE}
+lung_percent <-
+    read_tsv("Data/Supplement/k7m2_f420/repfig3d_lung_prop_tbl.tsv") %>%
+    mutate(sample_order = rank(sample) * 1000 - lung_perc,
+           x_label = paste0(sample, " c", cluster) %>%
+                reorder(sample_order))
+
+cx.pd <-
+    read_tsv("Data/Supplement/k7m2_f420/cxpd.tsv",
+             show_col_types = FALSE) %>%
+    pivot_longer(c(-rn),
+                 names_to = "sample",
+                 values_to = "pval") %>%
+    mutate(cluster = str_remove(sample, ".+_") %>%
+                as.numeric(),
+           sample = str_replace(sample, "OS2", "NCH-OS-2") %>%
+                str_replace("OS7", "NCH-OS-7") %>%
+                str_replace("t143b", "143B") %>%
+                str_replace("OS17", "OS-17") %>%
+                str_remove("_.+"),
+            rn = str_remove(rn, "HALLMARK_") %>%
+                str_replace("_", " ")) %>%
+    left_join(lung_percent) %>%
+    mutate(pval = -log10(pval),
+           sample_order = rank(sample) * 1000 - lung_perc,
+           signif_bool = pval >= (-1 * log10(0.05)),
+           signif = if_else(signif_bool == TRUE, "p-value < 0.05", "p-value > 0.05"))
+
+P1 <-
+  cx.pd %>%
+  ggplot(., aes(x = x_label, y = rn, fill = signif)) +
+    geom_tile() +
+    geom_text(aes(label = sprintf("%0.2f", pval)), size = 3) +
+    scale_fill_manual(values = c("red", "gray"), name = "") +
+    scale_y_discrete(limits = rev, position = "right") +
+    theme(panel.background = element_blank(),
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.margin = unit(c(0, 0, 0, 0), "cm"),
+          panel.border = element_rect(colour = "black", fill = NA),
+          axis.text.x = element_text(angle = 90,
+                                     hjust = 1,
+                                     vjust = 0.4,
+                                     size = 12),
+          axis.text.y = element_text(size = 12)) +
+    labs(x = "",
+         y = "") +
+    facet_grid(. ~ sample,
+               scales = "free_x",
+               space = "free")
+
+P2 <-
+  lung_percent %>%
+  ggplot(., aes(x = x_label, y = lung_perc, fill = sample)) +
+    geom_bar(stat = "identity") +
+    ylab("Percent\nin lung") +
+    xlab("") +
+    labs(fill = "Model",
+         y = "Percent in\nmetastases(%)") +
+    scale_fill_brewer(palette = "Set2") +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          panel.background = element_blank(),
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.margin = unit(c(0, 0, -0.2, 0), "cm"),
+          panel.border = element_rect(colour = "black", fill = NA)) +
+    facet_grid(. ~ sample,
+               scales = "free_x",
+               space = "free")
+
+repfigure_3d <- cowplot::plot_grid(P2,
+                   P1,
+                   ncol = 1,
+                   align = "v",
+                   rel_heights = c(2, 10))
+repfigure_3d
+
+pdf("figures/supplement/k7m2_f420/repfigure_3d.pdf",
+       width = 15,
+       height = 8)
+repfigure_3d
+dev.off()
+```
