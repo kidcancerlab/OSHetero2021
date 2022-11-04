@@ -974,6 +974,8 @@ C) Pathway enrichment analysis with adjusted p values for hallmark gene sets ass
 ```{r Fig2c_repeat, fig.height=6, fig.width=10}
 ### Extract genes that are shared in these datasets
 load("Data/OS_merged_postCCR.RData")
+load("Data/Supplement/k7m2_f420/k7m2_tumor.RData")
+load("Data/Supplement/k7m2_f420/F420_tumor.RData")
 # Set seed before subsetting and DE analysis to ensure consistent results
 set.seed(100)
 
@@ -1236,19 +1238,20 @@ repfigure_2c <-
   labs(title = "",
        y = "",
        x = "") +
-  ylim(-7, 7) +
-  xlim(-5.5, 1)
+  ylim(-12, 12) +
+  xlim(-6, 1)
 
 repfigure_2c
 
 # Save as PDF
 pdf("figures/supplement/requests/k7m2_f420/repeat_figure_2c_k7m2-f420.pdf",
-    width = 6,
+    width = 8,
     height = 9)
 repfigure_2c
 dev.off()
 
 save(repfigure_2c, file = "figures/supplement/requests/k7m2_f420/repfigure_2c.RData")
+save(repfigure_2c, file = "figures/supplement/requests/k7m2_f420/repfig_2c_data.RData")
 ```
 
 ### Repeat Figure 3
