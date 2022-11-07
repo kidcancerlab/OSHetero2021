@@ -43,7 +43,7 @@ DGEA <- function(data,
       msig.name = m_t2n.h
     }
     else if (category == "C2") {
-      if (subcategory = NULL) {
+      if (subcategory == NULL) {
         m_t2g.c2 <- msigdbr(species = "Homo sapiens", category = "C2") %>%
           dplyr::select(gs_name, human_gene_symbol)
         m_t2n.c2 <- msigdbr(species = "Homo sapiens", category = "C2") %>%
@@ -53,7 +53,7 @@ DGEA <- function(data,
         msig.gene.set = m_t2g.c2
         msig.name = m_t2n.c2
       }
-      else if (subcategory = "CP") {
+      else if (subcategory == "CP") {
         m_t2g.c2 <- msigdbr(species = "Homo sapiens", category = "C2",
                             subcategory = "CP") %>%
           dplyr::select(gs_name, human_gene_symbol)
