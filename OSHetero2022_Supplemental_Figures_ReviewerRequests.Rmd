@@ -1315,6 +1315,7 @@ better_names <-
     group_names %>%
     str_replace("\\.", " ") %>%
     str_replace("cx", "Culture") %>%
+    str_replace("Cx", "Culture") %>%
     str_replace("OB", "Osteoblast") %>%
     str_replace("t143", "143")
 
@@ -1837,10 +1838,8 @@ layout_matrix <-
              14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,
              14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,
              14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,
-             14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,
-             14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,
              14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14),
-         nrow = 13,
+         nrow = 11,
          byrow = TRUE)
 
 pdf("figures/supplement/requests/k7m2_f420/suppFigure_3_with_mouse.pdf",
