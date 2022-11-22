@@ -146,7 +146,8 @@ os17_cx <- CellCycleScoring(object = os17_cx,
   set.ident = TRUE)
 os17_cx <- ScaleData(object = os17_cx,
   vars.to.regress = c("S.Score", "G2M.Score"),
-  features = VariableFeatures(os17_cx))
+  features = VariableFeatures(os17_cx),
+  block.size = 10000)
 
 os17_cx <- RunPCA(os17_cx,
   pc.genes = os17_cx@var.genes,
@@ -179,29 +180,40 @@ For lineage analysis in Figure 5.
 
 ```{r Fig5_tag, dependson='load_os17'}
 # Plot histograms of lineage tracing tags in the Seurat objects
-for(i in c("S0016", "S0018xS0028", "S0024xS0029")) {
-  gen_cellecta_bc_data(
-    file = paste0("/gpfs0/home/gdrobertslab/lab/Counts/",
-      i,
-      "/outs/possorted_genome_bam.bam"),
-    output = paste0("Data/", i, ".bcs"),
-    samtools_module = "SAMtools")
+
+if(!file.exists("Data/S0024xS0029.ltbc")){
+  s <- c("S0016", "S0018xS0028", "S0024xS0029")
+  for(i in s) {
+    gen_cellecta_bc_data(
+      file = paste0("/gpfs0/home/gdrobertslab/lab/Counts/",
+        i,
+        "/outs/possorted_genome_bam.bam"),
+      verbose = TRUE,
+      output = paste0("Data/", i, ".ltbc"),
+      samtools_module = "SAMtools")
+  }
+
+  for(i in s) {
+    ltbc <- read.table(paste0("Data/", i, ".ltbc"), header = T, sep = "\t")
+    if(substr(ltbc[[1, 1]], 1, 5)=="CB:Z:") {
+      ltbc$cid <- substr(ltbc$cid, 6, 22)
+      write.table(ltbc, paste0("Data/", i, ".ltbc"), sep = "\t")
+    }
+  }
 }
 
 os17_cx_raw <- process_ltbc(os17_cx_raw,
-  cid_lt = read.table("Data/S0016.bcs", sep = "\t"),
+  cid_lt = read.table("Data/S0016.ltbc", header = T, sep = "\t"),
   histogram = F,
   relative = T)
 
 os17_tib_raw <- process_ltbc(os17_tib_raw,
-  lt_loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
-  cid_loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
+  cid_lt = read.table("Data/S0018xS0028.ltbc", sep = "\t"),
   histogram = F,
   relative = T)
 
 os17_lung_raw <- process_ltbc(os17_lung_raw,
-  lt_loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
-  cid_loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
+  cid_lt = read.table("Data/S0024xS0029.ltbc", sep = "\t"),
   histogram = F,
   relative = T)
 ```
@@ -243,7 +255,8 @@ os17 <- CellCycleScoring(object = os17,
 
 os17 <- ScaleData(object = os17,
   vars.to.regress = c("S.Score", "G2M.Score"),
-  features = VariableFeatures(os17))
+  features = VariableFeatures(os17),
+  block.size = 10000)
 
 os17 <- RunPCA(os17, pc.genes = os17@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
@@ -433,7 +446,8 @@ os7_cx <- CellCycleScoring(object = os7_cx,
 
 os7_cx <- ScaleData(object = os7_cx,
   vars.to.regress = c("S.Score", "G2M.Score"),
-  features = VariableFeatures(os7_cx))
+  features = VariableFeatures(os7_cx),
+  block.size = 10000)
 
 os7_cx <- RunPCA(os7_cx, pc.genes = os7_cx@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
@@ -450,7 +464,6 @@ os7_cx <- FindClusters(os7_cx, resolution = 0.15)
 
 save(os7_cx, file = "Data/os7_cx_CCR.RData")
 ```
-
 
 ## Save Raw Objects
 
@@ -495,7 +508,7 @@ names(sample_list) <- sample_names
 for (item in sample_names) {
   # Save each sample as an individual Seurat object with proper name
   assign(item, sample_list[[item]])
-  save(list = item, file = paste("Data/Raw/",
+  save(list = item, file = paste("Data/",
     item,
     ".RData",
     sep = ""))
@@ -561,7 +574,8 @@ OS <- CellCycleScoring(object = OS,
 
 OS <- ScaleData(object = OS,
   vars.to.regress = c("S.Score", "G2M.Score"),
-  features = VariableFeatures(OS))
+  features = VariableFeatures(OS),
+  block.size = 10000)
 
 OS <- RunPCA(OS, pc.genes = OS@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
@@ -581,26 +595,26 @@ OS$model <- factor(as.factor(OS$model),
 
 # Plot the data
 DimPlot(OS,
-        reduction = "umap",
-        group.by = "model",
-        pt.size = 1,
-        label = T) +
+    reduction = "umap",
+    group.by = "model",
+    pt.size = 1,
+    label = T) +
   coord_fixed() +
   ggtitle("OS by Model") +
     scale_color_npg(alpha = 1)
 
 DimPlot(OS,
-        reduction = "umap",
-        group.by = "src",
-        pt.size = 1,
-        label = T) +
+    reduction = "umap",
+    group.by = "src",
+    pt.size = 1,
+    label = T) +
   coord_fixed() +
   ggtitle("OS by Source")
 
 DimPlot(OS,
-        reduction = "umap",
-        pt.size = 1,
-        label = T) +
+    reduction = "umap",
+    pt.size = 1,
+    label = T) +
   coord_fixed() +
   ggtitle("OS by Clusters") +
     scale_color_npg(alpha = 0.7)
@@ -612,21 +626,22 @@ List objects, process, and cell cycle regress. Used in Figure 3B - ITH code.
 
 ```{r listallobj1500, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7')}
 # Create List to compute ITH scores (subset to 1500 cells for each)
-OS.list_1500 <- list(osteoblasts = osteoblasts,
-                     OS17.cx = os17_cx_raw,
-                     OS17.Tibia = os17_tib_raw, 
-                     OS17.Lung = os17_lung_raw, 
-                     t143B.cx = t143b_cx_raw,
-                     t143B.Tibia = t143b_tib_raw, 
-                     t143B.Lung = t143b_lung_raw,
-                     OS2.Flank = os2_cx_raw,
-                     OS2.Tibia = os2_tib_raw, 
-                     OS2.Lung = os2_lung_raw, 
-                     OS7.Flank= os7_cx_raw,
-                     OS7.Tibia = os7_tib_raw, 
-                     OS7.Lung = os7_lung_raw) 
+OS.list_1500 <- list(
+  osteoblasts = osteoblasts,
+  OS17.cx = os17_cx_raw,
+  OS17.Tibia = os17_tib_raw, 
+  OS17.Lung = os17_lung_raw, 
+  t143B.cx = t143b_cx_raw,
+  t143B.Tibia = t143b_tib_raw, 
+  t143B.Lung = t143b_lung_raw,
+  OS2.Flank = os2_cx_raw,
+  OS2.Tibia = os2_tib_raw, 
+  OS2.Lung = os2_lung_raw, 
+  OS7.Flank= os7_cx_raw,
+  OS7.Tibia = os7_tib_raw, 
+  OS7.Lung = os7_lung_raw) 
 
-for (i in 1: length(OS.list_1500)) {
+for (i in 1:length(OS.list_1500)) {
   OS.list_1500[[i]] <- NormalizeData(OS.list_1500[[i]]) %>%
     FindVariableFeatures(selection.method = "vst") %>%
     ScaleData() %>%
@@ -644,14 +659,14 @@ g2m.genes <- cc.genes$g2m.genes
 
 for (i in 1:length(OS.list_1500)) {
   OS.list_1500[[i]] <- CellCycleScoring(object = OS.list_1500[[i]],
-                                   s.features = s.genes,
-                                   g2m.features = g2m.genes,
-                                   set.ident = TRUE)
+    s.features = s.genes,
+    g2m.features = g2m.genes,
+    set.ident = TRUE)
   
   OS.list_1500[[i]] <- ScaleData(object = OS.list_1500[[i]],
-                            vars.to.regress = c("S.Score",
-                                                "G2M.Score"),
-                            features = rownames(x = OS.list_1500[[i]])) # Change to VariableFeatures()
+    vars.to.regress = c("S.Score", "G2M.Score"),
+    features = VariableFeatures(OS.list_1500[[i]]),
+    block.size = 10000) # Change to VariableFeatures()
   
   OS.list_1500[[i]] <- RunPCA(OS.list_1500[[i]],
                          pc.genes = OS.list_1500[[i]]@var.genes, npcs = 20) %>%
@@ -741,7 +756,8 @@ for (i in 1:length(OS_list)) {
   OS_list[[i]] <- ScaleData(object = OS_list[[i]],
                             vars.to.regress = c("S.Score",
                                                 "G2M.Score"),
-                            features = rownames(x = OS_list[[i]])) # Change to VariableFeatures()
+                            features = rownames(x = OS_list[[i]]),
+                            block.size = 10000) # Change to VariableFeatures()
   
   OS_list[[i]] <- RunPCA(OS_list[[i]],
                          pc.genes = OS_list[[i]]@var.genes, npcs = 20) %>%
