@@ -87,8 +87,8 @@ processLTBC <- function(sobject,
                         ret.list = F) {
   
   # Read in the master Cellecta barcode tables for QC purposes
-  bc14 <- read.table("R:/RESRoberts/Sanjana/Lineage Tracing/Cellecta/Cellecta-bc14s.txt")
-  bc30 <- read.table("R:/RESRoberts/Sanjana/Lineage Tracing/Cellecta/Cellecta-bc30s.txt")
+  bc14 <- read.table("/home/gdrobertslab/lab/GenRef/cellectaBarcodes/Cellecta-bc14s.txt")
+  bc30 <- read.table("/home/gdrobertslab/lab/GenRef/cellectaBarcodes/Cellecta-bc30s.txt")
   names(bc14) <- c("label", "forward", "reverse")
   names(bc30) <- c("label", "forward", "reverse")
   bc14f <- setNames(bc14$label, bc14$forward)
