@@ -13,11 +13,11 @@ library("celldex")
 # plan(strategy = "multicore", workers = 3)
 
 ## Define functions
-##enricher - https://guangchuangyu.github.io/2015/05/use-clusterprofiler-as-an-universal-enrichment-analysis-tool/
-#WRITE ANNOTATION 
-#Function for msigdb and SingleR annotation
-#spec: default is "human", the other species available is "mouse"
-#category default is "H" for the hallmark gene sets, but can also be defined as "C2" or "C7" for those msigdb respective sets.
+## enricher - https://guangchuangyu.github.io/2015/05/use-clusterprofiler-as-an-universal-enrichment-analysis-tool/
+# WRITE ANNOTATION 
+# Function for msigdb and SingleR annotation
+# spec: default is "human", the other species available is "mouse"
+# category default is "H" for the hallmark gene sets, but can also be defined as "C2" or "C7" for those msigdb respective sets.
 # Note: in msigdbr output, gene_symbol is comprised of mouse genes, while human_gene_symbol is needed for the human genes. 
 DGEA <- function(data,
                  spec = "human",
@@ -71,7 +71,7 @@ DGEA <- function(data,
         dplyr::select(gs_name, human_gene_symbol)
       m_t2n.c7 <- msigdbr(species = "Homo sapiens", category = "C7") %>% 
         dplyr::select(gs_id, gs_name)
-      #m_t2g=rbind(m_t2g.c7,m_t2g.c7)
+      # m_t2g=rbind(m_t2g.c7,m_t2g.c7)
       
       # msigdb signature to use
       msig.gene.set = m_t2g.c7

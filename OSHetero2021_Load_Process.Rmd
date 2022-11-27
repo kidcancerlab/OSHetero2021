@@ -25,27 +25,14 @@ knitr::opts_chunk$set(
 ```
 
 ```{r Fig1_lib, cache=FALSE}
-# setwd("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021")
-# source("scSeurat.R")
 source("Downstream.v2.R")
 
 # loading libraries
 library(Seurat)
 library(rrrSingleCellUtils)
-# library(future)
 library(ggplot2)
-# library(fgsea)
 library(msigdbr)
-# library(clusterProfiler)
-# library(SingleR)
 library(dplyr)
-# library(pheatmap)
-# library(RColorBrewer)
-# library(viridis) # inferno color palette
-# library(grid)
-# library(ggsci)
-# library(data.table)
-library(ggvenn)
 ```
 
 # Load Seurat objects 

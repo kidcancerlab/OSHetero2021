@@ -7,9 +7,6 @@ library("reticulate")
 library("Seurat")
 library("reshape2")
 library("ggplot2")
-# library("harmony")
-# library("future")
-# plan(strategy = "multicore", workers = 3)
 
 # Define functions
 # enricher - https://guangchuangyu.github.io/2015/05/use-clusterprofiler-as-an-universal-enrichment-analysis-tool/
@@ -18,8 +15,7 @@ library("ggplot2")
 
 DGEA <- function(data) {
   # Set the Human Primary Cell Atlas as a reference
-  hpca.se <- HumanPrimaryCellAtlasData()
-
+  hpca.se <- celldex::HumanPrimaryCellAtlasData()
   # Preparing clusterProfiler to perform pathway enrichment on msigdb signatures
   m_t2g.c2 <- msigdbr(species = "Homo sapiens", category = "C2", subcategory = "CP") %>%
     dplyr::select(gs_name, human_gene_symbol)
