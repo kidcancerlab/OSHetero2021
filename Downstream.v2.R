@@ -1,12 +1,13 @@
 # Set up environment, activate library components
-library("ggsci")
-library("cowplot")
-library("dplyr")
-library("Matrix")
-library("reticulate")
-library("Seurat")
-library("reshape2")
-library("ggplot2")
+library(ggsci)
+library(cowplot)
+library(dplyr)
+library(Matrix)
+library(reticulate)
+library(Seurat)
+library(reshape2)
+library(ggplot2)
+library(clusterProfiler)
 
 # Define functions
 # enricher - https://guangchuangyu.github.io/2015/05/use-clusterprofiler-as-an-universal-enrichment-analysis-tool/

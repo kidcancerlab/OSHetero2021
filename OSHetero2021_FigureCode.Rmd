@@ -38,7 +38,7 @@ set.seed(888)
 library(Seurat)
 # library(future)
 library(ggplot2)
-# library(msigdbr)
+library(msigdbr)
 # library(clusterProfiler)
 # library(SingleR)
 # library(dplyr)
@@ -47,7 +47,7 @@ library(ggplot2)
 # library(viridis) # inferno color palette
 library(grid)
 # library(ggsci)
-# library(data.table)
+library(data.table)
 # library(ggvenn)
 # library(tibble)
 # library(tidyr)
@@ -317,7 +317,7 @@ set.seed(100)
 OS$tissue <- OS$src %>%
   stringr::str_replace("Flank", "Culture")
 
-OS <- subset(OS, subset = model != "OB")
+OS <- subset(OS, subset = model != "osteoblasts")
 
 Idents(OS) <- OS$tissue
 
@@ -382,6 +382,9 @@ for (tissue_name in c("Tibia", "Lung")) {
 }
 
 #Save as PDF
+if(!dir.exists("Figures/figure_2")) {
+  dir.create("Figures/figure_2")
+}
 pdf("Figures/figure_2/figure_2b.pdf",
     width = 4,
     height = 4)
@@ -582,15 +585,9 @@ save(figure_2c, file = "Figures/figure_2/figure_2c.RData")
 load("Figures/figure_2/figure_2b.RData")
 load("Figures/figure_2/figure_2c.RData")
 
-layout_matrix <- matrix(c(1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5,
-                          1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5,
-                          1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5,
-                          1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5,
-                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5,
-                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5,
-                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5,
-                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5),
-                        nrow = 8,
+layout_matrix <- matrix(c(1, 1, 2, 2, 5, 5, 5,
+                          3, 3, 4, 4, 5, 5, 5),
+                        nrow = 2,
                         byrow = TRUE)
 
 pdf("Figures/figure_2/figure_2.pdf",
