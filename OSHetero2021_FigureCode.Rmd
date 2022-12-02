@@ -31,33 +31,34 @@ knitr::opts_chunk$set(
 **Cell line and PDX models of osteosarcoma display transcriptional heterogeneity.**
 
 ```{r Fig1_lib, cache=FALSE}
-source("scSeurat.R")
+# source("scSeurat.R")
 source("Downstream.v2.R")
 set.seed(888)
 # loading libraries
 library(Seurat)
-library(future)
+# library(future)
 library(ggplot2)
 library(msigdbr)
-library(clusterProfiler)
-library(SingleR)
-library(dplyr)
-library(pheatmap)
-library(RColorBrewer)
-library(viridis) # inferno color palette
+# library(clusterProfiler)
+# library(SingleR)
+# library(dplyr)
+# library(pheatmap)
+# library(RColorBrewer)
+# library(viridis) # inferno color palette
 library(grid)
-library(ggsci)
+# library(ggsci)
 library(data.table)
-library(ggvenn)
-library(tibble)
-library(tidyr)
+# library(ggvenn)
+# library(tibble)
+# library(tidyr)
 library(tidyverse)
-library(stringr)
-library(reshape2)
-library(pzfx)
-library(ggridges)
-library(effsize)
-library(perm)
+# library(stringr)
+# library(reshape2)
+# library(pzfx)
+# library(ggridges)
+# library(effsize)
+# library(perm)
+# library(celldex)
 ```
 
 ## Figure 1A
@@ -67,13 +68,13 @@ library(perm)
 A) UMAP analysis of OS-17 cells (n = 3178) grown in cell culture. Cell cycle distribution of cells (n = 3178) is visualized as pie charts.
 
 ```{r Fig1a_OS17}
-load("Data/os17.cx_CCR.RData")
+load("Data/os17_cx_CCR.RData")
 
 # Culture plot
-figure1_a1 <- DimPlot(os17.cx,
-                      reduction = "umap",
-                      pt.size = 1,
-                      label = T) +
+figure1_a1 <- DimPlot(os17_cx,
+    reduction = "umap",
+    pt.size = 1,
+    label = T) +
   coord_fixed() +
   ggtitle("OS17 in Culture") +
   NoAxes() +
@@ -83,7 +84,13 @@ figure1_a1 <- DimPlot(os17.cx,
 figure1_a1
 
 # Save as pdf
-pdf("figures/figure_1/figure_1a_os17.pdf",
+if(!dir.exists("Figures")) {
+  dir.create("Figures")
+}
+if(!dir.exists("Figures/figure_1")) {
+  dir.create("Figures/figure_1")
+}
+pdf("Figures/figure_1/figure_1a_os17.pdf",
     width = 5,
     height = 5)
 figure1_a1
@@ -91,13 +98,13 @@ dev.off()
 
 
 # Cell cycle distribution of clusters
-cid <- sort(unique(os17.cx@active.ident))
+cid <- sort(unique(os17_cx@active.ident))
 
 vplayout <- function(x, y) viewport(layout.pos.row = x,
                                     layout.pos.col = y)
 
 
-pdf("figures/figure_1/figure_1a_os17_pie.pdf",
+pdf("Figures/figure_1/figure_1a_os17_pie.pdf",
     width = 6,
     height = 2)
 
@@ -105,9 +112,9 @@ grid.newpage()
 pushViewport(viewport(layout = grid.layout(1, 4)))
 
 for(i in 1:3){
-  temp <- WhichCells(os17.cx,
+  temp <- WhichCells(os17_cx,
                      idents = cid[[i]])
-  LT.cells <- subset(os17.cx,
+  LT.cells <- subset(os17_cx,
                      cells = temp)
   df <- table(LT.cells$Phase)
   bp <- ggplot(as.data.frame(df),
@@ -138,11 +145,11 @@ dev.off()
 B) UMAP analysis of NCH-OS-7 cells (n = 1998) grown as subcutaneous flank tumor. Cell cycle distribution of cells is visualized as pie charts.
 
 ```{r Fig1b_NCHOS7}
-load(file ="Data/OS7.cx_CCR.RData")
+load(file ="Data/os7_cx_CCR.RData")
 
 # Flank plots
 
-figure_1b <- DimPlot(OS7.cx,
+figure_1b <- DimPlot(os7_cx,
                      reduction = "umap",
                      pt.size = 1,
                      label = T) + 
@@ -155,27 +162,27 @@ figure_1b <- DimPlot(OS7.cx,
 figure_1b
 
 # Save as pdf
-pdf("figures/figure_1/figure_1b_nchos7.pdf",
+pdf("Figures/figure_1/figure_1b_nchos7.pdf",
     width = 5,
     height = 5)
 figure_1b
 dev.off()
 
 # Cell cycle distribution of clusters
-cid <- sort(unique(OS7.cx@active.ident))
+cid <- sort(unique(os7_cx@active.ident))
 
 vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
 
-pdf("figures/figure_1/figure_1b_nchos7_pie.pdf",
+pdf("Figures/figure_1/figure_1b_nchos7_pie.pdf",
     width = 6,
     height = 2)
 
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(1, 4)))
 for(i in 1:4){
-  temp <- WhichCells(OS7.cx,
+  temp <- WhichCells(os7_cx,
                      idents = cid[[i]]) 
-  LT.cells <- subset(OS7.cx,
+  LT.cells <- subset(os7_cx,
                      cells = temp)
   df <- table(LT.cells$Phase)
   bp <- ggplot(as.data.frame(df),
@@ -210,8 +217,8 @@ C) Pathway enrichment analysis for hallmark gene sets associated with genes upre
 ```{r Fig1c_dgea, dependson='Fig1b_NCHOS7'}
 # Pathway enrichment analysis
 # Display adjust p-values
-B.list <- list(OS17 = os17.cx,
-               NCHOS7 = OS7.cx)
+B.list <- list(OS17 = os17_cx,
+               NCHOS7 = os7_cx)
 
 em.hm.list <- list()
 
@@ -287,7 +294,7 @@ figure_1c <- cx.pd.log %>%
 figure_1c
 
 #Save as PDF
-pdf("figures/figure_1/figure_1c.pdf",
+pdf("Figures/figure_1/figure_1c.pdf",
     width = 8,
     height = 8)
 figure_1c
@@ -310,7 +317,7 @@ set.seed(100)
 OS$tissue <- OS$src %>%
   stringr::str_replace("Flank", "Culture")
 
-OS <- subset(OS, subset = model != "OB")
+OS <- subset(OS, subset = model != "osteoblasts")
 
 Idents(OS) <- OS$tissue
 
@@ -375,7 +382,10 @@ for (tissue_name in c("Tibia", "Lung")) {
 }
 
 #Save as PDF
-pdf("figures/figure_2/figure_2b.pdf",
+if(!dir.exists("Figures/figure_2")) {
+  dir.create("Figures/figure_2")
+}
+pdf("Figures/figure_2/figure_2b.pdf",
     width = 4,
     height = 4)
 # Put all four plots into one image
@@ -384,7 +394,7 @@ gridExtra::grid.arrange(grobs = figure_2b,
 dev.off()
 
 # Save RData obj
-save(figure_2b, file = "figures/figure_2/figure_2b.RData")
+save(figure_2b, file = "Figures/figure_2/figure_2b.RData")
 ```
 
 ## Figure 2C
@@ -560,33 +570,27 @@ dev.off()
 figure_2c
 
 # Save as PDF
-pdf("figures/figure_2/figure_2c.pdf",
+pdf("Figures/figure_2/figure_2c.pdf",
     width = 6,
     height = 9)
 figure_2c
 dev.off()
 
-save(figure_2c, file = "figures/figure_2/figure_2c.RData")
+save(figure_2c, file = "Figures/figure_2/figure_2c.RData")
 ```
 
 ## Paneling figure 2
 
 ```{r panelFig2, eval = TRUE}
-load("figures/figure_2/figure_2b.RData")
-load("figures/figure_2/figure_2c.RData")
+load("Figures/figure_2/figure_2b.RData")
+load("Figures/figure_2/figure_2c.RData")
 
-layout_matrix <- matrix(c(1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5,
-                          1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5,
-                          1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5,
-                          1, 1, 1, 1, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5,
-                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5,
-                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5,
-                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5,
-                          3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5),
-                        nrow = 8,
+layout_matrix <- matrix(c(1, 1, 2, 2, 5, 5, 5,
+                          3, 3, 4, 4, 5, 5, 5),
+                        nrow = 2,
                         byrow = TRUE)
 
-pdf("figures/figure_2/figure_2.pdf",
+pdf("Figures/figure_2/figure_2.pdf",
     width = 6,
     height = 4)
 gridExtra::grid.arrange(grobs = list(figure_2b$`Tibia - down`,
@@ -756,13 +760,13 @@ figure_3b <-
 figure_3b
 
 # Save as PDF
-pdf("figures/figure_3/figure_3b.pdf",
+pdf("Figures/figure_3/figure_3b.pdf",
     width = 9,
     height = 8)
 figure_3b
 dev.off()
 
-save(figure_3b, file = "figures/figure_3/figure_3b.RData")
+save(figure_3b, file = "Figures/figure_3/figure_3b.RData")
 ```
 
 ## Figure 3C
@@ -863,7 +867,7 @@ for (s_obj in sample_names) {
   figure_3c_umaps[[s_obj]] <- tibia_plot + lung_plot
 
 
-  pdf(paste0("figures/figure_3/figure_3c1_",
+  pdf(paste0("Figures/figure_3/figure_3c1_",
              s_obj,
              ".pdf"),
       width = 5,
@@ -872,7 +876,7 @@ for (s_obj in sample_names) {
   dev.off()
 }
 
-save(figure_3c_umaps, file = "figures/figure_3/figure_3c_umaps.RData")
+save(figure_3c_umaps, file = "Figures/figure_3/figure_3c_umaps.RData")
 
 #### Bar plots ####
 objlist <- c(OS_list$OS17_TL,
@@ -914,7 +918,7 @@ for (sobj in objlist) {
           axis.title.y = element_text(size = 6))
 
   # Save plot as PDF
-  pdf(paste0("figures/figure_3/figure_3c2_",
+  pdf(paste0("Figures/figure_3/figure_3c2_",
              head(sobj$model, 1),
              ".pdf"),
       width = 1,
@@ -923,7 +927,7 @@ for (sobj in objlist) {
   dev.off()
 }
 
-save(figure_3c_barplots, file = "figures/figure_3/figure_3c_barplots.RData")
+save(figure_3c_barplots, file = "Figures/figure_3/figure_3c_barplots.RData")
 
 # For Rmd visual
 figure_3c2 <- ggplot(tident,
@@ -1089,9 +1093,9 @@ figure_3d <-
                         rel_widths = c(0.95, 0.05))
 figure_3d
 
-save(figure_3d, file = "figures/figure_3/figure_3d.RData")
+save(figure_3d, file = "Figures/figure_3/figure_3d.RData")
 
-pdf("figures/figure_3/figure_3d.pdf",
+pdf("Figures/figure_3/figure_3d.pdf",
     width = 15,
     height = 8)
 figure_3d
@@ -1099,10 +1103,10 @@ dev.off()
 ```
 
 ```{r assemblingFig3, eval=TRUE}
-load("figures/figure_3/figure_3b.RData")
-load("figures/figure_3/figure_3c_umaps.RData")
-load("figures/figure_3/figure_3c_barplots.RData")
-load("figures/figure_3/figure_3d.RData")
+load("Figures/figure_3/figure_3b.RData")
+load("Figures/figure_3/figure_3c_umaps.RData")
+load("Figures/figure_3/figure_3c_barplots.RData")
+load("Figures/figure_3/figure_3d.RData")
 
 layout_matrix <-
     matrix(c(1,  1,  1,  1,  2,  2,  2,  6,  4,  4,  4,  8,
@@ -1119,7 +1123,7 @@ layout_matrix <-
          nrow = 11,
          byrow = TRUE)
 
-pdf("figures/figure_3/figure_3.pdf",
+pdf("Figures/figure_3/figure_3.pdf",
     width = 8,
     height = 9)
 gridExtra::grid.arrange(grobs = list(figure_3b,
@@ -1152,14 +1156,14 @@ Figure 5. Lung colonization bottleneck enriches for clonal populations with a co
 source("scSeurat.R")
 
 # Load raw objects for lineage tag analysis
-load("Data/Raw/os17.cx.raw.RData")
+load("Data/Raw/os17_cx.raw.RData")
 load("Data/Raw/os17.tib.raw.RData")
 load("Data/Raw/os17.lung.raw.RData")
 
 # Subset all to 2800 cells in each condition
 set.seed(108)
-os17.cx.raw <- subset(os17.cx.raw,
-                      cells = sample(Cells(os17.cx.raw),
+os17_cx.raw <- subset(os17_cx.raw,
+                      cells = sample(Cells(os17_cx.raw),
                                      2800))
 
 os17.tib.raw <- subset(os17.tib.raw,
@@ -1201,10 +1205,10 @@ figure_5b <- DimPlot(os17,
 
 figure_5b
 
-save(figure_5b, file = "figures/figure_5/figure_5b.RData")
+save(figure_5b, file = "Figures/figure_5/figure_5b.RData")
 
 # Save as PDF
-pdf("figures/figure_5/figure_5b.pdf",
+pdf("Figures/figure_5/figure_5b.pdf",
     width = 8,
     height = 4)
 figure_5b
@@ -1243,11 +1247,11 @@ dim_plot <- function(x, src_sub, color) {
 }
 
 n_uniq_1 <-
-  (table(os17.cx.raw$lt) == 1) %>%
+  (table(os17_cx.raw$lt) == 1) %>%
   sum()
 
 # Plot histograms of lineage tracing tags in the Seurat objects
-figure_5c1 <- processLTBC(os17.cx.raw,
+figure_5c1 <- processLTBC(os17_cx.raw,
                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
                           cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
                           histogram = T,
@@ -1277,7 +1281,7 @@ figure_5c1 <-
     cowplot::draw_plot(inset_1, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
-pdf("figures/figure_5/figure_5c1.pdf",
+pdf("Figures/figure_5/figure_5c1.pdf",
     width = 8,
     height = 2)
 figure_5c1
@@ -1318,7 +1322,7 @@ figure_5c2 <-
     cowplot::draw_plot(inset_2, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
-pdf("figures/figure_5/figure_5c2.pdf",
+pdf("Figures/figure_5/figure_5c2.pdf",
     width = 8,
     height = 2)
 figure_5c2
@@ -1357,7 +1361,7 @@ figure_5c3 <-
     cowplot::draw_plot(inset_3, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
-pdf("figures/figure_5/figure_5c3.pdf",
+pdf("Figures/figure_5/figure_5c3.pdf",
     width = 8,
     height = 2)
 figure_5c3
@@ -1369,7 +1373,7 @@ figure_5c <-
                             figure_5c3,
                             ncol = 1)
 
-save(figure_5c, file = "figures/figure_5/figure_5c.RData")
+save(figure_5c, file = "Figures/figure_5/figure_5c.RData")
 ```
 
 ## Figure 5D
@@ -1380,7 +1384,7 @@ D) Overlay of cells sharing a common ancestor onto the dimensional reduction plo
 
 ```{r Fig5d_processing, dependson="Fig5load"}
 # Extract the barcode frequency lists
-cx.lt.list <- processLTBC(os17.cx.raw,
+cx.lt.list <- processLTBC(os17_cx.raw,
                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
                           cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
                           ret.list = TRUE)
@@ -1503,7 +1507,7 @@ for (i in seq_len(length(dataset_list))) {
 figure_5d <-
     gridExtra::grid.arrange(grobs = figure_5d_list, ncol = 4)
 
-save(figure_5d, file = "figures/figure_5/figure_5d.RData")
+save(figure_5d, file = "Figures/figure_5/figure_5d.RData")
 ```
 
 ## Figure 5E
@@ -1549,9 +1553,9 @@ figure_5e <- DimPlot(lung.sub,
         plot.margin = unit(c(0, 0, 0, 0), "cm"))
 figure_5e
 
-save(figure_5e, file = "figures/figure_5/figure_5e.RData")
+save(figure_5e, file = "Figures/figure_5/figure_5e.RData")
 
-pdf("figures/figure_5/figure_5e.pdf",
+pdf("Figures/figure_5/figure_5e.pdf",
     width = 6,
     height = 5)
 figure_5e
@@ -1635,9 +1639,9 @@ figure_5f <- ggplot(temp1,
 
 figure_5f
 
-save(figure_5f, file = "figures/figure_5/figure_5f.RData")
+save(figure_5f, file = "Figures/figure_5/figure_5f.RData")
 
-pdf("figures/figure_5/figure_5f.pdf",
+pdf("Figures/figure_5/figure_5f.pdf",
     width = 8,
     height = 3)
 figure_5f
@@ -1645,7 +1649,7 @@ dev.off()
 ```
 
 ### Test if clones tend to be enriched within a single cluster
-This was ultimately put into Emily's code for the supplementary figures
+This was ultimately put into Emily's code for the supplementary Figures
 ```{r eval=FALSE}
 load("Data/os17.RData")
 
@@ -1742,17 +1746,17 @@ top_clones %>%
 
 ### Panel Figure 5
 ```{r eval=FALSE}
-load("figures/figure_5/figure_5b.RData")
-load("figures/figure_5/figure_5c.RData")
-load("figures/figure_5/figure_5d.RData")
-load("figures/figure_5/figure_5e.RData")
-load("figures/figure_5/figure_5f.RData")
+load("Figures/figure_5/figure_5b.RData")
+load("Figures/figure_5/figure_5c.RData")
+load("Figures/figure_5/figure_5d.RData")
+load("Figures/figure_5/figure_5e.RData")
+load("Figures/figure_5/figure_5f.RData")
 
 layout_matrix <- matrix(c(NA, 1, 2, 3, 4, 5),
                         ncol = 2,
                         byrow = TRUE)
 
-pdf("figures/figure_5/figure_5.pdf",
+pdf("Figures/figure_5/figure_5.pdf",
     width = 8,
     height = 11)
 gridExtra::grid.arrange(grobs = list(figure_5b,

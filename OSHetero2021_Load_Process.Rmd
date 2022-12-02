@@ -25,27 +25,14 @@ knitr::opts_chunk$set(
 ```
 
 ```{r Fig1_lib, cache=FALSE}
-# setwd("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021")
-# source("scSeurat.R")
 source("Downstream.v2.R")
 
 # loading libraries
 library(Seurat)
 library(rrrSingleCellUtils)
-# library(future)
 library(ggplot2)
-# library(fgsea)
 library(msigdbr)
-# library(clusterProfiler)
-# library(SingleR)
 library(dplyr)
-# library(pheatmap)
-# library(RColorBrewer)
-# library(viridis) # inferno color palette
-# library(grid)
-# library(ggsci)
-# library(data.table)
-library(ggvenn)
 ```
 
 # Load Seurat objects 
@@ -684,52 +671,45 @@ List objects, process, and cell cycle regress. Used in Figure 3 C-D code.
 ```{r listallobj, dependson=c('load_ob','load_os17','load_t143b','load_nchos2','load_nchos7')}
 # Create list for usage in Figure 3
 tibia_list <- list(OS17.Tibia = os17_tib_raw,
-                   t143B.Tibia = t143b_tib_raw,
-                   OS2.Tibia = os2_tib_raw,
-                   OS7.Tibia = os7_tib_raw)
+  t143B.Tibia = t143b_tib_raw,
+  OS2.Tibia = os2_tib_raw,
+  OS7.Tibia = os7_tib_raw)
 
 lung_list <- list(OS17.Lung = os17_lung_raw,
-                  t143B.Lung = t143b_lung_raw,
-                  OS2.Lung = os2_lung_raw,
-                  OS7.Lung = os7_lung_raw)
+  t143B.Lung = t143b_lung_raw,
+  OS2.Lung = os2_lung_raw,
+  OS7.Lung = os7_lung_raw)
 
 OS_list <- list()
 
 for (i in 1:length(tibia_list)) {
-  message(i, head(paste(tibia_list[[i]]$model,
-                      "_TL",
-                      sep = ""),
-                1))
+  message(i, head(paste(tibia_list[[i]]$model, "_TL", sep = ""), 1))
   # Subset number of cells in each Seurat object to the least in the group
   a <- table(tibia_list[[i]]$orig.ident)
   b <- table(lung_list[[i]]$orig.ident)
   list <- c(a, b)
   min <- min(list)
 
-  tibia_list[[i]] <- subset(tibia_list[[i]],
-                        cells = sample(Cells(tibia_list[[i]]), min))
-  lung_list[[i]] <- subset(lung_list[[i]],
-                         cells = sample(Cells(lung_list[[i]]), min))
+  tibia_list[[i]] <- subset(
+    tibia_list[[i]],
+    cells = sample(Cells(tibia_list[[i]]),
+    min))
 
-  title <- head(paste(tibia_list[[i]]$model,
-                      "_TL",
-                      sep = ""),
-                      1)
+  lung_list[[i]] <- subset(
+    lung_list[[i]],
+    cells = sample(Cells(lung_list[[i]]),
+    min))
+
+  title <- head(paste(tibia_list[[i]]$model, "_TL", sep = ""), 1)
   title <- gsub("-", "", title)
 
-  OS_list[[title]] <- merge(tibia_list[[i]],
-                              y = c(lung_list[[i]]),
-                              add.cell_ids = c(head(paste(tibia_list[[i]]$model,
-                                                          "_",
-                                                          tibia_list[[i]]$src,
-                                                          sep = ""),
-                                                    1),
-                                               head(paste(lung_list[[i]]$model,
-                                                          "_",
-                                                          lung_list[[i]]$src,
-                                                          sep = ""),
-                                                    1)),
-                              project = "Heterogeneity")
+  OS_list[[title]] <- merge(
+    tibia_list[[i]],
+    y = c(lung_list[[i]]),
+    add.cell_ids = c(
+      head(paste(tibia_list[[i]]$model, "_", tibia_list[[i]]$src, sep = ""), 1),
+      head(paste(lung_list[[i]]$model, "_", lung_list[[i]]$src, sep = ""), 1)),
+      project = "Heterogeneity")
 }
 ```
 
@@ -747,27 +727,25 @@ for (i in 1:length(OS_list)) {
     RunUMAP(reduction = "pca", dims = 1:20) %>%
     FindNeighbors(reduction = "pca", dims = 1:20) %>%
     FindClusters(resolution = 0.3)
-  
+
   OS_list[[i]] <- CellCycleScoring(object = OS_list[[i]],
-                                   s.features = s.genes,
-                                   g2m.features = g2m.genes,
-                                   set.ident = TRUE)
-  
+    s.features = s.genes,
+    g2m.features = g2m.genes,
+    set.ident = TRUE)
+
   OS_list[[i]] <- ScaleData(object = OS_list[[i]],
-                            vars.to.regress = c("S.Score",
-                                                "G2M.Score"),
-                            features = rownames(x = OS_list[[i]]),
-                            block.size = 10000) # Change to VariableFeatures()
-  
+    vars.to.regress = c("S.Score", "G2M.Score"),
+    features = VariableFeatures(OS_list[[i]]),
+    block.size = 10000) # Change to VariableFeatures()
+
   OS_list[[i]] <- RunPCA(OS_list[[i]],
-                         pc.genes = OS_list[[i]]@var.genes, npcs = 20) %>%
+    pc.genes = OS_list[[i]]@var.genes, npcs = 20) %>%
     RunUMAP(reduction = "pca", dims = 1:20) %>%
     FindNeighbors(reduction = "pca", dims = 1:20) %>%
     FindClusters(resolution = 0.3)
 }
 
-save(OS_list,
-     file = "Data/OS_list_CCR.RData")
+save(OS_list, file = "Data/OS_list_CCR.RData")
 ```
 
 ```{r versions}
