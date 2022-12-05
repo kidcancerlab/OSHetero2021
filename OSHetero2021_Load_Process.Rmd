@@ -63,13 +63,13 @@ osteoblasts$model <- "osteoblasts"
 # OS17
 ## Culture
 os17_cx_raw <- tenx_load_qc(
-  path_10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/filtered_feature_bc_matrix/",
+  path_10x = "/gpfs0/home/gdrobertslab/lab/Counts/S0016xS0027/outs/filtered_feature_bc_matrix/",
   species_pattern = "^hg19-"
 )
 
 os17_cx_raw <- subset(os17_cx_raw,
   subset = nFeature_RNA > 3500 &
-  nCount_RNA < 50000 &
+  nCount_RNA < 100000 &
   percent.mt < 15
 )
 
@@ -168,41 +168,45 @@ For lineage analysis in Figure 5.
 ```{r Fig5_tag, dependson='load_os17'}
 # Plot histograms of lineage tracing tags in the Seurat objects
 
-if(!file.exists("Data/S0024xS0029.ltbc")){
-  s <- c("S0016", "S0018xS0028", "S0024xS0029")
-  for(i in s) {
+ltbc_list <- c("S0016xS0027",
+               "S0018xS0028",
+               "S0024xS0029")
+
+for (ltbc_name in ltbc_list){
+  if(!file.exists(paste0("Data/", ltbc_name, ".ltbc"))){
     gen_cellecta_bc_data(
       file = paste0("/gpfs0/home/gdrobertslab/lab/Counts/",
-        i,
-        "/outs/possorted_genome_bam.bam"),
+                    ltbc_name,
+                    "/outs/possorted_genome_bam.bam"),
       verbose = TRUE,
-      output = paste0("Data/", i, ".ltbc"),
+      output = paste0("Data/", ltbc_name, ".ltbc"),
       samtools_module = "SAMtools")
-  }
-
-  for(i in s) {
-    ltbc <- read.table(paste0("Data/", i, ".ltbc"), header = T, sep = "\t")
+    ltbc <- read.table(paste0("Data/", ltbc_name, ".ltbc"), header = T, sep = "\t")
     if(substr(ltbc[[1, 1]], 1, 5)=="CB:Z:") {
       ltbc$cid <- substr(ltbc$cid, 6, 22)
-      write.table(ltbc, paste0("Data/", i, ".ltbc"), sep = "\t")
+      write.table(ltbc, paste0("Data/", ltbc_name, ".ltbc"), sep = "\t")
     }
   }
 }
 
 os17_cx_raw <- process_ltbc(os17_cx_raw,
-  cid_lt = read.table("Data/S0016.ltbc", header = T, sep = "\t"),
-  histogram = F,
-  relative = T)
+                            cid_lt = read.table("Data/S0016xS0027.ltbc",
+                                                header = T,
+                                                sep = "\t"),
+                            histogram = F,
+                            relative = T)
 
 os17_tib_raw <- process_ltbc(os17_tib_raw,
-  cid_lt = read.table("Data/S0018xS0028.ltbc", sep = "\t"),
-  histogram = F,
-  relative = T)
+                             cid_lt = read.table("Data/S0018xS0028.ltbc",
+                                                 sep = "\t"),
+                             histogram = F,
+                             relative = T)
 
 os17_lung_raw <- process_ltbc(os17_lung_raw,
-  cid_lt = read.table("Data/S0024xS0029.ltbc", sep = "\t"),
-  histogram = F,
-  relative = T)
+                              cid_lt = read.table("Data/S0024xS0029.ltbc",
+                                                  sep = "\t"),
+                              histogram = F,
+                              relative = T)
 ```
 
 ### Create OS17 object for lineage analysis in Figure 5
@@ -219,7 +223,7 @@ os17.lung <- subset(os17_lung_raw,
 # Merge into a single Seurat object
 os17 <- merge(os17_cx,
   y = c(os17.tib, os17.lung),
-  add.cell_ids = c("Culture", "Tibia", "Lung"),
+  add.cell.ids = c("Culture", "Tibia", "Lung"),
   project = "LineageTracing")
 
 # Process and cluster
@@ -521,7 +525,7 @@ OS <- merge(osteoblasts,
     os7_cx_raw,
     os7_tib_raw,
     os7_lung_raw),
-  add.cell_ids = c(
+  add.cell.ids = c(
     "Osteoblasts",
     "OS-17_Culture",
     "OS-17_Tibia",
@@ -706,7 +710,7 @@ for (i in 1:length(tibia_list)) {
   OS_list[[title]] <- merge(
     tibia_list[[i]],
     y = c(lung_list[[i]]),
-    add.cell_ids = c(
+    add.cell.ids = c(
       head(paste(tibia_list[[i]]$model, "_", tibia_list[[i]]$src, sep = ""), 1),
       head(paste(lung_list[[i]]$model, "_", lung_list[[i]]$src, sep = ""), 1)),
       project = "Heterogeneity")
