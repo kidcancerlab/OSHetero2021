@@ -55,7 +55,7 @@ library(tidyverse)
 # library(stringr)
 # library(reshape2)
 # library(pzfx)
-# library(ggridges)
+library(ggridges)
 # library(effsize)
 # library(perm)
 # library(celldex)
@@ -618,11 +618,7 @@ load("Data/OSlist_1500_CCR.RData")
 merged_sobjs <-
     SeuratObject:::merge.Seurat(x = OS.list_1500[[1]],
                                 y = OS.list_1500[2:length(OS.list_1500)],
-                                add.cell.ids = names(OS.list_1500)) %>%
-    NormalizeData(verbose = FALSE) %>%
-    FindVariableFeatures(verbose = FALSE) %>%
-    ScaleData(verbose = FALSE) %>%
-    RunPCA(verbose = FALSE)
+                                add.cell.ids = names(OS.list_1500))
 
 merged_sobjs$group <-
     colnames(merged_sobjs) %>%
@@ -632,15 +628,34 @@ group_names <-
     merged_sobjs$group %>%
     unique()
 
+# Find the genes that are variable within each sample, and combine into a vector
+var_genes <- c()
+for(i in seq_along(OS.list_1500)) {
+  OS.list_1500[[i]] <- OS.list_1500[[i]] %>%
+    NormalizeData(verbose = FALSE) %>%
+    FindVariableFeatures(verbose = FALSE)
+  var_genes <- c(var_genes, VariableFeatures(OS.list_1500[[i]]))
+}
+var_genes <- unique(var_genes)
+
+# Process each sample to be CC regressed in the same gene space and calculate ITH score
 raw_ith <- data.frame(matrix(, nrow = 1500, ncol = 0))
-for (i in seq_len(length(group_names))) {
+for (i in seq_along(group_names)) {
   better_name <-
     group_names[i] %>%
     str_replace("\\.", " ") %>%
     str_replace("cx", "Culture") %>%
     str_replace("OB", "Osteoblast") %>%
     str_replace("t143", "143")
-  sub_obj <- subset(merged_sobjs, group == group_names[i])
+
+  sub_obj <- subset(merged_sobjs, group == group_names[i]) %>%
+    NormalizeData(verbose = FALSE) %>%
+    FindVariableFeatures(verbose = FALSE) %>%
+    ScaleData(
+      features = var_genes,
+      vars.to.regress = c("S.Score", "G2M.Score"),
+      block.size = 100000)
+
   z <-
     GetAssayData(sub_obj, slot = "scale.data") %>%
     as.data.frame() %>%
