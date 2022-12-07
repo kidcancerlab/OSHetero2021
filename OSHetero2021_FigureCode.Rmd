@@ -724,54 +724,35 @@ comps <- tribble(
   11, 12,
   11, 13
 )
-# Calculate Mann-Whitney test (in figure, p-value)
-stats <- matrix(nrow = 13, ncol = 2)
-mwu <- matrix(nrow = 13, ncol = 13)
+comps$ctl_name <- unique(ith$Sample)[comps$ctl]
+comps$comp_name <- unique(ith$Sample)[comps$comp]
+
+# Calculate Mann-Whitney test (p-value), overlap, and effect size (Cohen d)
 for (i in seq_along(comps$ctl)) {
   s <- wilcox.test(raw_ith[, comps$ctl[i]], raw_ith[, comps$comp[i]])
-  #P-value of comparison group (column)
-  #correlated with its respective proper control (row)
-  mwu[comps$ctl[i], comps$comp[i]] <- s$p.value
-  #P-value for each group given proper comparison to respective controls
-  stats[comps$comp[i]] <- s$p.value
-}
-# Calculate effect size (in figure)
-efs <- matrix(nrow = 13, ncol = 13)
-for (i in seq_along(comps$ctl)) {
-  effect_size <-
-    overlapping::overlap(list(ctrl = raw_ith[, comps$ctl[i]],
-                              comp = raw_ith[, comps$comp[i]]))$OV
-  #Effect size of comparison group (column)
-  #correlated with its respective proper control (row)
-  efs[comps$ctl[i], comps$comp[i]] <- effect_size
-  #Effect size for each group given proper comparison to respective controls
-  stats[comps$comp[i], 2] <- effect_size
+  comps$mwu_p[i] <- s$p.value
+  s <- overlapping::overlap(list(ctrl = raw_ith[, comps$ctl[i]],
+      comp = raw_ith[, comps$comp[i]]))$OV
+  comps$overlap[i] <- s
+  s <- effsize::cohen.d(raw_ith[, comps$ctl[i]], raw_ith[, comps$comp[i]])
+  comps$eff_size[i] <- s$estimate
 }
 
-# Save table of comparison group (column) correlated with its proper control (row)
-as.data.frame(mwu) %>%
-  write_excel_csv(file="Data/ITH/mwu.csv")
-as.data.frame(efs) %>%
-  write_excel_csv(file="Data/ITH/efs.csv")
-
-# Correlate p-values with Sample name
-stats <- as.data.frame(stats)
-stats$Sample <- base::unique(ith[["Sample"]]) %>%
-  as.vector()
-stats <- stats[-1,]
+# Convert overlap to percentage
+comps$overlap <- paste0(format(comps$overlap*100, digits = 2, trim = T), "%")
 
 # Plot with p-values superimposed for each sample
 figure_3b <-
-    rplot +
-    geom_text(data = stats,
-              aes(x = 1.8, y = Sample),
-              label = paste0("p=",
-                             format(stats$V1, digits = 3, trim = TRUE),
-                            ", eff. size=",
-                            format(stats$V2, digits = 1, trim = TRUE),
-                            "\n"),
-              size = 1.8,
-              color = "#2b2a2a")
+  rplot +
+  geom_text(data = stats,
+    aes(x = 1.8, y = Sample),
+    label = paste0("overlap ",
+      comps$overlap,
+      ", eff. size ",
+      format(comps$eff_size, digits = 1, trim = T),
+      "\n"),
+    size = 8,
+    color = "#2b2a2a")
 figure_3b
 
 # Save as PDF
