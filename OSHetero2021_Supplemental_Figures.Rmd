@@ -121,7 +121,7 @@ sfig_s1_a2 <- DimPlot(os17_cx,
   ggtitle("")
 sfig_s1_a2
 
-pdf("figures/supplement/s1/sfig_s1_a2.pdf",
+pdf("Figures/supplement/s1/sfig_s1_a2.pdf",
     height = 5,
     width = 5)
 sfig_s1_a2
@@ -138,7 +138,7 @@ sfig_s1_b1 <- DimPlot(os17_cx_noccr,
   ggtitle("")
 sfig_s1_b1
 
-pdf("figures/supplement/s1/sfig_s1_b1.pdf",
+pdf("Figures/supplement/s1/sfig_s1_b1.pdf",
     height = 5,
     width = 5)
 sfig_s1_b1
@@ -159,7 +159,7 @@ sfig_s1_b2 <- DimPlot(os17_cx,
   ggtitle("")
 sfig_s1_b2
 
-pdf("figures/supplement/s1/sfig_s1_b2.pdf",
+pdf("Figures/supplement/s1/sfig_s1_b2.pdf",
     height = 5,
     width = 5)
 sfig_s1_b2
@@ -176,7 +176,7 @@ sfig_s1_c1 <- RidgePlot(os17_cx_noccr,
                         same.y.lims = T,
                         combine = T)
 sfig_s1_c1
-pdf("figures/supplement/s1/sfig_s1_c1.pdf",
+pdf("Figures/supplement/s1/sfig_s1_c1.pdf",
     height = 4,
     width = 8)
 sfig_s1_c1
@@ -195,7 +195,7 @@ sfig_s1_c2 <- RidgePlot(os17_cx,
                         combine = T,
                         slot = "scale.data")
 sfig_s1_c2
-pdf("figures/supplement/s1/sfig_s1_c2.pdf",
+pdf("Figures/supplement/s1/sfig_s1_c2.pdf",
     height = 4,
     width = 8)
 sfig_s1_c2
@@ -208,7 +208,7 @@ s1 <- (sfig_s1_a1 | sfig_s1_a2) /
   (sfig_s1_b1 | sfig_s1_b2) /
   (sfig_s1_c1 | sfig_s1_c2)
 s1
-pdf("figures/supplement/s1/s1.pdf",
+pdf("Figures/supplement/s1/s1.pdf",
     height = 12,
     width = 12)
 s1
@@ -217,7 +217,7 @@ dev.off()
 s1_v2 <- (sfig_s1_a1 + sfig_s1_b1 + sfig_s1_c1) /
   (sfig_s1_a2 + sfig_s1_b2 + sfig_s1_c2)
 s1_v2
-pdf("figures/supplement/s1/s1_v2.pdf",
+pdf("Figures/supplement/s1/s1_v2.pdf",
     height = 8,
     width = 15)
 s1_v2
@@ -227,84 +227,91 @@ dev.off()
 # S2
 
 ```{r s2}
-load("Data/Raw/OB.RData")
+load("Data/Raw/osteoblasts.RData")
 set.seed(100)
 
-OB <- NormalizeData(OB) %>%
+osteoblasts <- NormalizeData(osteoblasts) %>%
   FindVariableFeatures(selection.method = "vst") %>% 
   ScaleData() %>%
-  RunPCA(pc.genes = OB@var.genes, npcs = 20) %>%
+  RunPCA(pc.genes = osteoblasts@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
   FindNeighbors(reduction = "pca", dims = 1:20) %>%
   FindClusters(resolution = 0.1)
 
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
-OB <- CellCycleScoring(object = OB,
-                       s.features = s.genes,
-                       g2m.features = g2m.genes,
-                       set.ident = TRUE)
+osteoblasts <- CellCycleScoring(object = osteoblasts,
+                                s.features = s.genes,
+                                g2m.features = g2m.genes,
+                                set.ident = TRUE)
 
 # Prior to cell cycle regression
-DimPlot(OB, reduction = "umap",
+DimPlot(osteoblasts, reduction = "umap",
         group.by = "Phase",
         pt.size = 1) +
   coord_fixed()
 
 # Regress out cell cycle genes
-OB_ccr <- ScaleData(object = OB,
-                    vars.to.regress = c("S.Score",
-                                        "G2M.Score"),
-                    features = rownames(x = OB))
+osteoblasts_ccr <- ScaleData(object = osteoblasts,
+                             vars.to.regress = c("S.Score",
+                                                 "G2M.Score"),
+                             features = rownames(x = osteoblasts))
 
 # Save
-save(OB_ccr, file = "Data/Supplement/OB_ccr.RData")
+if(!dir.exists("Data/Supplement")) {
+  dir.create("Data/Supplement")
+}
+save(osteoblasts_ccr, file = "Data/Supplement/osteoblasts_ccr.RData")
 ```
 
 ```{r obplot}
-#### S2 A1: OB UMAP ####
-OB_ccr <- RunPCA(OB_ccr, pc.genes = OB_ccr@var.genes, npcs = 20) %>%
+#### S2 A1: Osteoblasts UMAP ####
+osteoblasts_ccr <- RunPCA(osteoblasts_ccr, pc.genes = osteoblasts_ccr@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
   FindNeighbors(reduction = "pca", dims = 1:20) %>%
   FindClusters(resolution = 0.1)
 
-OB.nC <- nRes(OB_ccr,
-              res = seq(from = 0.04,
-                        to = 0.5,
-                        by = 0.01))
-pSil(OB.nC, 0.07)
-pSil(OB.nC, 0.06)
-OB_ccr <- OB_ccr %>%
+osteoblasts.nC <- nRes(osteoblasts_ccr,
+                       res = seq(from = 0.04,
+                                 to = 0.5,
+                                 by = 0.01))
+pSil(osteoblasts.nC, 0.07)
+pSil(osteoblasts.nC, 0.06)
+osteoblasts_ccr <- osteoblasts_ccr %>%
   FindClusters(resolution = 0.05)
 
-sfig_s2_a1 <- DimPlot(OB_ccr,
+sfig_s2_a1 <- DimPlot(osteoblasts_ccr,
                       label = T) +
   ggtitle("Osteoblasts") +
   NoLegend() +
   NoAxes() +
   scale_color_npg()
 
-pdf("figures/supplement/s2/sfig_s2_a1.pdf",
+# Save as pdf
+if(!dir.exists("Figures/supplement/s2")) {
+  dir.create("Figures/supplement/s2")
+}
+pdf("Figures/supplement/s2/sfig_s2_a1.pdf",
     height = 5,
     width = 5)
 sfig_s2_a1
 dev.off()
 
-#### S2 A2: OB Cell Cycle Pie ####
-cid <- sort(unique(OB_ccr@active.ident))
+#### S2 A2: Osteoblasts Cell Cycle Pie ####
+cid <- sort(unique(osteoblasts_ccr@active.ident))
 
 vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-pdf("figures/supplement/s2/sfig_s2_a2_OB_pie.pdf",
+pdf("Figures/supplement/s2/sfig_s2_a2_osteoblasts_pie.pdf",
     width = 3,
     height = 2)
 grid.newpage()
-pushViewport(viewport(layout = grid.layout(1, 2)))
+pushViewport(viewport(layout = grid.layout(1, length(unique(osteoblasts@active.ident)))))
 
 pies <- list()
-for (i in 1:2) {
-  temp <- WhichCells(OB_ccr,
+for (i in 1:length(unique(osteoblasts@active.ident))) {
+  temp <- WhichCells(osteoblasts_ccr,
                      idents = cid[[i]])
-  LT.cells <- subset(OB_ccr,
+  LT.cells <- subset(osteoblasts_ccr,
                      cells = temp)
   df <- table(LT.cells$Phase)
   bp <- ggplot(as.data.frame(df),
@@ -324,18 +331,18 @@ for (i in 1:2) {
                   cid[[i]]))
   
   pies[[i]] <- pie
-  print(pie, vp = vplayout(ceiling(i/2), i))
+  print(pie, vp = vplayout(ceiling(i/length(unique(osteoblasts@active.ident))), i))
 }
 dev.off()
 
 
-#### S2 B Heatmap of OB markers ####
+#### S2 B Heatmap of osteoblasts markers ####
 
-## Pathways associated with OB clusters
+## Pathways associated with osteoblasts clusters
 set.seed(108)
 source("Downstream.v3.R")
 
-em.hm.list <- DGEA(OB_ccr,
+em.hm.list <- DGEA(osteoblasts_ccr,
                    category = "C2",
                    subcategory = "CP")
 
@@ -379,7 +386,7 @@ sfig_s2_b <- temp1 %>%
 sfig_s2_b
 
 # Save plot as PDF
-pdf("figures/supplement/s2/sfig_s2_b_OB_Pathway.pdf",
+pdf("Figures/supplement/s2/sfig_s2_b_osteoblasts_Pathway.pdf",
     height = 6,
     width = 6)
 plot(sfig_s2_b)
@@ -398,7 +405,7 @@ s2 <- (sfig_s2_a1 + theme(aspect.ratio = 1)) +
   sfig_s2_b +
   plot_layout(design = layout)
 s2
-pdf("figures/supplement/s2/s2.pdf",
+pdf("Figures/supplement/s2/s2.pdf",
     height = 7,
     width = 11)
 s2
@@ -412,8 +419,7 @@ dev.off()
 load("Data/OS_merged_postCCR.RData")
 
 # Rename ob
-OS$model[grep("OB", OS$model)] <- "Osteoblast"
-OS$src[grep("OB", OS$src)] <- "Culture"
+OS$src[grep("Osteoblasts", OS$src)] <- "Culture"
 
 OS$model <- factor(as.factor(OS$model),
                    levels = c("Osteoblast",
@@ -434,7 +440,10 @@ sfig_s3_a1 <- DimPlot(OS,
   scale_color_npg(alpha = 1)
 sfig_s3_a1
 
-pdf("figures/supplement/s3/sfig_s3_a1.pdf",
+if(!dir.exists("Figures/supplement/s3")) {
+  dir.create("Figures/supplement/s3")
+}
+pdf("Figures/supplement/s3/sfig_s3_a1.pdf",
     height = 5,
     width = 5)
 sfig_s3_a1
@@ -454,7 +463,7 @@ sfig_s3_a2 <- DimPlot(OS,
   ggtitle("OS by Model") 
 sfig_s3_a2
 
-pdf("figures/supplement/s3/sfig_s3_a2.pdf",
+pdf("Figures/supplement/s3/sfig_s3_a2.pdf",
     height = 5,
     width = 5)
 sfig_s3_a2
@@ -488,7 +497,7 @@ sfig_s3_b <- DimPlot(OS_harmony,
   ggtitle("OS by Model") 
 sfig_s3_b
 
-pdf("figures/supplement/s3/sfig_s3_b.pdf",
+pdf("Figures/supplement/s3/sfig_s3_b.pdf",
     height = 5,
     width = 5)
 sfig_s3_b
@@ -499,7 +508,7 @@ dev.off()
 s3 <- (sfig_s3_a2 | sfig_s3_b)
 s3
 
-pdf("figures/supplement/s3/s3.pdf",
+pdf("Figures/supplement/s3/s3.pdf",
     height = 5,
     width = 10)
 s3
@@ -721,7 +730,7 @@ sfig_s4_a1 <- DimPlot(Rep1_H_v3,
   NoAxes()
 sfig_s4_a1
 
-pdf("figures/supplement/s4/sfig_s4_a1.pdf",
+pdf("Figures/supplement/s4/sfig_s4_a1.pdf",
     height = 5,
     width = 5)
 sfig_s4_a1
@@ -740,7 +749,7 @@ sfig_s4_a2 <- DimPlot(Rep1_H_v3,
   NoAxes()
 sfig_s4_a2
 
-pdf("figures/supplement/s4/sfig_s4_a2.pdf",
+pdf("Figures/supplement/s4/sfig_s4_a2.pdf",
     height = 5,
     width = 5)
 sfig_s4_a2
@@ -765,7 +774,7 @@ sfig_s4_a3 <- DimPlot(Rep1_H_v3,
   NoAxes()
 sfig_s4_a3
 
-pdf("figures/supplement/s4/sfig_s4_a3.pdf",
+pdf("Figures/supplement/s4/sfig_s4_a3.pdf",
     height = 5,
     width = 6)
 sfig_s4_a3
@@ -820,7 +829,7 @@ sfig_s4_b1 <- DimPlot(Rep1_H_sct.integrated,
   NoAxes()
 sfig_s4_b1
 
-pdf("figures/supplement/s4/sfig_s4_b1.pdf",
+pdf("Figures/supplement/s4/sfig_s4_b1.pdf",
     height = 5,
     width = 5)
 sfig_s4_b1
@@ -838,7 +847,7 @@ sfig_s4_b2 <- DimPlot(Rep1_H_sct.integrated,
   NoAxes()
 sfig_s4_b2
 
-pdf("figures/supplement/s4/sfig_s4_b2.pdf",
+pdf("Figures/supplement/s4/sfig_s4_b2.pdf",
     height = 5,
     width = 5)
 sfig_s4_b2
@@ -869,7 +878,7 @@ sfig_s4_b3 <- DimPlot(Rep1_H_sct.integrated,
   NoAxes()
 sfig_s4_b3
 
-pdf("figures/supplement/s4/sfig_s4_b3.pdf",
+pdf("Figures/supplement/s4/sfig_s4_b3.pdf",
     height = 5,
     width = 5)
 sfig_s4_b3
@@ -882,7 +891,7 @@ dev.off()
 s4_ab <- (sfig_s4_a1 | sfig_s4_a2 | sfig_s4_a3) /
   (sfig_s4_b1 | sfig_s4_b2 | sfig_s4_b3)
 
-pdf("figures/supplement/s4/s4_ab.pdf",
+pdf("Figures/supplement/s4/s4_ab.pdf",
     height=8,
     width=12)
 s4_ab
@@ -923,7 +932,7 @@ for (i in 1:length(OS_list)) {
     NoAxes()
 }
 
-pdf("figures/supplement/s4/sfig_s4_c.pdf",
+pdf("Figures/supplement/s4/sfig_s4_c.pdf",
     width = 16,
     height = 4)
 sfig_s4_c[[1]] |
@@ -940,7 +949,7 @@ s4 <- (sfig_s4_a1 | sfig_s4_a2 | sfig_s4_a3) /
   (sfig_s4_b1 | sfig_s4_b2 | sfig_s4_b3) /
   (sfig_s4_c[[1]] | sfig_s4_c[[2]] | sfig_s4_c[[3]] | sfig_s4_c[[4]])
 
-pdf("figures/supplement/s4/s4.pdf",
+pdf("Figures/supplement/s4/s4.pdf",
     height=12,
     width=16)
 s4
@@ -1561,7 +1570,7 @@ for (i in 1:length(primarytumor)) {
     ggtitle(paste0(s[i])) +
     theme(aspect.ratio = 1)
   
-  pdf(file = paste0("figures/supplement/s5/",
+  pdf(file = paste0("Figures/supplement/s5/",
                     names(gl[1]),
                     "_FeaturePlot_",
                     s[i],
@@ -1582,7 +1591,7 @@ s5 <- gly[[1]] +
   gly[[7]] +
   plot_layout(ncol = 3)
 
-pdf(file = "figures/supplement/s5/s5.pdf",
+pdf(file = "Figures/supplement/s5/s5.pdf",
     height=13,
     width=15)
 s5
@@ -1606,7 +1615,7 @@ for (i in 1:length(primarytumor)) {
     ggtitle(paste0(s[i])) +
     theme(aspect.ratio = 1)
   
-  pdf(file = paste0("figures/supplement/s6/",
+  pdf(file = paste0("Figures/supplement/s6/",
                     names(gl[2]),
                     "_FeaturePlot_",
                     s[i],
@@ -1625,7 +1634,7 @@ s6 <- hypx[[1]] +
   hypx[[7]] +
   plot_layout(ncol = 3)
 
-pdf(file = "figures/supplement/s6/s6.pdf",
+pdf(file = "Figures/supplement/s6/s6.pdf",
     height=13,
     width=15)
 s6
@@ -1649,7 +1658,7 @@ for (i in 1:length(primarytumor)) {
     ggtitle(paste0(s[i])) +
     theme(aspect.ratio = 1)
   
-  pdf(file = paste0("figures/supplement/s7/",
+  pdf(file = paste0("Figures/supplement/s7/",
                     names(gl[3]),
                     "_FeaturePlot_",
                     s[i],
@@ -1669,7 +1678,7 @@ s7 <- emt[[1]] +
   emt[[7]] +
   plot_layout(ncol = 3)
 
-pdf(file = "figures/supplement/s7/s7.pdf",
+pdf(file = "Figures/supplement/s7/s7.pdf",
     height=13,
     width=15)
 s7
@@ -1693,7 +1702,7 @@ for (i in 1:length(primarytumor)) {
     ggtitle(paste0(s[i])) +
     theme(aspect.ratio = 1)
   
-  pdf(file = paste0("figures/supplement/s8/",
+  pdf(file = paste0("Figures/supplement/s8/",
                     names(gl[4]),
                     "_FeaturePlot_",
                     s[i],
@@ -1713,7 +1722,7 @@ s8 <- tnf[[1]] +
   tnf[[7]] +
   plot_layout(ncol = 3)
 
-pdf(file = "figures/supplement/s8/s8.pdf",
+pdf(file = "Figures/supplement/s8/s8.pdf",
     height=13,
     width=15)
 s8
@@ -1752,7 +1761,7 @@ for (j in 1:3) {
       theme(aspect.ratio = 1)
     print(p)
     
-    pdf(file = paste0("figures/supplement/s5-",
+    pdf(file = paste0("Figures/supplement/s5-",
                       j+5,
                       "/",
                       names(gl[1]),
@@ -1776,7 +1785,7 @@ for (j in 1:3) {
       combo[[7]] +
       plot_layout(ncol = 3)
     
-    pdf(file = paste0("figures/supplement/s5-",
+    pdf(file = paste0("Figures/supplement/s5-",
                       j+5,
                       "/s5-",
                       j+5,
@@ -1802,7 +1811,7 @@ for (j in 1:2) {
       theme(aspect.ratio = 1)
     print(p)
     
-    pdf(file = paste0("figures/supplement/s6-",
+    pdf(file = paste0("Figures/supplement/s6-",
                       j+6,
                       "/",
                       names(gl[2]),
@@ -1826,7 +1835,7 @@ for (j in 1:2) {
       combo[[7]] +
       plot_layout(ncol = 3)
     
-    pdf(file = paste0("figures/supplement/s6-",
+    pdf(file = paste0("Figures/supplement/s6-",
                       j+6,
                       "/s6-",
                       j+6,
@@ -1853,7 +1862,7 @@ combo <- list()
       theme(aspect.ratio = 1)
     print(p)
     
-    pdf(file = paste0("figures/supplement/s7-8/",
+    pdf(file = paste0("Figures/supplement/s7-8/",
                       names(gl[3]),
                       names(gl[4]),
                       "_ScatterPlot_",
@@ -1875,7 +1884,7 @@ combo <- list()
       combo[[7]] +
       plot_layout(ncol = 3)
     
-    pdf(file = paste0("figures/supplement/s7-8/s7-8.pdf"),
+    pdf(file = paste0("Figures/supplement/s7-8/s7-8.pdf"),
         height=13,
         width=15)
     print(sfig)
@@ -1999,7 +2008,7 @@ sfig_s11_b1 <- DimPlot(Reps,
   ggtitle("OS17 in Cell Culture (replicates)")
 sfig_s11_b1
 
-pdf("figures/supplement/s11/sfig_s11_b1.pdf",
+pdf("Figures/supplement/s11/sfig_s11_b1.pdf",
     width = 6,
     height = 6)
 sfig_s11_b1
@@ -2108,7 +2117,7 @@ sfig_s11_b2 <- DimPlot(Reps2,
   ggtitle("OS17 in Orthotopic Lung (replicates)") 
 sfig_s11_b2
 
-pdf("figures/supplement/s11/sfig_s11_b2.pdf",
+pdf("Figures/supplement/s11/sfig_s11_b2.pdf",
     width = 6,
     height = 6)
 sfig_s11_b2
@@ -2128,7 +2137,7 @@ sfig_s11_a1 <- processLTBC(cellecta.cx.raw,
                            relative = T) +
   ggtitle("Replicate #2 Lineage Tag Enrichment Analysis",
           subtitle="Culture")
-pdf("figures/supplement/s11/sfig_s11_a1.pdf",
+pdf("Figures/supplement/s11/sfig_s11_a1.pdf",
     width = 8,
     height = 2)
 sfig_s11_a1 
@@ -2144,7 +2153,7 @@ sfig_s11_a2 <- processLTBC(cellecta.lung.raw,
                            ymax = 10,
                            col.fill = "#E64B35FF",
                            relative = T)
-pdf("figures/supplement/s11/sfig_s11_a2.pdf",
+pdf("Figures/supplement/s11/sfig_s11_a2.pdf",
     width = 8,
     height = 2)
 sfig_s11_a2
@@ -2161,7 +2170,7 @@ s11 <- sfig_s11_a1 +
   sfig_s11_b2 +
   plot_layout(design = layout)
 s11
-pdf("figures/supplement/s11/s11.pdf",
+pdf("Figures/supplement/s11/s11.pdf",
     width = 25,
     height = 5)
 s11
@@ -2180,7 +2189,7 @@ s11 <- sfig_s11_a1 +
   sfig_s11_b2 +
   plot_layout(design = layout)
 s11
-pdf("figures/supplement/s11/s11v2.pdf",
+pdf("Figures/supplement/s11/s11v2.pdf",
     width = 12,
     height = 9)
 s11
