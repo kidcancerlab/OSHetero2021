@@ -1171,6 +1171,9 @@ load("Data/os17_cx_raw.RData")
 load("Data/os17_tib_raw.RData")
 load("Data/os17_lung_raw.RData")
 
+# Load merged and cell cycle regressed OS17 object
+load("Data/os17.RData")
+
 # Subset all to 2800 cells in each condition
 set.seed(108)
 os17_cx_raw <- subset(os17_cx_raw,
@@ -1182,9 +1185,6 @@ os17_tib_raw <- subset(os17_tib_raw,
 os17_lung_raw <- subset(os17_lung_raw,
                         cells = sample(Cells(os17_lung_raw),
                                        2800))
-
-# Load merged and cell cycle regressed OS17 object
-load("Data/os17.RData")
 
 # Load lineage tracing data
 S0016xS0027_ltbc <- read.delim("Data/S0016xS0027.ltbc")
@@ -1242,17 +1242,24 @@ C) Frequency distribution of clones identified in each of the conditions. A high
 ```{r Fig5c, dependson="Fig5load"}
 library(rrrSingleCellUtils)
 
-# There are exactly two cells in lung/tibia that cluster with the culture cells and throw off the DimPlots
-odd_2_cells <-
-  subset(os17, subset = src == "Tibia" | src == "Lung") %>%
-  Embeddings("umap") %>%
-  as.data.frame() %>%
-  dplyr::filter(UMAP_1 > 0) %>%
-  rownames()
+# There are cells in lung/tibia that cluster with the culture cells and throw off the DimPlots
+
+odd_cells <-
+  c(subset(os17, subset = src == "Tibia" | src == "Lung") %>%
+        Embeddings("umap") %>%
+        as.data.frame() %>%
+        dplyr::filter(UMAP_1 < 0) %>%
+        rownames(),
+    subset(os17, subset = src == "Culture") %>%
+        Embeddings("umap") %>%
+        as.data.frame() %>%
+        dplyr::filter(UMAP_1 > 0) %>%
+        rownames())
+
 
 # kick out those two cells
 os17 <-
-  os17[, !colnames(os17) %in% odd_2_cells]
+  os17[, !colnames(os17) %in% odd_cells]
 
 dim_plot <- function(x, src_sub, color) {
   sub_sobj <- subset(x, subset = src == src_sub)
@@ -1419,10 +1426,10 @@ lung_sub <- subset(os17, subset = src == "Lung")
 # Culture
 Culture.LTcells <- vector(mode = "character")
 for (i in 1:nrow(cx_lt_list)) {
-  temp <- WhichCells(cx_sub,
-                     expression = lt == cx_lt_list[[i, 1]])
-  Culture.LTcells <- append(Culture.LTcells,
-                            temp)
+    temp <- WhichCells(cx_sub,
+                        expression = lt == cx_lt_list[[i, 1]])
+    Culture.LTcells <- append(Culture.LTcells,
+                                temp)
 }
 
 cx.tagged <- subset(cx_sub,
