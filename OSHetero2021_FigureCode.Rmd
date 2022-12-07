@@ -39,7 +39,7 @@ library(Seurat)
 # library(future)
 library(ggplot2)
 library(msigdbr)
-# library(clusterProfiler)
+library(clusterProfiler)
 # library(SingleR)
 # library(dplyr)
 # library(pheatmap)
@@ -55,7 +55,7 @@ library(tidyverse)
 # library(stringr)
 # library(reshape2)
 # library(pzfx)
-# library(ggridges)
+library(ggridges)
 # library(effsize)
 # library(perm)
 # library(celldex)
@@ -606,6 +606,7 @@ dev.off()
 # Figure 3
 
 Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
+
 ## Figure 3B
 
 *statistical method subject to change*
@@ -638,7 +639,7 @@ for (i in seq_len(length(group_names))) {
     group_names[i] %>%
     str_replace("\\.", " ") %>%
     str_replace("cx", "Culture") %>%
-    str_replace("OB", "Osteoblast") %>%
+    str_replace("osteoblasts", "Osteoblasts") %>%
     str_replace("t143", "143")
   sub_obj <- subset(merged_sobjs, group == group_names[i])
   z <-
@@ -667,7 +668,7 @@ ith <- pivot_longer(raw_ith,
                 fct_relevel(group_names %>%
                         str_replace("\\.", " ") %>%
                         str_replace("cx", "Culture") %>%
-                        str_replace("OB", "Osteoblast") %>%
+                        str_replace("osteoblasts", "Osteoblasts") %>%
                         str_replace("t143", "143")))
 
 ith$logITH <- log10(ith$ITHScore)
@@ -733,6 +734,11 @@ for (i in seq_along(comps$ctl)) {
   stats[comps$comp[i], 2] <- effect_size
 }
 
+#Save as PDF
+if(!dir.exists("Data/ITH")) {
+  dir.create("Data/ITH")
+}
+
 # Save table of comparison group (column) correlated with its proper control (row)
 as.data.frame(mwu) %>%
   write_excel_csv(file="Data/ITH/mwu.csv")
@@ -758,6 +764,11 @@ figure_3b <-
               size = 1.8,
               color = "#2b2a2a")
 figure_3b
+
+#Save as PDF
+if(!dir.exists("Figures/figure_3")) {
+  dir.create("Figures/figure_3")
+}
 
 # Save as PDF
 pdf("Figures/figure_3/figure_3b.pdf",
@@ -1156,25 +1167,29 @@ Figure 5. Lung colonization bottleneck enriches for clonal populations with a co
 source("scSeurat.R")
 
 # Load raw objects for lineage tag analysis
-load("Data/Raw/os17_cx.raw.RData")
-load("Data/Raw/os17.tib.raw.RData")
-load("Data/Raw/os17.lung.raw.RData")
+load("Data/os17_cx_raw.RData")
+load("Data/os17_tib_raw.RData")
+load("Data/os17_lung_raw.RData")
 
 # Subset all to 2800 cells in each condition
 set.seed(108)
-os17_cx.raw <- subset(os17_cx.raw,
-                      cells = sample(Cells(os17_cx.raw),
+os17_cx_raw <- subset(os17_cx_raw,
+                      cells = sample(Cells(os17_cx_raw),
                                      2800))
-
-os17.tib.raw <- subset(os17.tib.raw,
-                       cells = sample(Cells(os17.tib.raw),
+os17_tib_raw <- subset(os17_tib_raw,
+                       cells = sample(Cells(os17_tib_raw),
                                       2800))
-os17.lung.raw <- subset(os17.lung.raw,
-                        cells = sample(Cells(os17.lung.raw),
+os17_lung_raw <- subset(os17_lung_raw,
+                        cells = sample(Cells(os17_lung_raw),
                                        2800))
 
 # Load merged and cell cycle regressed OS17 object
 load("Data/os17.RData")
+
+# Load lineage tracing data
+S0016xS0027_ltbc <- read.delim("Data/S0016xS0027.ltbc")
+S0018xS0028_ltbc <- read.delim("Data/S0018xS0028.ltbc")
+S0024xS0029_ltbc <- read.delim("Data/S0024xS0029.ltbc")
 ```
 
 ## Figure 5B
@@ -1205,6 +1220,11 @@ figure_5b <- DimPlot(os17,
 
 figure_5b
 
+# Save
+if(!dir.exists("Figures/figure_5")) {
+  dir.create("Figures/figure_5")
+}
+
 save(figure_5b, file = "Figures/figure_5/figure_5b.RData")
 
 # Save as PDF
@@ -1220,6 +1240,8 @@ dev.off()
 C) Frequency distribution of clones identified in each of the conditions. A high level of clonal diversity is maintained in the orthotopic tumors (78% unique clones in primary tumor compared to 86% unique clones in cell culture); though dominant clones emerge in the lung (only 33% unique clones). 
 
 ```{r Fig5c, dependson="Fig5load"}
+library(rrrSingleCellUtils)
+
 # There are exactly two cells in lung/tibia that cluster with the culture cells and throw off the DimPlots
 odd_2_cells <-
   subset(os17, subset = src == "Tibia" | src == "Lung") %>%
@@ -1233,12 +1255,12 @@ os17 <-
   os17[, !colnames(os17) %in% odd_2_cells]
 
 dim_plot <- function(x, src_sub, color) {
-    sub_sobj <- subset(x, subset = src == src_sub)
-    sub_sobj <- subset(sub_sobj, cell = names(is.na(sub_sobj$lt) == FALSE))
-    DimPlot(sub_sobj,
-            group.by = "src",
-            pt.size = 0.1,
-            cols = color) +
+  sub_sobj <- subset(x, subset = src == src_sub)
+  sub_sobj <- subset(sub_sobj, cell = names(is.na(sub_sobj$lt) == FALSE))
+  DimPlot(sub_sobj,
+          group.by = "src",
+          pt.size = 0.1,
+          cols = color) +
     theme_void() +
     NoLegend() +
     NoAxes() +
@@ -1247,38 +1269,36 @@ dim_plot <- function(x, src_sub, color) {
 }
 
 n_uniq_1 <-
-  (table(os17_cx.raw$lt) == 1) %>%
+  (table(os17_cx_raw$lt) == 1) %>%
   sum()
 
 # Plot histograms of lineage tracing tags in the Seurat objects
-figure_5c1 <- processLTBC(os17_cx.raw,
-                          lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
-                          cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
-                          histogram = T,
-                          plot.only = T,
-                          title = "Culture, Top 40 Clones",
-                          ymax = 1.75,
-                          col.fill = "#E64B35FF",
-                          relative = T) +
-    theme(plot.title = element_text(size = 8),
-          axis.title = element_text(size = 6),
-          axis.text = element_text(size = 6)) +
-    labs(x = NULL) +
-    annotate("text",
-             label = paste(n_uniq_1,
-                           "out of every 1000 clones are unique"),
-            x = -Inf,
-            y = Inf,
-            hjust = -0.4,
-            vjust = 3,
-            size = 2)
+figure_5c1 <- process_ltbc(os17_cx_raw,
+                           cid_lt = S0016xS0027_ltbc,
+                           histogram = TRUE,
+                           title = "Culture, Top 40 Clones",
+                           ymax = 1.75,
+                           col_fill = "#E64B35FF",
+                           relative = TRUE) +
+  theme(plot.title = element_text(size = 8),
+        axis.title = element_text(size = 6),
+        axis.text = element_text(size = 6)) +
+  labs(x = NULL) +
+  annotate("text",
+           label = paste(n_uniq_1,
+                         "out of every 1000 clones are unique"),
+           x = -Inf,
+           y = Inf,
+           hjust = -0.4,
+           vjust = 3,
+           size = 2)
 
 inset_1 <- dim_plot(os17, "Culture", color = "#E64B35FF")
 
 figure_5c1 <-
-    cowplot::ggdraw() +
-    cowplot::draw_plot(figure_5c1) +
-    cowplot::draw_plot(inset_1, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
+  cowplot::ggdraw() +
+  cowplot::draw_plot(figure_5c1) +
+  cowplot::draw_plot(inset_1, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
 pdf("Figures/figure_5/figure_5c1.pdf",
@@ -1289,37 +1309,35 @@ dev.off()
 
 
 n_uniq_2 <-
-  (table(os17.tib.raw$lt) == 1) %>%
+  (table(os17_tib_raw$lt) == 1) %>%
   sum()
 
-figure_5c2 <- processLTBC(os17.tib.raw,
-                          lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
-                          cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
-                          histogram = T,
-                          plot.only = T,
-                          title = "Tibia, Top 40 Clones",
-                          ymax = 1.75,
-                          col.fill = "#00A087FF",
-                          relative = T) +
-    theme(plot.title = element_text(size = 8),
-          axis.title = element_text(size = 6),
-          axis.text = element_text(size = 6)) +
-    labs(x = NULL) +
-    annotate("text",
-             label = paste(n_uniq_2,
-                           "out of every 1000 clones are unique"),
-            x = -Inf,
-            y = Inf,
-            hjust = -0.4,
-            vjust = 3,
-            size = 2)
+figure_5c2 <- process_ltbc(os17_tib_raw,
+                           cid_lt = S0018xS0028_ltbc,
+                           histogram = TRUE,
+                           title = "Tibia, Top 40 Clones",
+                           ymax = 1.75,
+                           col_fill = "#00A087FF",
+                           relative = TRUE) +
+  theme(plot.title = element_text(size = 8),
+        axis.title = element_text(size = 6),
+        axis.text = element_text(size = 6)) +
+  labs(x = NULL) +
+  annotate("text",
+           label = paste(n_uniq_2,
+                         "out of every 1000 clones are unique"),
+           x = -Inf,
+           y = Inf,
+           hjust = -0.4,
+           vjust = 3,
+           size = 2)
 
 inset_2 <- dim_plot(os17, "Tibia", color = "#00A087FF")
 
 figure_5c2 <-
-    cowplot::ggdraw() +
-    cowplot::draw_plot(figure_5c2) +
-    cowplot::draw_plot(inset_2, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
+  cowplot::ggdraw() +
+  cowplot::draw_plot(figure_5c2) +
+  cowplot::draw_plot(inset_2, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
 pdf("Figures/figure_5/figure_5c2.pdf",
@@ -1329,36 +1347,35 @@ figure_5c2
 dev.off()
 
 n_uniq_3 <-
-  (table(os17.lung.raw$lt) == 1) %>%
+  (table(os17_lung_raw$lt) == 1) %>%
   sum()
 
-figure_5c3 <- processLTBC(os17.lung.raw,
-                          lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
-                          cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
-                          histogram = T,
-                          plot.only = T,
-                          title = "Lung, Top 40 Clones",
-                          ymax = 1.75,
-                          relative = T) +
-    theme(plot.title = element_text(size = 8),
-          axis.title = element_text(size = 6),
-          axis.text = element_text(size = 6),
-          ) +
-    annotate("text",
-             label = paste(n_uniq_3,
-                           "out of every 1000 clones are unique"),
-            x = -Inf,
-            y = Inf,
-            hjust = -0.4,
-            vjust = 3,
-            size = 2)
+figure_5c3 <- process_ltbc(os17_lung_raw,
+                           cid_lt = S0024xS0029_ltbc,
+                           histogram = TRUE,
+                           title = "Lung, Top 40 Clones",
+                           ymax = 1.75,
+                           col_fill = "#4DBBD5FF",
+                           relative = TRUE) +
+  theme(plot.title = element_text(size = 8),
+        axis.title = element_text(size = 6),
+        axis.text = element_text(size = 6),
+  ) +
+  annotate("text",
+           label = paste(n_uniq_3,
+                         "out of every 1000 clones are unique"),
+           x = -Inf,
+           y = Inf,
+           hjust = -0.4,
+           vjust = 3,
+           size = 2)
 
 inset_3 <- dim_plot(os17, "Lung", color = "#4DBBD5FF")
 
 figure_5c3 <-
-    cowplot::ggdraw() +
-    cowplot::draw_plot(figure_5c3) +
-    cowplot::draw_plot(inset_3, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
+  cowplot::ggdraw() +
+  cowplot::draw_plot(figure_5c3) +
+  cowplot::draw_plot(inset_3, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
 pdf("Figures/figure_5/figure_5c3.pdf",
@@ -1368,10 +1385,10 @@ figure_5c3
 dev.off()
 
 figure_5c <-
-    gridExtra::grid.arrange(figure_5c1,
-                            figure_5c2,
-                            figure_5c3,
-                            ncol = 1)
+  gridExtra::grid.arrange(figure_5c1,
+                          figure_5c2,
+                          figure_5c3,
+                          ncol = 1)
 
 save(figure_5c, file = "Figures/figure_5/figure_5c.RData")
 ```
@@ -1382,93 +1399,90 @@ D) Overlay of cells sharing a common ancestor onto the dimensional reduction plo
 
 ### Processing
 
-```{r Fig5d_processing, dependson="Fig5load"}
+```{r Fig5d_processing, dependson=c("Fig5load","Fig5b","Fig5c")}
 # Extract the barcode frequency lists
-cx.lt.list <- processLTBC(os17_cx.raw,
-                          lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
-                          cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
-                          ret.list = TRUE)
+cx_lt_list <- processLTBC(os17_cx_raw,
+                          cid_lt = S0016xS0027_ltbc,
+                          ret_list = TRUE)
 
-tib.lt.list <- processLTBC(os17.tib.raw,
-                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
-                           cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
-                           ret.list = TRUE)
+tib_lt_list <- processLTBC(os17_tib_raw,
+                           cid_lt = S0018xS0028_ltbc,
+                           ret_list = TRUE)
 
-lung.lt.list <- processLTBC(os17.lung.raw,
-                            lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
-                            cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
-                            ret.list = TRUE)
+lung_lt_list <- processLTBC(os17_lung_raw,
+                            cid_lt = S0024xS0029_ltbc,
+                            ret_list = TRUE)
 
 # Subset the three samples, but retain the current umap data
-cx.sub <- subset(os17, subset = src == "Culture")
-tib.sub <- subset(os17, subset = src == "Tibia")
-lung.sub <- subset(os17, subset = src == "Lung")
+cx_sub <- subset(os17, subset = src == "Culture")
+tib_sub <- subset(os17, subset = src == "Tibia")
+lung_sub <- subset(os17, subset = src == "Lung")
 
 # Subset to cells that have a lineage tag
 # Culture
 Culture.LTcells <- vector(mode = "character")
-for (i in 1:nrow(cx.lt.list)) {
-  temp <- WhichCells(cx.sub,
-                     expression = lt == cx.lt.list[[i, 1]])
+for (i in 1:nrow(cx_lt_list)) {
+  temp <- WhichCells(cx_sub,
+                     expression = lt == cx_lt_list[[i, 1]])
   Culture.LTcells <- append(Culture.LTcells,
                             temp)
 }
 
-cx.tagged <- subset(cx.sub,
+cx.tagged <- subset(cx_sub,
                     cells = Culture.LTcells)
 
 # Tibia
 # Remove outlier cells (names may vary in different runs of the code)
 # This doesn't appear to do anything since those are already the only clusters
-# tib.sub <- subset(tib.sub,
+# tib_sub <- subset(tib_sub,
 #                   idents = c("0",
 #                              "1",
 #                              "3",
 #                              "6")) 
 
 tib.LTcells <- vector(mode = "character")
-for (i in 1:nrow(tib.lt.list)) {
-  temp <- WhichCells(tib.sub,
-                     expression = lt == tib.lt.list[[i, 1]])
+for (i in 1:nrow(tib_lt_list)) {
+  temp <- WhichCells(tib_sub,
+                     expression = lt == tib_lt_list[[i, 1]])
   tib.LTcells <- append(tib.LTcells, temp)
 }
-tib.tagged <- subset(tib.sub,
+tib.tagged <- subset(tib_sub,
                      cells = tib.LTcells)
 
 # Lung
 # Remove outlier cells (names may vary in different runs of the code)
 # This doesn't appear to do anything since those are already the only clusters
-# lung.sub <- subset(lung.sub,
+# lung_sub <- subset(lung_sub,
 #                    idents = c("0",
 #                               "1",
 #                               "3",
 #                               "6"))
 
 lung.LTcells <- vector(mode = "character")
-for (i in 1:nrow(lung.lt.list)) {
-  temp <- WhichCells(lung.sub,
-                     expression = lt == lung.lt.list[[i, 1]])
+for (i in 1:nrow(lung_lt_list)) {
+  temp <- WhichCells(lung_sub,
+                     expression = lt == lung_lt_list[[i, 1]])
   lung.LTcells <- append(lung.LTcells,
                          temp)
 }
-lung.tagged <- subset(lung.sub,
+lung.tagged <- subset(lung_sub,
                       cells = lung.LTcells)
 ```
 
 
 ### Make enriched clone DimPlots
-```{r eval=FALSE}
+```{r Fig5d, dependson=c("Fig5load","Fig5b","Fig5c","Fig5d_processing")}
 dataset_list <- list(cx.tagged,
                      tib.tagged,
                      lung.tagged)
 
-lt_list <- list(cx.lt.list,
-                tib.lt.list,
-                lung.lt.list)
+lt_list <- list(cx_lt_list,
+                tib_lt_list,
+                lung_lt_list)
 
-sub_list <- list(cx.sub,
-                 tib.sub,
-                 lung.sub)
+sub_list <- list(cx_sub,
+                 tib_sub,
+                 lung_sub)
 
 color_list <- list("#E64B35FF",
                    "#00A087FF",
@@ -1514,14 +1528,14 @@ save(figure_5d, file = "Figures/figure_5/figure_5d.RData")
 
 E) UMAP visualization of cells belonging to top ten enriched clonal families highlighted in red.
 
-```{r Fig5e, dependson='Fig5d_processing'}
+```{r Fig5e, dependson=c("Fig5load","Fig5b","Fig5c","Fig5d_processing")}
 # Compare Enriched vs non-enriched 
 # Group first 10 against the tagged Lung
 LT <- vector(mode = "character")
 
 for (i in 1:10) {
   temp <- WhichCells(lung.tagged,
-                     expression = lt == lung.lt.list[[i, 1]])
+                     expression = lt == lung_lt_list[[i, 1]])
   LT <- append(LT, temp)
 }
 
@@ -1530,7 +1544,7 @@ Idents(lung.tagged, cells = LT) <- "Enriched clones"
 cell.ids <- sample(colnames(lung.tagged))
 
 # Culture plots
-figure_5e <- DimPlot(lung.sub,
+figure_5e <- DimPlot(lung_sub,
                      reduction = "umap",
                      pt.size = 1,
                      cells.highlight = WhichCells(lung.tagged,
@@ -1566,24 +1580,24 @@ dev.off()
 
 F) Pathway enrichment analysis for hallmark gene sets comparing enriched clones relative to the remaining metastatic tumor cells identifies Hypoxia, Glycolysis, EMT and MTORC1 signaling related genes to be significantly upregulated
 
-```{r Fig5f, dependson='Fig5e'}
+```{r Fig5f, dependson=c("Fig5load","Fig5b","Fig5c","Fig5d_processing","Fig5e")}
 # Pathways associated with Enriched clonal families
 source("Downstream.v2.R")
 
 # Rename identities from the total lung tumor to include enriched clones
-lung.sub.enr <- SetIdent(lung.sub,
+lung_sub_enr <- SetIdent(lung_sub,
                          cells = WhichCells(lung.tagged,
                                             idents = "Enriched clones"),
                          value = "Enriched clones")
 
 # Analyze enriched clones against the remaining tumor cells in the lung
-lung.sub.enr <- RenameIdents(lung.sub.enr,
+lung_sub_enr <- RenameIdents(lung_sub_enr,
                              "0" = "Remaining Tumor Cells",
                              "1" = "Remaining Tumor Cells",
                              "3" = "Remaining Tumor Cells",
                              "6" = "Remaining Tumor Cells")
 
-B.list <- list(OS17 = lung.sub.enr)
+B.list <- list(OS17 = lung_sub_enr)
 
 # Perform differential gene expression analysis for hallmark pathways
 set.seed(100)

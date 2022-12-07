@@ -53,8 +53,8 @@ osteoblasts <- subset(osteoblasts,
   percent.mt < 10
   )
 
-osteoblasts$src <- "osteoblasts"
-osteoblasts$model <- "osteoblasts"
+osteoblasts$src <- "Osteoblasts"
+osteoblasts$model <- "Osteoblasts"
 ```
 
 ## Load OS17
