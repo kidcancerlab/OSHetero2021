@@ -56,34 +56,36 @@ library(perm)
 options(future.globals.maxSize= 89128960000)
 ```
 
+Note: supplemental numbering in this code reflects the previous version of the paper submitted, visible on bioRx. Edits on supplemental numbering is made in Illustrator. 
+
 # S1
 
 ```{r s1}
 library(rrrSingleCellUtils)
 
 # Prior to cell-cycle regression
-load("Data/Raw/os17.cx.raw.RData")
+load("Data/Raw/os17_cx_raw.RData")
 
-os17.cx_noccr <- NormalizeData(os17.cx.raw) %>%
+os17.cx_noccr <- NormalizeData(os17_cx_raw) %>%
   FindVariableFeatures(selection.method = "vst") %>%
   ScaleData() %>%
-  RunPCA(pc.genes = os17.cx.raw@var.genes, npcs = 20) %>%
+  RunPCA(pc.genes = os17_cx_raw@var.genes, npcs = 20) %>%
   RunUMAP(reduction = "pca", dims = 1:20) %>%
   FindNeighbors(reduction = "pca", dims = 1:20) %>%
   FindClusters(resolution = 0.3)
 
-os17.cx_noccr <- kill_cc(os17.cx_noccr,
+os17_cx_noccr <- kill_cc(os17_cx_noccr,
                          cc_regress = "N",
                          find_pcs = 20,
                          use_pcs = 3,
                          use_res = 0.3,
                          method = "umap")
-os17.cx_noccr$Phase <- factor(os17.cx_noccr$Phase,
+os17_cx_noccr$Phase <- factor(os17_cx_noccr$Phase,
                               levels = c("G1",
                                          "G2M",
                                          "S"))
 # UMAP
-sfig_s1_a1 <- DimPlot(os17.cx_noccr,
+sfig_s1_a1 <- DimPlot(os17_cx_noccr,
                       group.by = "Phase",
                       label = T) +
   scale_color_npg(alpha = 1) +
@@ -91,20 +93,27 @@ sfig_s1_a1 <- DimPlot(os17.cx_noccr,
   ggtitle("")
 sfig_s1_a1
 
-pdf("figures/supplement/s1/sfig_s1_a1.pdf",
+# Save as pdf
+if(!dir.exists("Figures/supplement/")) {
+  dir.create("Figures/supplement/")
+}
+if(!dir.exists("Figures/supplement/s1")) {
+  dir.create("Figures/supplement/s1")
+}
+pdf("Figures/supplement/s1/sfig_s1_a1.pdf",
     height = 5,
     width = 5)
 sfig_s1_a1
 dev.off()
 
 # Post-cell cycle regression
-load("Data/os17.cx_CCR.RData")
-os17.cx$Phase <- factor(os17.cx$Phase,
+load("Data/os17_cx_CCR.RData")
+os17_cx$Phase <- factor(os17_cx$Phase,
                         levels = c("G1",
                                    "G2M",
                                    "S"))
 # UMAP
-sfig_s1_a2 <- DimPlot(os17.cx,
+sfig_s1_a2 <- DimPlot(os17_cx,
                       group.by = "Phase",
                       label = F) +
   scale_color_npg(alpha = 1) +
@@ -120,7 +129,7 @@ dev.off()
 
 # PCA
 # Prior to cell-cycle regression
-sfig_s1_b1 <- DimPlot(os17.cx_noccr,
+sfig_s1_b1 <- DimPlot(os17_cx_noccr,
                       group.by = "Phase",
                       label = T,
                       reduction = "pca") +
@@ -137,11 +146,11 @@ dev.off()
 
 # PCA
 # Post-cell cycle regression
-os17.cx$Phase <- factor(os17.cx$Phase,
+os17_cx$Phase <- factor(os17_cx$Phase,
                         levels = c("G1",
                                    "G2M",
                                    "S"))
-sfig_s1_b2 <- DimPlot(os17.cx,
+sfig_s1_b2 <- DimPlot(os17_cx,
                       group.by = "Phase",
                       label = F,
                       reduction = "pca") +
@@ -157,7 +166,7 @@ sfig_s1_b2
 dev.off()
 
 # Cell-cycle genes Pre-CCR
-sfig_s1_c1 <- RidgePlot(os17.cx_noccr,
+sfig_s1_c1 <- RidgePlot(os17_cx_noccr,
                         features = c("PCNA",
                                      "TOP2A",
                                      "MCM6",
@@ -175,7 +184,7 @@ dev.off()
 
 
 # Cell-cycle genes - post-CCR
-sfig_s1_c2 <- RidgePlot(os17.cx,
+sfig_s1_c2 <- RidgePlot(os17_cx,
                         features = c("PCNA",
                                      "TOP2A",
                                      "MCM6",
