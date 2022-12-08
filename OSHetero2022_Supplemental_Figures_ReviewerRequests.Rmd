@@ -1779,7 +1779,7 @@ Pull out the DEG between patient primary vs met, do the same for PDXs, then comp
 
 ```{r pateintvpdx}
 # Start from this stopping point
-comb <- qs::qread("Data/Supplement/PrimaryTumor/comb.qs")
+comb <- qs::qread("Data/Supplement/PatientData/comb.qs")
 
 DimPlot(comb, reduction = "umap", label = T, repel = T) +
   coord_fixed() +
@@ -1846,8 +1846,8 @@ DimPlot(comb, reduction = "umap", label = T, repel = T) +
 coord_fixed() +
   ggtitle("GSE152048 composite clusters - primaries Sanj") +
   theme(legend.position = "none")
-#saveRDS(comb,'Data/Supplement/PrimaryTumor/comb.rds')
-#comb<-readRDS('Data/Supplement/PrimaryTumor/comb.rds')
+#saveRDS(comb,'Data/Supplement/PatientData/comb.rds')
+#comb<-readRDS('Data/Supplement/PatientData/comb.rds')
 
 #### Tumor - Met ####
 
@@ -1953,9 +1953,9 @@ met_comb <- met_comb %>%
   FindClusters(resolution=0.3)
 
 # Save a stopping point - merged and harmony aligned
-qs::qsave(met_comb, "Data/Supplement/PrimaryTumor/met_comb.qs")
+qs::qsave(met_comb, "Data/Supplement/PatientData/met_comb.qs")
 # Start from this stopping point
-met_comb <- qs::qread("Data/Supplement/PrimaryTumor/met_comb.qs")
+met_comb <- qs::qread("Data/Supplement/PatientData/met_comb.qs")
 
 DimPlot(met_comb, reduction = "umap", label = T, repel = T) +
   coord_fixed() +
@@ -1986,8 +1986,8 @@ for(i in 1:length(mod_names)) {
 ```
 
 ```{r patientdeg}
-tumor_comb <- qs::qread("Data/Supplement/PrimaryTumor/tumor_comb.qs")
-met_comb <- qs::qread("Data/Supplement/PrimaryTumor/met_comb.qs")
+tumor_comb <- qs::qread("Data/Supplement/PatientData/tumor_comb.qs")
+met_comb <- qs::qread("Data/Supplement/PatientData/met_comb.qs")
 
 all_tumor <- merge(x = tumor_comb,
                    y = met_comb,
@@ -2010,9 +2010,9 @@ all_tumor <- all_tumor %>%
   FindClusters(resolution=0.3)
 
 # Save a stopping point - merged and harmony aligned
-qs::qsave(all_tumor, "Data/Supplement/PrimaryTumor/all_tumor.qs")
+qs::qsave(all_tumor, "Data/Supplement/PatientData/all_tumor.qs")
 # Start from this stopping point
-all_tumor <- qs::qread("Data/Supplement/PrimaryTumor/all_tumor.qs")
+all_tumor <- qs::qread("Data/Supplement/PatientData/all_tumor.qs")
 
 set.seed(100)
 # DEG list between mets and primary patient tumors
@@ -2087,7 +2087,7 @@ save(de_genes_dir, file="Data/Supplement/de_genes_dir.RData")
 ```{r compare, eval=FALSE}
 NCHOS2 <- subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-2"))
 NCHOS7 <- subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-7"))
-all_tumor <- qs::qread("Data/Supplement/PrimaryTumor/all_tumor.qs")
+all_tumor <- qs::qread("Data/Supplement/PatientData/all_tumor.qs")
 
 # Plot
 all_tumor$tissue <- all_tumor$type %>%
@@ -2456,7 +2456,7 @@ pdf(file = "figures/supplement/requests/tnf_plot.pdf",
 tnf_plot
 dev.off()
 
-save(OS.list_1500, file = "Data/Supplement/PrimaryTumor/OS.list_1500_ms.RData")
+save(OS.list_1500, file = "Data/Supplement/PatientData/OS.list_1500_ms.RData")
 ```
 
 ```{r cellpdx_scatter}
