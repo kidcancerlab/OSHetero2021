@@ -1435,15 +1435,6 @@ for (i in 1:nrow(cx_lt_list)) {
 cx.tagged <- subset(cx_sub,
                     cells = Culture.LTcells)
 
-# Tibia
-# Remove outlier cells (names may vary in different runs of the code)
-# This doesn't appear to do anything since those are already the only clusters
-# tib_sub <- subset(tib_sub,
-#                   idents = c("0",
-#                              "1",
-#                              "3",
-#                              "6")) 
-
 tib.LTcells <- vector(mode = "character")
 for (i in 1:nrow(tib_lt_list)) {
   temp <- WhichCells(tib_sub,
@@ -1452,15 +1443,6 @@ for (i in 1:nrow(tib_lt_list)) {
 }
 tib.tagged <- subset(tib_sub,
                      cells = tib.LTcells)
-
-# Lung
-# Remove outlier cells (names may vary in different runs of the code)
-# This doesn't appear to do anything since those are already the only clusters
-# lung_sub <- subset(lung_sub,
-#                    idents = c("0",
-#                               "1",
-#                               "3",
-#                               "6"))
 
 lung.LTcells <- vector(mode = "character")
 for (i in 1:nrow(lung_lt_list)) {
@@ -1496,34 +1478,34 @@ figure_5d_list <- list()
 plot_num <- 1
 
 for (i in seq_len(length(dataset_list))) {
-    dataset <- dataset_list[[i]]
-    lt_data <- lt_list[[i]]
-    sub_data <- sub_list[[i]]
-    data_color <- color_list[[i]]
-    for (j in 1:4) {
-        figure_5d_list[[plot_num]] <-
-              patchwork::patchworkGrob(DimPlot(dataset,
+  dataset <- dataset_list[[i]]
+  lt_data <- lt_list[[i]]
+  sub_data <- sub_list[[i]]
+  data_color <- color_list[[i]]
+  for (j in 1:4) {
+    figure_5d_list[[plot_num]] <-
+      patchwork::patchworkGrob(DimPlot(dataset,
                                        reduction = "umap",
                                        pt.size = 0.1,
                                        cells.highlight = WhichCells(sub_data,
                                                                     expression = lt == lt_data[[j, 1]]),
                                        cols.highlight = data_color,
                                        sizes.highlight = 1) +
-                            coord_fixed() +
-                            theme(legend.position = "none") +
-                            ggtitle(paste("Clone",
-                                          lt_data[[j, 1]])) +
-                            NoLegend() +
-                            NoAxes() +
-              theme(title = element_text(size = 6),
-                    plot.margin = unit(c(0, 0, 0, 0), "cm"),
-                    plot.title = element_text(hjust = 0.5)))
-        plot_num <- plot_num + 1
-    }
+                                 coord_fixed() +
+                                 theme(legend.position = "none") +
+                                 ggtitle(paste("Clone",
+                                               lt_data[[j, 1]])) +
+                                 NoLegend() +
+                                 NoAxes() +
+                                 theme(title = element_text(size = 6),
+                                       plot.margin = unit(c(0, 0, 0, 0), "cm"),
+                                       plot.title = element_text(hjust = 0.5)))
+    plot_num <- plot_num + 1
+  }
 }
 
 figure_5d <-
-    gridExtra::grid.arrange(grobs = figure_5d_list, ncol = 4)
+  gridExtra::grid.arrange(grobs = figure_5d_list, ncol = 4)
 
 save(figure_5d, file = "Figures/figure_5/figure_5d.RData")
 ```
@@ -1635,10 +1617,10 @@ temp1 <- rownames_to_column(temp1,
 
 # Order by -log10pvalue for plotting
 temp1 <-
-    temp1 %>%
-    mutate(Pathway = str_wrap(Pathway, width = 30) %>%
-        as.factor() %>%
-        fct_reorder(pvalue))
+  temp1 %>%
+  mutate(Pathway = str_wrap(Pathway, width = 30) %>%
+           as.factor() %>%
+           fct_reorder(pvalue))
 
 # Plot 
 figure_5f <- ggplot(temp1,
@@ -1673,91 +1655,91 @@ load("Data/os17.RData")
 
 n_clones <- 30
 top_clones <-
-    tibble(src = os17$src,
-           clone = os17$lt,
-           cluster = paste0("c_", os17$seurat_clusters)) %>%
-    na.omit() %>%
-    group_by(src, clone, cluster) %>%
-    mutate(n_cells_in_cluster = n()) %>%
-    ungroup() %>%
-    group_by(src, clone) %>%
-    mutate(n_cells_in_clone = n()) %>%
-    ungroup() %>%
-    group_by(src) %>%
-    arrange(desc(n_cells_in_clone), clone, .by_group = TRUE) %>%
-    unique() %>%
-    pivot_wider(id_cols = c(src, clone, n_cells_in_clone),
-                names_from = cluster,
-                values_from = n_cells_in_cluster) %>%
-    filter(n_cells_in_clone >= 5) %>%
-    #slice_head(n = n_clones) %>%
-    ungroup() %>%
-    pivot_longer(cols = starts_with("c_"),
-                 names_to = "cluster",
-                 values_to = "n_cells_in_cluster") %>%
-    na.omit() %>%
-    mutate(clone = fct_reorder(clone, n_cells_in_clone))
+  tibble(src = os17$src,
+         clone = os17$lt,
+         cluster = paste0("c_", os17$seurat_clusters)) %>%
+  na.omit() %>%
+  group_by(src, clone, cluster) %>%
+  mutate(n_cells_in_cluster = n()) %>%
+  ungroup() %>%
+  group_by(src, clone) %>%
+  mutate(n_cells_in_clone = n()) %>%
+  ungroup() %>%
+  group_by(src) %>%
+  arrange(desc(n_cells_in_clone), clone, .by_group = TRUE) %>%
+  unique() %>%
+  pivot_wider(id_cols = c(src, clone, n_cells_in_clone),
+              names_from = cluster,
+              values_from = n_cells_in_cluster) %>%
+  filter(n_cells_in_clone >= 5) %>%
+  #slice_head(n = n_clones) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("c_"),
+               names_to = "cluster",
+               values_to = "n_cells_in_cluster") %>%
+  na.omit() %>%
+  mutate(clone = fct_reorder(clone, n_cells_in_clone))
 
 cell_counts_to_test <-
-    top_clones$n_cells_in_clone %>%
-    unique() %>%
-    sort()
+  top_clones$n_cells_in_clone %>%
+  unique() %>%
+  sort()
 
 names(cell_counts_to_test) <- paste0("c_", cell_counts_to_test)
 
 # Get the number of clusters represented by n randomly selected cells
 max_per_cluster_n_cells <- function(sobj, n_cells) {
-    selected_cell_indexes <-
-        sample(seq_len(ncol(sobj)),
-               size = n_cells,
-               replace = FALSE)
-
-    max_n_per_cluster <-
-        sobj$seurat_clusters[selected_cell_indexes] %>%
-        table() %>%
-        max()
-    return(max_n_per_cluster)
+  selected_cell_indexes <-
+    sample(seq_len(ncol(sobj)),
+           size = n_cells,
+           replace = FALSE)
+  
+  max_n_per_cluster <-
+    sobj$seurat_clusters[selected_cell_indexes] %>%
+    table() %>%
+    max()
+  return(max_n_per_cluster)
 }
 
 # bootstrap the data n_perms times to get a distribution
 perm_n_times <- function(sobj, n_cells, n_perms = 1000) {
-    message("Testing ", n_cells, " cells")
-    n_clusters <- replicate(n_perms, max_per_cluster_n_cells(sobj, n_cells))
-    return(n_clusters)
+  message("Testing ", n_cells, " cells")
+  n_clusters <- replicate(n_perms, max_per_cluster_n_cells(sobj, n_cells))
+  return(n_clusters)
 }
 
 # Do this for all observed cells/clone
 n_perms <- 100000
 perm_table <-
-    sapply(cell_counts_to_test,
-           function(cell_num) perm_n_times(os17,
-                                           cell_num,
-                                           n_perms = n_perms),
-           USE.NAMES = TRUE) %>%
-    as.data.frame()
+  sapply(cell_counts_to_test,
+         function(cell_num) perm_n_times(os17,
+                                         cell_num,
+                                         n_perms = n_perms),
+         USE.NAMES = TRUE) %>%
+  as.data.frame()
 
 top_clones %>%
-    rowwise() %>%
-    mutate(p_value = (
-        sum(perm_table[[paste0("c_", n_cells_in_clone)]] >=
-             n_cells_in_cluster) /
-         n_perms
-                     ),
-           signif = p_value <= 0.05,
-           cluster = str_remove(cluster, "c_")) %>%
-    ggplot(aes(x = cluster,
-               y = clone,
-               fill = n_cells_in_cluster)) +
-    geom_tile() +
-    geom_text(aes(label = n_cells_in_cluster,
-                  color = signif)) +
-    scale_color_manual(values = c("gray", "red")) +
-    facet_grid(src ~ ., scales = "free_y", space = "free") +
-    labs(x = "Cluster",
-         y = "Clone",
-         fill = "Cells in Cluster",
-         color = "Enriched Cluster") +
-    theme_bw()
+  rowwise() %>%
+  mutate(p_value = (
+    sum(perm_table[[paste0("c_", n_cells_in_clone)]] >=
+          n_cells_in_cluster) /
+      n_perms
+  ),
+  signif = p_value <= 0.05,
+  cluster = str_remove(cluster, "c_")) %>%
+  ggplot(aes(x = cluster,
+             y = clone,
+             fill = n_cells_in_cluster)) +
+  geom_tile() +
+  geom_text(aes(label = n_cells_in_cluster,
+                color = signif)) +
+  scale_color_manual(values = c("gray", "red")) +
+  facet_grid(src ~ ., scales = "free_y", space = "free") +
+  labs(x = "Cluster",
+       y = "Clone",
+       fill = "Cells in Cluster",
+       color = "Enriched Cluster") +
+  theme_bw()
 
 ```
 
@@ -1778,13 +1760,13 @@ pdf("Figures/figure_5/figure_5.pdf",
     width = 8,
     height = 11)
 gridExtra::grid.arrange(grobs = list(figure_5b,
-                          figure_5c,
-                          figure_5d,
-                          figure_5e,
-                          figure_5f),
-             layout_matrix = layout_matrix,
-             ncol = 2,
-             nrow = 3)
+                                     figure_5c,
+                                     figure_5d,
+                                     figure_5e,
+                                     figure_5f),
+                        layout_matrix = layout_matrix,
+                        ncol = 2,
+                        nrow = 3)
 dev.off()
 ```
 
