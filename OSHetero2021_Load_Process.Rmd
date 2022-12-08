@@ -168,8 +168,7 @@ save(os17_cx, file = "Data/os17_cx_CCR.RData")
 For lineage analysis in Figure 5.
 
 ```{r Fig5_tag, dependson='load_os17'}
-# Plot histograms of lineage tracing tags in the Seurat objects
-
+# Add lineage tracing tags to the Seurat object metadata
 ltbc_list <- c("S0016xS0027",
                "S0018xS0028",
                "S0024xS0029")
