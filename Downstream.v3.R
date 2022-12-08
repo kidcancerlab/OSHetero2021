@@ -26,7 +26,7 @@ DGEA <- function(data,
                  direction = "up") {
   
   if (spec == "human") {
-    hpca.se <- HumanPrimaryCellAtlasData()
+    hpca.se <- celldex::HumanPrimaryCellAtlasData()
   } else if (spec == "mouse") {
     mrsd.se <- MouseRNAseqData()
   } 
@@ -43,7 +43,7 @@ DGEA <- function(data,
       msig.name = m_t2n.h
     }
     else if (category == "C2") {
-      if (subcategory == NULL) {
+      if (is.null(subcategory)) {
         m_t2g.c2 <- msigdbr(species = "Homo sapiens", category = "C2") %>%
           dplyr::select(gs_name, human_gene_symbol)
         m_t2n.c2 <- msigdbr(species = "Homo sapiens", category = "C2") %>%
