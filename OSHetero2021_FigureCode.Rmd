@@ -316,7 +316,7 @@ set.seed(100)
 OS$tissue <- OS$src %>%
   stringr::str_replace("Flank", "Culture")
 
-OS <- subset(OS, subset = model != "osteoblasts")
+OS <- subset(OS, subset = model != "Osteoblasts")
 
 Idents(OS) <- OS$tissue
 
@@ -1163,7 +1163,8 @@ Figure 5. Lung colonization bottleneck enriches for clonal populations with a co
 ### Load
 
 ```{r Fig5load}
-source("scSeurat.R")
+#source("scSeurat.R")
+library(rrrSingleCellUtils)
 
 # Load raw objects for lineage tag analysis
 load("Data/os17_cx_raw.RData")
@@ -1241,7 +1242,7 @@ C) Frequency distribution of clones identified in each of the conditions. A high
 ```{r Fig5c, dependson="Fig5load"}
 library(rrrSingleCellUtils)
 
-# There are cells in lung/tibia that cluster with the culture cells and throw off the DimPlots
+# There are cells in lung/tibia that cluster with the culture cells and throw off the DimPlots and vise versa
 
 odd_cells <-
   c(subset(os17, subset = src == "Tibia" | src == "Lung") %>%
@@ -1762,7 +1763,7 @@ top_clones %>%
 
 
 ### Panel Figure 5
-```{r eval=FALSE}
+```{r Fig5_panel, dependson=c("Fig5load","Fig5b","Fig5c","Fig5d_processing","Fig5e","Fig5f")}
 load("Figures/figure_5/figure_5b.RData")
 load("Figures/figure_5/figure_5c.RData")
 load("Figures/figure_5/figure_5d.RData")
