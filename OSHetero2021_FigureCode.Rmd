@@ -1171,6 +1171,9 @@ load("Data/os17_cx_raw.RData")
 load("Data/os17_tib_raw.RData")
 load("Data/os17_lung_raw.RData")
 
+# Load merged and cell cycle regressed OS17 object
+load("Data/os17.RData")
+
 # Subset all to 2800 cells in each condition
 set.seed(108)
 os17_cx_raw <- subset(os17_cx_raw,
@@ -1183,9 +1186,6 @@ os17_lung_raw <- subset(os17_lung_raw,
                         cells = sample(Cells(os17_lung_raw),
                                        2800))
 
-# Load merged and cell cycle regressed OS17 object
-load("Data/os17.RData")
-
 # Load lineage tracing data
 S0016xS0027_ltbc <- read.delim("Data/S0016xS0027.ltbc")
 S0018xS0028_ltbc <- read.delim("Data/S0018xS0028.ltbc")
@@ -1197,7 +1197,7 @@ S0024xS0029_ltbc <- read.delim("Data/S0024xS0029.ltbc")
 B) UMAP analysis of lineage tagged OS-17 cells in culture, implanted into tibia, or inoculated to generate lung metastases. These lineage tags are heritable allowing us to track the transcriptional profiles of daughter cells originating from the same ancestor. Metastatic and orthotopic samples share many cells with similar phenotypes, though cultured cells are dramatically different (n = 2800 per condition)
 
 ```{r Fig5b, dependson="Fig5load"}
-# Set cell identities to proper cluster resolution 
+# Set cell identities to proper cluster resolution
 Idents(os17) <- os17$RNA_snn_res.0.3
 
 # Plot os17
@@ -1242,17 +1242,24 @@ C) Frequency distribution of clones identified in each of the conditions. A high
 ```{r Fig5c, dependson="Fig5load"}
 library(rrrSingleCellUtils)
 
-# There are exactly two cells in lung/tibia that cluster with the culture cells and throw off the DimPlots
-odd_2_cells <-
-  subset(os17, subset = src == "Tibia" | src == "Lung") %>%
-  Embeddings("umap") %>%
-  as.data.frame() %>%
-  dplyr::filter(UMAP_1 > 0) %>%
-  rownames()
+# There are cells in lung/tibia that cluster with the culture cells and throw off the DimPlots
+
+odd_cells <-
+  c(subset(os17, subset = src == "Tibia" | src == "Lung") %>%
+        Embeddings("umap") %>%
+        as.data.frame() %>%
+        dplyr::filter(UMAP_1 < 0) %>%
+        rownames(),
+    subset(os17, subset = src == "Culture") %>%
+        Embeddings("umap") %>%
+        as.data.frame() %>%
+        dplyr::filter(UMAP_1 > 0) %>%
+        rownames())
+
 
 # kick out those two cells
 os17 <-
-  os17[, !colnames(os17) %in% odd_2_cells]
+  os17[, !colnames(os17) %in% odd_cells]
 
 dim_plot <- function(x, src_sub, color) {
   sub_sobj <- subset(x, subset = src == src_sub)
@@ -1268,30 +1275,47 @@ dim_plot <- function(x, src_sub, color) {
     theme(plot.background = element_rect(colour = "black"))
 }
 
+ltbc_hist <- function(df, fill, n_uniq, title) {
+  ggplot(df, aes(x = stats::reorder(Var1, -freq),
+                 y = freq)) +
+    geom_bar(fill = fill, stat = "identity") +
+    theme_bw() +
+    theme(plot.title = element_text(size = 8),
+          axis.title = element_text(size = 6),
+          axis.text = element_text(size = 6),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
+    labs(x = "",
+         y = "Percentage of Cells",
+         title = title) +
+    ylim(0, 1.75) +
+    annotate("text",
+             label = paste(n_uniq,
+                           "out of every 1000 clones are unique"),
+             x = -Inf,
+             y = Inf,
+             hjust = -0.4,
+             vjust = 3,
+             size = 2)
+}
+
 n_uniq_1 <-
   (table(os17_cx_raw$lt) == 1) %>%
   sum()
 
 # Plot histograms of lineage tracing tags in the Seurat objects
-figure_5c1 <- process_ltbc(os17_cx_raw,
-                           cid_lt = S0016xS0027_ltbc,
-                           histogram = TRUE,
-                           title = "Culture, Top 40 Clones",
-                           ymax = 1.75,
-                           col_fill = "#E64B35FF",
-                           relative = TRUE) +
-  theme(plot.title = element_text(size = 8),
-        axis.title = element_text(size = 6),
-        axis.text = element_text(size = 6)) +
-  labs(x = NULL) +
-  annotate("text",
-           label = paste(n_uniq_1,
-                         "out of every 1000 clones are unique"),
-           x = -Inf,
-           y = Inf,
-           hjust = -0.4,
-           vjust = 3,
-           size = 2)
+figure_5c1 <-
+  process_ltbc(os17_cx_raw,
+               cid_lt = S0016xS0027_ltbc,
+               histogram = FALSE,
+               title = "Culture, Top 40 Clones",
+               ymax = 1.75,
+               col_fill = "#E64B35FF",
+               relative = TRUE,
+               ret_list = TRUE) %>%
+  ltbc_hist(fill = "#E64B35FF", n_uniq_1, "Culture, Top 40 Clones")
 
 inset_1 <- dim_plot(os17, "Culture", color = "#E64B35FF")
 
@@ -1314,23 +1338,13 @@ n_uniq_2 <-
 
 figure_5c2 <- process_ltbc(os17_tib_raw,
                            cid_lt = S0018xS0028_ltbc,
-                           histogram = TRUE,
+                           histogram = FALSE,
                            title = "Tibia, Top 40 Clones",
                            ymax = 1.75,
                            col_fill = "#00A087FF",
-                           relative = TRUE) +
-  theme(plot.title = element_text(size = 8),
-        axis.title = element_text(size = 6),
-        axis.text = element_text(size = 6)) +
-  labs(x = NULL) +
-  annotate("text",
-           label = paste(n_uniq_2,
-                         "out of every 1000 clones are unique"),
-           x = -Inf,
-           y = Inf,
-           hjust = -0.4,
-           vjust = 3,
-           size = 2)
+                           relative = TRUE,
+                           ret_list = TRUE) %>%
+  ltbc_hist(fill = "#00A087FF", n_uniq_2, "Tibia, Top 40 Clones")
 
 inset_2 <- dim_plot(os17, "Tibia", color = "#00A087FF")
 
@@ -1352,23 +1366,13 @@ n_uniq_3 <-
 
 figure_5c3 <- process_ltbc(os17_lung_raw,
                            cid_lt = S0024xS0029_ltbc,
-                           histogram = TRUE,
+                           histogram = FALSE,
                            title = "Lung, Top 40 Clones",
                            ymax = 1.75,
                            col_fill = "#4DBBD5FF",
-                           relative = TRUE) +
-  theme(plot.title = element_text(size = 8),
-        axis.title = element_text(size = 6),
-        axis.text = element_text(size = 6),
-  ) +
-  annotate("text",
-           label = paste(n_uniq_3,
-                         "out of every 1000 clones are unique"),
-           x = -Inf,
-           y = Inf,
-           hjust = -0.4,
-           vjust = 3,
-           size = 2)
+                           relative = TRUE,
+                           ret_list = TRUE) %>%
+  ltbc_hist(fill = "#4DBBD5FF", n_uniq_3, "Lung, Top 40 Clones")
 
 inset_3 <- dim_plot(os17, "Lung", color = "#4DBBD5FF")
 
@@ -1401,15 +1405,15 @@ D) Overlay of cells sharing a common ancestor onto the dimensional reduction plo
 
 ```{r Fig5d_processing, dependson=c("Fig5load","Fig5b","Fig5c")}
 # Extract the barcode frequency lists
-cx_lt_list <- processLTBC(os17_cx_raw,
-                          cid_lt = S0016xS0027_ltbc,
-                          ret_list = TRUE)
+cx_lt_list <- process_ltbc(os17_cx_raw,
+                           cid_lt = S0016xS0027_ltbc,
+                           ret_list = TRUE)
 
-tib_lt_list <- processLTBC(os17_tib_raw,
+tib_lt_list <- process_ltbc(os17_tib_raw,
                            cid_lt = S0018xS0028_ltbc,
                            ret_list = TRUE)
 
-lung_lt_list <- processLTBC(os17_lung_raw,
+lung_lt_list <- process_ltbc(os17_lung_raw,
                             cid_lt = S0024xS0029_ltbc,
                             ret_list = TRUE)
 
@@ -1422,10 +1426,10 @@ lung_sub <- subset(os17, subset = src == "Lung")
 # Culture
 Culture.LTcells <- vector(mode = "character")
 for (i in 1:nrow(cx_lt_list)) {
-  temp <- WhichCells(cx_sub,
-                     expression = lt == cx_lt_list[[i, 1]])
-  Culture.LTcells <- append(Culture.LTcells,
-                            temp)
+    temp <- WhichCells(cx_sub,
+                        expression = lt == cx_lt_list[[i, 1]])
+    Culture.LTcells <- append(Culture.LTcells,
+                                temp)
 }
 
 cx.tagged <- subset(cx_sub,
