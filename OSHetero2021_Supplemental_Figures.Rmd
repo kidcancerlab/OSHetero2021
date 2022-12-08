@@ -987,6 +987,10 @@ library(devtools)
 #source("scSeurat.R")
 set.seed(888)
 
+if(!dir.exists("Data/Supplement/PatientData")) {
+  tar_dir <- "Data/Supplement/PatientData"
+}
+
 #### Raw ####
 # plan("multisession", workers = 10)
 # options(future.globals.maxSize= 10 * 24000 * 1024^2)
@@ -1003,8 +1007,8 @@ type <- c("Primary", "Primary", "Lung Met", "Primary", "Primary",
           "Lung Met", "Primary", "Primary", "Primary")
 
 # Download, file, and extract the files from GEO
-if(!dir.exists("PrimaryTumor/GSE152048")) {
-  tar_dir <- "PrimaryTumor/GSE152048"
+if(!dir.exists("Data/Supplement/PatientData/GSE152048")) {
+  tar_dir <- "Data/Supplement/PatientData/GSE152048"
   dir.create(tar_dir)
   geo_pre <- "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE152nnn/GSE152048/suppl/GSE152048_"
   for(i in 1:length(s)){
@@ -1019,7 +1023,7 @@ if(!dir.exists("PrimaryTumor/GSE152048")) {
 # Create a vector that contains normalized Seurat objects for all samples
 raw <- c()
 for(i in 1:9) {
-  x <- tenx_load_qc(str_c("PrimaryTumor/GSE152048/",
+  x <- tenx_load_qc(str_c("Data/Supplement/PatientData/GSE152048/",
                           s[i], "/"))
   x <- subset(x, subset = nCount_RNA < qc[i] & percent.mt <13)
   x$src <- s[i]
@@ -1063,9 +1067,9 @@ comb <- comb %>%
   FindClusters()
 
 # Save a stopping point - merged and harmony aligned
-qs::qsave(comb, "Data/Supplement/PrimaryTumor/comb.qs")
+qs::qsave(comb, "Data/Supplement/PatientData/comb.qs")
 # Start from this stopping point
-comb <- qs::qread("Data/Supplement/PrimaryTumor/comb.qs")
+comb <- qs::qread("Data/Supplement/PatientData/comb.qs")
 
 DimPlot(comb, reduction = "umap", label = T, repel = T) +
   coord_fixed() +
@@ -1089,9 +1093,9 @@ primary <- subset(comb, subset = type == "Primary")
 #primary <- kill_cc(primary)
 # 
 # # Set a post-cc-regression stopping point
-# saveRDS(primary, "PrimaryTumor/primary-ccReg.rds")
+# saveRDS(primary, "PatientData/primary-ccReg.rds")
 # # Start from this stopping point
-# primary <- readRDS("PrimaryTumor/primary-ccReg.rds")
+# primary <- readRDS("PatientData/primary-ccReg.rds")
 
 DimPlot(primary, reduction = "umap", label = T, repel = T) +
   coord_fixed() +
@@ -1144,8 +1148,8 @@ DimPlot(primary, reduction = "umap", label = T, repel = T) +
 coord_fixed() +
   ggtitle("GSE152048 composite clusters - primaries Sanj") +
   theme(legend.position = "none")
-saveRDS(primary,'Data/Supplement/PrimaryTumor/primary.rds')
-primary<-readRDS('Data/Supplement/PrimaryTumor/primary.rds')
+saveRDS(primary,'Data/Supplement/PatientData/primary.rds')
+primary<-readRDS('Data/Supplement/PatientData/primary.rds')
 
 #### Tumor ####
 
@@ -1184,8 +1188,8 @@ for(i in 1:length(mod_names)) {
                    order = T, cols = c("lightgoldenrod", "darkred"))
   print(p)
 }
-saveRDS(tumor,'Data/Supplement/PrimaryTumor/tumor.rds')
-tumor<-readRDS('Data/Supplement/PrimaryTumor/tumor.rds')
+saveRDS(tumor,'Data/Supplement/PatientData/tumor.rds')
+tumor<-readRDS('Data/Supplement/PatientData/tumor.rds')
 
 #### Tumor_2 ####
 
@@ -1223,8 +1227,8 @@ for(i in 1:length(mod_names)) {
                    order = T, cols = c("lightgoldenrod", "darkred"))
   print(p)
 }
-saveRDS(tumor_2,'Data/Supplement/PrimaryTumor/tumor_2.rds')
-tumor_2<-readRDS('Data/Supplement/PrimaryTumor/tumor_2.rds')
+saveRDS(tumor_2,'Data/Supplement/PatientData/tumor_2.rds')
+tumor_2<-readRDS('Data/Supplement/PatientData/tumor_2.rds')
 
 #### Tumor_comb ####
 
@@ -1243,9 +1247,9 @@ tumor_comb <- tumor_comb %>%
   FindClusters(resolution=0.3)
 
 # Save a stopping point - merged and harmony aligned
-qs::qsave(tumor_comb, "Data/Supplement/PrimaryTumor/tumor_comb.qs")
+qs::qsave(tumor_comb, "Data/Supplement/PatientData/tumor_comb.qs")
 # Start from this stopping point
-tumor_comb <- qs::qread("Data/Supplement/PrimaryTumor/tumor_comb.qs")
+tumor_comb <- qs::qread("Data/Supplement/PatientData/tumor_comb.qs")
 
 DimPlot(tumor_comb, reduction = "umap", label = T, repel = T) +
   coord_fixed() +
@@ -1541,7 +1545,7 @@ pdf(file = "Figures/supplement/s8/s8.pdf",
 s8
 dev.off()
 
-save(primarytumor, file = "Data/Supplement/PrimaryTumor/primarytumor.RData")
+save(primarytumor, file = "Data/Supplement/PatientData/primarytumor.RData")
 ```
 
 ```{r s5-s6-s7-s8_scatter, dependson=c("s5-s6-s7_processing","s5-s6-s7-s8_modules")}
