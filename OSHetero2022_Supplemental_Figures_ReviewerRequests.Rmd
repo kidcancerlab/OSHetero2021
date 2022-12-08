@@ -1772,3 +1772,845 @@ gridExtra::grid.arrange(grobs = list(repfigure_3b_15,
                         layout_matrix = layout_matrix)
 dev.off()
 ```
+
+## Patient tumors and cell lines
+
+Pull out the DEG between patient primary vs met, do the same for PDXs, then compare gene lists using venn diagram.
+
+```{r pateintvpdx}
+# Start from this stopping point
+comb <- qs::qread("Data/Supplement/PrimaryTumor/comb.qs")
+
+DimPlot(comb, reduction = "umap", label = T, repel = T) +
+  coord_fixed() +
+  ggtitle("GSE152048 composite") +
+  theme(legend.position = "none")
+
+DimPlot(comb, reduction = "umap", group.by = "src") +
+  coord_fixed() +
+  ggtitle("GSE152048 composite") 
+
+DimPlot(comb, reduction = "umap", group.by = "type") +
+  coord_fixed() +
+  ggtitle("GSE152048 composite") 
+
+# Isolate the tumor cells from mets
+# Calculate and show module scores from the paper
+ms <- list()
+ms$Osteoblastic <- c("RUNX2", "COL1A1", "CDH11", "IBSP")
+ms$Chondroblastic <- c("SOX9", "ACAN", "PTH1R")
+ms$Osteoclast <- c("ACP5", "CTSK", "MMP9")
+ms$Myeloid <- c("CD74", "CD14", "FCGR3A")
+ms$TCell <- c("CD3E", "IL7R", "CD8A", "CD4", "NKG7")
+ms$NKCell <- c("NKG7", "GNLY")
+ms$NKTCell <- c("NKG7", "GNLY", "CD3E")
+ms$DCCell <- c("CD1C", "FCER1A", "CLEC9A", "CCR7", "CD14", "CD163")
+ms$Fibroblast <- c("DCN", "COL1A1")
+ms$Pericyte <- c("RGS5", "ACTA2")
+ms$MSC <- c("MME", "THY1", "CXCL12", "SFRP2")
+ms$Endothelial <- c("PECAM1", "VWF")
+ms$Myoblast <- c("MYL1", "MYLPF")
+ms$BCell <- c("MS4A1", "CD19", "JCHAIN")
+
+mod_names <- names(ms)
+plots <- list()
+#Added min.cutoff to isolate for cells most module like
+for(i in 1:length(mod_names)) {
+  comb <- AddModuleScore(comb,
+                         ms[i],
+                         name = names(ms[i]))
+  plots[[i]] <- FeaturePlot(comb,
+                          features = str_c(names(ms[i]),
+                                           "1"),
+                          min.cutoff = 2,
+                          pt.size = 1,
+                          order = T,
+                          label = T,
+                          cols = c("lightgoldenrod",
+                                   "darkred"))
+  print(plots[[i]])
+}
+
+#look for proliferation
+comb<-kill_cc(comb)
+DimPlot(comb, reduction = "umap", label = T, repel = T) +
+  coord_fixed() +
+  ggtitle("G1/S/G2M cell cycle analysis - comb tumor") +
+  theme(legend.position = "none")
+
+#Select Clusters which are tumors. Notice how one group is G2M only. 
+#Maybe possible that this group is tumor and due to 0inflation there are transcripts which are not active. 
+#Could be cycling back to other tumor states
+Idents(comb) <- comb$seurat_clusters
+DimPlot(comb, reduction = "umap", label = T, repel = T) +
+coord_fixed() +
+  ggtitle("GSE152048 composite clusters - primaries Sanj") +
+  theme(legend.position = "none")
+#saveRDS(comb,'Data/Supplement/PrimaryTumor/comb.rds')
+#comb<-readRDS('Data/Supplement/PrimaryTumor/comb.rds')
+
+#### Tumor - Met ####
+
+# Separate out the met tumor lesions
+met <- subset(comb, subset = type == "Lung Met")
+
+# Re-cluster after subsetting to tumor cells
+# Since have not re-processed, the cluster names are the same as those used in primary
+Idents(met) <- met$seurat_clusters
+met <- subset(met,
+              idents=c(2,
+                       3,
+                       27,
+                       16,
+                       15,
+                       6,
+                       28,
+                       5,
+                       20,
+                       29,
+                       0,
+                       24,
+                       14,
+                       21,
+                       33,
+                       35,
+                       13,
+                       26,
+                       7,
+                       9,
+                       23))
+DimPlot(met, reduction = "umap", label = T, repel = T) +
+coord_fixed() +
+  ggtitle("GSE152048 composite clusters - primaries") +
+  theme(legend.position = "none")
+
+met <- met %>%
+  NormalizeData() %>%
+  ScaleData() %>%
+  FindVariableFeatures()
+met <- met %>%
+  RunPCA(features = VariableFeatures(met)) %>%
+  RunUMAP(dims=1:20) %>%
+  FindNeighbors() %>%
+  FindClusters(resolution=0.3)
+
+#Plot results
+DimPlot(met,
+        pt.size=1,
+        reduction="umap",
+        label=T)+
+  coord_fixed()+
+  ggtitle("Reclustering of Met Cells")
+
+#kill_cc adds metadata
+met <- kill_cc(met)
+
+DimPlot(met, pt.size=1, reduction="umap", label=T)+
+  coord_fixed()+
+  ggtitle("Cell Cycle of met Cells")
+
+metplots2 <- list()
+#Added min.cutoff to isolate for cells most module like
+Idents(met) <- met$seurat_clusters
+for(i in 1:length(mod_names)) {
+  met <- AddModuleScore(met,
+                        ms[i],
+                        name = names(ms[i]))
+  metplots2[[i]] <- FeaturePlot(met,
+                                features = str_c(names(ms[i]),
+                                                 "1"),
+                                pt.size = 1,
+                                order = T,
+                                label = T,
+                                cols = c("lightgoldenrod",
+                                         "darkred"))
+  print(metplots2[[i]])
+}
+
+#### Met_comb ####
+
+#Now that sure of tumor cells. Take the tumor subsets from "met" and combine across data with harmony
+#cluster 12 has markers of epithelial nature(top 10 DEgs: SFN,S100A14,ELF3,LRP2,MLPH,LAMP3)
+met_comb<-subset(met,
+                 idents = c(0,
+                            1,
+                            2,
+                            6))
+met_comb <- met_comb %>%
+  NormalizeData() %>%
+  FindVariableFeatures() %>%
+  ScaleData() %>%
+  RunPCA(verbose = F)
+
+met_comb <- RunHarmony(met_comb,
+                       group.by.vars = "src")
+met_comb <- RunUMAP(met_comb,
+                    reduction = "harmony",
+                    dims = 1:30)
+met_comb <- met_comb %>%
+  FindNeighbors(reduction = "harmony",
+                dims = 1:30) %>%
+  FindClusters(resolution=0.3)
+
+# Save a stopping point - merged and harmony aligned
+qs::qsave(met_comb, "Data/Supplement/PrimaryTumor/met_comb.qs")
+# Start from this stopping point
+met_comb <- qs::qread("Data/Supplement/PrimaryTumor/met_comb.qs")
+
+DimPlot(met_comb, reduction = "umap", label = T, repel = T) +
+  coord_fixed() +
+  ggtitle("met Clusters post-integration") +
+  theme(legend.position = "none")
+
+DimPlot(met_comb, reduction = "umap", group.by = "src") +
+  coord_fixed() +
+  ggtitle("met by sample post-integration") 
+
+met_comb<-kill_cc(met_comb)
+
+#Run cell type module as before
+metplots3 <- list()
+Idents(met_comb)<-met_comb$seurat_clusters
+for(i in 1:length(mod_names)) {
+  met_comb <- AddModuleScore(met_comb,
+                             ms[i], name = names(ms[i]))
+  metplots3[[i]] <- FeaturePlot(met_comb,
+                                features = str_c(names(ms[i]), "1"),
+                                pt.size = 1,
+                                order = T,
+                                label = T,
+                                cols = c("lightgoldenrod",
+                                         "darkred"))
+  print(metplots3[[i]])
+}
+```
+
+```{r patientdeg}
+tumor_comb <- qs::qread("Data/Supplement/PrimaryTumor/tumor_comb.qs")
+met_comb <- qs::qread("Data/Supplement/PrimaryTumor/met_comb.qs")
+
+all_tumor <- merge(x = tumor_comb,
+                   y = met_comb,
+                   project = "Patient Tumor Comparison")
+
+all_tumor <- all_tumor %>%
+  NormalizeData() %>%
+  FindVariableFeatures() %>%
+  ScaleData() %>%
+  RunPCA(verbose = F)
+
+all_tumor <- RunHarmony(all_tumor,
+                       group.by.vars = "src")
+all_tumor <- RunUMAP(all_tumor,
+                    reduction = "harmony",
+                    dims = 1:30)
+all_tumor <- all_tumor %>%
+  FindNeighbors(reduction = "harmony",
+                dims = 1:30) %>%
+  FindClusters(resolution=0.3)
+
+# Save a stopping point - merged and harmony aligned
+qs::qsave(all_tumor, "Data/Supplement/PrimaryTumor/all_tumor.qs")
+# Start from this stopping point
+all_tumor <- qs::qread("Data/Supplement/PrimaryTumor/all_tumor.qs")
+
+set.seed(100)
+# DEG list between mets and primary patient tumors
+patient_de_genes <- list()
+patient_de_genes_dir <- list()
+for (tissue_name in c("Primary", "Lung Met")) {
+  for (direction in c("up", "down")) {
+    Idents(all_tumor) <- all_tumor$type
+    patient_de_genes <-
+      FindMarkers(all_tumor,
+                  ident.1 = "Lung Met",
+                  ident.2 = "Primary",
+                  ionly.pos = FALSE,
+                  min.pct = 0.1)
+    
+    # Select genes that change in the direction of interest
+    if (direction == "up") {
+      patient_de_genes_dir[["up"]] <-
+        patient_de_genes[patient_de_genes$p_val_adj < 0.05 &
+                           patient_de_genes$avg_log2FC > 0, ]
+    } else {
+      patient_de_genes_dir[["down"]] <-
+        patient_de_genes[patient_de_genes$p_val_adj < 0.05 &
+                           patient_de_genes$avg_log2FC < 0, ]
+    }
+  }
+}
+
+save(patient_de_genes_dir, file="Data/Supplement/patient_de_genes_dir.RData")
+```
+
+```{r pdxdeg}
+### Extract genes that are shared in these datasets
+load("Data/OS_merged_postCCR.RData")
+# Set seed before subsetting and DE analysis to ensure consistent results
+set.seed(100)
+
+data <- list(
+  NCHOS2 = subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-2")),
+  NCHOS7 = subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-7"))
+)
+
+pdx_data <- tibble()
+de_genes_dir <- list()
+for (direction in c("up", "down")) {
+  de_genes <- list()
+  for (i in seq_len(length(data))) {
+    Idents(data[[i]]) <- data[[i]]$src
+    de_genes[[i]] <-
+      FindMarkers(data[[i]],
+                  ident.1 = "Lung",
+                  ident.2 = "Tibia",
+                  only.pos = FALSE,
+                  min.pct = 0.1)
+    
+    # Select genes that change in the direction of interest
+    if (direction == "up") {
+      de_genes_dir[[i]][["up"]] <-
+        de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
+                        de_genes[[i]]$avg_log2FC > 0, ]
+    } else {
+      de_genes_dir[[i]][["down"]] <-
+        de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
+                        de_genes[[i]]$avg_log2FC < 0, ]
+    }
+  }
+}
+
+save(de_genes_dir, file="Data/Supplement/de_genes_dir.RData")
+```
+
+```{r compare, eval=FALSE}
+NCHOS2 <- subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-2"))
+NCHOS7 <- subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-7"))
+all_tumor <- qs::qread("Data/Supplement/PrimaryTumor/all_tumor.qs")
+
+# Plot
+all_tumor$tissue <- all_tumor$type %>%
+  stringr::str_replace("Lung Met", "Lung")
+NCHOS2$tissue <- NCHOS2$src %>%
+  stringr::str_replace("Tibia", "Primary")
+NCHOS7$tissue <- NCHOS7$src %>%
+  stringr::str_replace("Tibia", "Primary")
+
+models <- c(all_tumor,
+            NCHOS2,
+            NCHOS7)
+model_names <- c("Patient Tumors",
+                 "NCHOS2 PDX",
+                 "NCHOS7 PDX")
+names(models) <- model_names
+
+de_out <- list()
+for (cl_name in model_names) {
+  Idents(models[[cl_name]]) <- models[[cl_name]]$tissue
+  temp_de_out <-
+    FindMarkers(models[[cl_name]],
+                ident.1 = "Lung",
+                ident.2 = "Primary",
+                min.pct = 0.1) %>%
+    filter(p_val_adj <= 0.05)
+  
+  de_out[["up"]][[cl_name]] <-
+    temp_de_out %>%
+    filter(avg_log2FC > 0) %>%
+    rownames()
+  
+  de_out[["down"]][[cl_name]] <-
+    temp_de_out %>%
+    filter(avg_log2FC < 0) %>%
+    rownames()
+  
+  rm(temp_de_out)
+}
+
+pdx_v_patient <- list()
+for (cl_name in model_names) {
+  for (direction in c("up", "down")) {
+    pdx_v_patient[[direction]] <-
+      ggvenn::ggvenn(de_out[[direction]],
+                     fill_color = c("#0073C2FF",
+                                    "#EFC000FF",
+                                    "#868686FF",
+                                    "#CD534CFF"),
+                     stroke_size = 0.1,
+                     set_name_size = 2,
+                     text_size = 2,
+                     show_percentage = TRUE) +
+      ggtitle(paste0(direction)) +
+      theme(plot.title = element_text(hjust = 0.5,
+                                      size = 10,
+                                      face = "bold"))
+  }
+}
+
+#Save as PDF
+pdf("figures/supplement/requests/pdx_v_patient.pdf",
+    width = 5,
+    height = 10)
+# Put all four plots into one image
+gridExtra::grid.arrange(grobs = pdx_v_patient,
+                        vp = viewport(width = 1.0, height = 0.9))
+dev.off()
+```
+
+```{r degs, eval = F}
+# Load pdx
+load("Data/Supplement/de_genes_dir.RData")
+
+# Load patient DEG list between mets and primary tumors
+load("Data/Supplement/patient_de_genes_dir.RData")
+
+# Up
+## Patient DEGs
+A <- rownames(patient_de_genes[["up"]])
+
+## PDX DEGs
+B <- rownames(de_genes[[1]][["up"]])
+C <- rownames(de_genes[[2]][["up"]])
+
+# Down
+## Patient DEGs
+D <- rownames(patient_de_genes[["down"]])
+
+## PDX DEGs
+E <- rownames(de_genes[[1]][["down"]])
+F <- rownames(de_genes[[2]][["down"]])
+
+intersect_up <- intersect(intersect(A, B), C) %>%
+      unique()
+
+intersect_down <- intersect(intersect(D, E), F) %>%
+      unique()
+```
+
+## Met Module scores
+
+## Module Scores and Scatter Plots for Cell lines and PDXs
+
+```{r ms}
+library(rrrSingleCellUtils)
+library(patchwork)
+library(Seurat)
+library(ggplot2)
+library(tidyverse)
+library(stringr)
+# library(future)
+library(harmony)
+library(devtools)
+source("scSeurat.R")
+set.seed(888)
+
+# Equal number since feature plots can appear misleading if have uneven numbers
+load("Data/OSlist_1500_CCR.RData")
+
+# Apply Glycolysis module score to each of the primary tumor cells
+gl <- list()
+Glycolysis <- read.table(file = "pathways/Glycolysis.txt",
+                         header = FALSE,
+                         sep = ",")
+Glycolysis <- Glycolysis[, 1]
+
+
+Hypoxia <- read.table(file = "pathways/Hypoxia.txt",
+                      header = FALSE,
+                      sep = ",")
+Hypoxia <- Hypoxia[, 1]
+
+
+EMT <- read.table(file = "pathways/EMT.txt",
+                  header = FALSE,
+                  sep = ",")
+EMT <- EMT[, 1]
+
+
+TNFA <- read.table(file = "pathways/TNFA.txt",
+                   header = FALSE,
+                   sep = ",")
+TNFA <- TNFA[, 1]
+
+gl$Glycolysis <- Glycolysis
+gl$Hypoxia <- Hypoxia
+gl$EMT <- EMT
+gl$TNFA <- TNFA
+
+mod_names <- names(gl)
+
+#### Glycolysis ####
+# Glycolysis - Added min.cutoff to isolate for cells most module like
+gly <- list()
+for (i in 1:length(OS.list_1500)) {
+  OS.list_1500[[i]] <- AddModuleScore(OS.list_1500[[i]],
+                             gl[1],
+                             name = names(gl[1]))
+  p <- FeaturePlot(OS.list_1500[[i]],
+                   features = str_c(names(gl[1]),
+                                    "1"),
+                   min.cutoff = 0.1,
+                   pt.size = 1,
+                   order = T,
+                   cols = c("lightgoldenrod",
+                            "darkred")) +
+    ggtitle(paste(head(OS.list_1500[[i]]@meta.data$model,1),
+                   head(OS.list_1500[[i]]@meta.data$src,1),
+                   "-",
+                   names(gl[1]))) +
+    theme(aspect.ratio = 1)
+  
+  pdf(file = paste0("figures/supplement/requests/",
+                    names(gl[1]),
+                    "_FeaturePlot_",
+                    paste0(head(OS.list_1500[[i]]@meta.data$model,1),
+                           head(OS.list_1500[[i]]@meta.data$src,1),
+                           ".pdf")))
+      print(p)
+      dev.off()
+  
+  gly[[i]] <- p
+  
+}
+
+gly_plot <- gly[[1]] +
+  gly[[2]] +
+  gly[[3]] +
+  gly[[4]] +
+  gly[[5]] +
+  gly[[6]] +
+  gly[[7]] +
+  gly[[8]] +
+  gly[[9]] +
+  gly[[10]] +
+  gly[[11]] +
+  gly[[12]] +
+  gly[[13]] +
+  plot_layout(ncol = 3)
+
+pdf(file = "figures/supplement/requests/gly_plot.pdf",
+    height=26,
+    width=15)
+gly_plot
+dev.off()
+
+#### Hypoxia ####
+# Hypoxia - Added min.cutoff to isolate for cells most module like
+hypx <- list()
+for (i in 1:length(OS.list_1500)) {
+  OS.list_1500[[i]] <- AddModuleScore(OS.list_1500[[i]],
+                             gl[2],
+                             name = names(gl[2]))
+  p <- FeaturePlot(OS.list_1500[[i]],
+                   features = str_c(names(gl[2]),
+                                    "1"),
+                   min.cutoff = 0.1,
+                   pt.size = 1,
+                   order = T,
+                   cols = c("lightgoldenrod",
+                            "darkred")) +
+    ggtitle(paste(head(OS.list_1500[[i]]@meta.data$model,1),
+                   head(OS.list_1500[[i]]@meta.data$src,1),
+                   "-",
+                   names(gl[2]))) +
+    theme(aspect.ratio = 1)
+  
+  pdf(file = paste0("figures/supplement/requests/",
+                    names(gl[2]),
+                    "_FeaturePlot_",
+                    paste0(head(OS.list_1500[[i]]@meta.data$model,1),
+                           head(OS.list_1500[[i]]@meta.data$src,1),
+                           ".pdf")))
+  print(p)
+  dev.off()
+  
+  hypx[[i]] <- p
+}
+hypx_plot <- hypx[[1]] +
+  hypx[[2]] +
+  hypx[[3]] +
+  hypx[[4]] +
+  hypx[[5]] +
+  hypx[[6]] +
+  hypx[[7]] +
+  hypx[[8]] +
+  hypx[[9]] +
+  hypx[[10]] +
+  hypx[[11]] +
+  hypx[[12]] +
+  hypx[[13]] +
+  plot_layout(ncol = 3)
+
+pdf(file = "figures/supplement/requests/hypx_plot.pdf",
+    height=26,
+    width=15)
+hypx_plot
+dev.off()
+
+#### EMT ####
+# EMT - Added min.cutoff to isolate for cells most module like
+emt <- list()
+for (i in 1:length(OS.list_1500)) {
+  OS.list_1500[[i]] <- AddModuleScore(OS.list_1500[[i]],
+                             gl[3],
+                             name = names(gl[3]))
+  p <- FeaturePlot(OS.list_1500[[i]],
+                   features = str_c(names(gl[3]),
+                                    "1"),
+                   min.cutoff = 0.1,
+                   pt.size = 1,
+                   order = T,
+                   cols = c("lightgoldenrod",
+                            "darkred")) +
+    ggtitle(paste(head(OS.list_1500[[i]]@meta.data$model,1),
+                   head(OS.list_1500[[i]]@meta.data$src,1),
+                   "-",
+                   names(gl[3]))) +
+    theme(aspect.ratio = 1)
+  
+  pdf(file = paste0("figures/supplement/requests/",
+                    names(gl[3]),
+                    "_FeaturePlot_",
+                    paste0(head(OS.list_1500[[i]]@meta.data$model,1),
+                           head(OS.list_1500[[i]]@meta.data$src,1)),
+                    ".pdf"))
+  print(p)
+  dev.off()
+  
+  emt[[i]] <- p
+}
+
+emt_plot <- emt[[1]] +
+  emt[[2]] +
+  emt[[3]] +
+  emt[[4]] +
+  emt[[5]] +
+  emt[[6]] +
+  emt[[7]] +
+  emt[[8]] +
+  emt[[9]] +
+  emt[[10]] +
+  emt[[11]] +
+  emt[[12]] +
+  emt[[13]] +
+  plot_layout(ncol = 3)
+
+pdf(file = "figures/supplement/requests/emt_plot.pdf",
+    height=26,
+    width=15)
+emt_plot
+dev.off()
+
+#### TNFA ####
+# TNFA - Added min.cutoff to isolate for cells most module like
+tnf <- list()
+for (i in 1:length(OS.list_1500)) {
+  OS.list_1500[[i]] <- AddModuleScore(OS.list_1500[[i]],
+                             gl[4],
+                             name = names(gl[4]))
+  p <- FeaturePlot(OS.list_1500[[i]],
+                   features = str_c(names(gl[4]),
+                                    "1"),
+                   min.cutoff = 0.1,
+                   pt.size = 1,
+                   order = T,
+                   cols = c("lightgoldenrod",
+                            "darkred")) +
+    ggtitle(paste(head(OS.list_1500[[i]]@meta.data$model,1),
+                   head(OS.list_1500[[i]]@meta.data$src,1),
+                   "-",
+                   names(gl[4]))) +
+    theme(aspect.ratio = 1)
+  
+  pdf(file = paste0("figures/supplement/requests/",
+                    names(gl[4]),
+                    "_FeaturePlot_",
+                    paste0(head(OS.list_1500[[i]]@meta.data$model,1),
+                           head(OS.list_1500[[i]]@meta.data$src,1)),
+                    ".pdf"))
+  print(p)
+  dev.off()
+  
+  tnf[[i]] <- p
+}
+
+tnf_plot <- tnf[[1]] +
+  tnf[[2]] +
+  tnf[[3]] +
+  tnf[[4]] +
+  tnf[[5]] +
+  tnf[[6]] +
+  tnf[[7]] +
+  tnf[[8]] +
+  tnf[[9]] +
+  tnf[[10]] +
+  tnf[[11]] +
+  tnf[[12]] +
+  tnf[[13]] +
+  plot_layout(ncol = 3)
+
+pdf(file = "figures/supplement/requests/tnf_plot.pdf",
+    height=26,
+    width=15)
+tnf_plot
+dev.off()
+
+save(OS.list_1500, file = "Data/Supplement/PrimaryTumor/OS.list_1500_ms.RData")
+```
+
+```{r cellpdx_scatter}
+colors <- c("#F8766D",
+            "#C49A00",
+            "#53B400",
+            "#00C094",
+            "#00B6EB",
+            "#A58AFF",
+            "#FB61D7")
+#### Glycolysis vs all others ####
+combo <- list()
+for (j in 1:3) {
+  for (i in 1:length(primarytumor)) {
+    p <- FeatureScatter(primarytumor[[i]],
+                        feature1 = str_c(names(gl[1]),
+                                         "1"),
+                        
+                        feature2 = str_c(names(gl[j+1]),
+                                         "1"),
+                        group.by = "src",
+                        cols = colors[[i]],
+                        pt.size = 0.5) +
+      theme(aspect.ratio = 1)
+    print(p)
+    
+    pdf(file = paste0("figures/supplement/s5-",
+                      j+5,
+                      "/",
+                      names(gl[1]),
+                      names(gl[j+1]),
+                      "_ScatterPlot_",
+                      s[i],
+                      ".pdf"),
+        height = 5,
+        width = 5)
+    print(p)
+    dev.off()
+    
+    combo[[i]] <- p
+  }
+    sfig <- combo[[1]] +
+      combo[[2]] +
+      combo[[3]] +
+      combo[[4]] +
+      combo[[5]] +
+      combo[[6]] +
+      combo[[7]] +
+      plot_layout(ncol = 3)
+    
+    pdf(file = paste0("figures/supplement/s5-",
+                      j+5,
+                      "/s5-",
+                      j+5,
+                      ".pdf"),
+        height=13,
+        width=15)
+    print(sfig)
+    dev.off()
+}
+#### Hypoxia vs Remaining ####
+combo <- list()
+for (j in 1:2) {
+  for (i in 1:length(primarytumor)) {
+    p <- FeatureScatter(primarytumor[[i]],
+                        feature1 = str_c(names(gl[2]),
+                                         "1"),
+                        
+                        feature2 = str_c(names(gl[j+2]),
+                                         "1"),
+                        group.by = "src",
+                        cols = colors[[i]],
+                        pt.size = 0.5) +
+      theme(aspect.ratio = 1)
+    print(p)
+    
+    pdf(file = paste0("figures/supplement/s6-",
+                      j+6,
+                      "/",
+                      names(gl[2]),
+                      names(gl[j+2]),
+                      "_ScatterPlot_",
+                      s[i],
+                      ".pdf"),
+        height = 5,
+        width = 5)
+    print(p)
+    dev.off()
+    
+    combo[[i]] <- p
+  }
+    sfig <- combo[[1]] +
+      combo[[2]] +
+      combo[[3]] +
+      combo[[4]] +
+      combo[[5]] +
+      combo[[6]] +
+      combo[[7]] +
+      plot_layout(ncol = 3)
+    
+    pdf(file = paste0("figures/supplement/s6-",
+                      j+6,
+                      "/s6-",
+                      j+6,
+                      ".pdf"),
+        height=13,
+        width=15)
+    print(sfig)
+    dev.off()
+}
+
+#### Last Two vs Each other ####
+combo <- list()
+
+  for (i in 1:length(primarytumor)) {
+    p <- FeatureScatter(primarytumor[[i]],
+                        feature1 = str_c(names(gl[3]),
+                                         "1"),
+                        
+                        feature2 = str_c(names(gl[4]),
+                                         "1"),
+                        group.by = "src",
+                        cols = colors[[i]],
+                        pt.size = 0.5) +
+      theme(aspect.ratio = 1)
+    print(p)
+    
+    pdf(file = paste0("figures/supplement/s7-8/",
+                      names(gl[3]),
+                      names(gl[4]),
+                      "_ScatterPlot_",
+                      s[i],
+                      ".pdf"),
+        height = 5,
+        width = 5)
+    print(p)
+    dev.off()
+    
+    combo[[i]] <- p
+  }
+    sfig <- combo[[1]] +
+      combo[[2]] +
+      combo[[3]] +
+      combo[[4]] +
+      combo[[5]] +
+      combo[[6]] +
+      combo[[7]] +
+      plot_layout(ncol = 3)
+    
+    pdf(file = paste0("figures/supplement/s7-8/s7-8.pdf"),
+        height=13,
+        width=15)
+    print(sfig)
+    dev.off()
+
+```
+
