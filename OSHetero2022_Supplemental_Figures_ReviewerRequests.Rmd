@@ -1298,11 +1298,7 @@ OS.list_1500 <- c(OS.list_1500,
 merged_sobjs <-
     SeuratObject:::merge.Seurat(x = OS.list_1500[[1]],
                                 y = OS.list_1500[2:length(OS.list_1500)],
-                                add.cell.ids = names(OS.list_1500)) %>%
-    NormalizeData(verbose = FALSE) %>%
-    FindVariableFeatures(verbose = FALSE) %>%
-    ScaleData(verbose = FALSE) %>%
-    RunPCA(verbose = FALSE)
+                                add.cell.ids = names(OS.list_1500))
 
 merged_sobjs$group <-
     colnames(merged_sobjs) %>%
@@ -1322,6 +1318,16 @@ better_names <-
     str_replace("OB", "Osteoblast") %>%
     str_replace("t143", "143")
 
+# Find the genes that are variable within each sample, and combine into a vector
+var_genes <- c()
+for (i in seq_along(OS.list_1500)) {
+  OS.list_1500[[i]] <- OS.list_1500[[i]] %>%
+    NormalizeData(verbose = FALSE) %>%
+    FindVariableFeatures(verbose = FALSE)
+  var_genes <- c(var_genes, VariableFeatures(OS.list_1500[[i]]))
+}
+var_genes <- unique(var_genes)
+
 raw_ith <-
     tibble(Sample = character(),
            ITHScore = numeric())
@@ -1329,7 +1335,15 @@ raw_ith <-
 for (i in seq_len(length(group_names))) {
   better_name <-
     better_names[i]
-  sub_obj <- subset(merged_sobjs, group == group_names[i])
+
+  sub_obj <- subset(merged_sobjs, group == group_names[i]) %>%
+    NormalizeData(verbose = FALSE) %>%
+    FindVariableFeatures(verbose = FALSE) %>%
+    ScaleData(
+      features = var_genes,
+      vars.to.regress = c("S.Score", "G2M.Score"),
+      block.size = 100000)
+
   z <-
     GetAssayData(sub_obj, slot = "scale.data") %>%
     as.data.frame() %>%
@@ -1364,8 +1378,8 @@ ridge_cols <- c("#B8B8B8FF",
                 "#E495A5", "#E495A5", "#E495A5",
                 "#ABB065", "#ABB065", "#ABB065")
 rplot <-
-  ggplot(ith, aes(x = logITH, y = Sample, fill = Sample)) +
-  geom_density_ridges(scale = 2) +
+  ggplot(ith, aes(x = logITH, y = Sample)) +
+  geom_density_ridges(scale = 2, aes(fill = Sample)) +
   scale_y_discrete(expand = c(0, 0), limits = rev) +
   scale_x_continuous(expand = c(0, 0)) +
   scale_fill_manual(values = ridge_cols) +
@@ -1402,62 +1416,54 @@ comps <- tribble(
   17, 19
 )
 
+comps$ctl_name <- unique(ith$Sample)[comps$ctl]
+comps$comp_name <- unique(ith$Sample)[comps$comp]
+comps$mwu_p <- NA
+comps$overlap <- NA
+comps$eff_size <- NA
+
 # Calculate Mann-Whitney test (in figure, p-value)
-stats <- matrix(nrow = 19, ncol = 2)
-mwu <- matrix(nrow = 19, ncol = 19)
 for (i in seq_along(comps$ctl)) {
   message("compare ",
           group_names[comps$ctl[i]],
           " to ",
           group_names[comps$comp[i]])
 
-  s <-
+  comps$mwu_p[i] <-
     wilcox.test(filter(ith, Sample == better_names[comps$ctl[i]]) %>%
                     pull(ITHScore),
                 filter(ith, Sample == better_names[comps$comp[i]]) %>%
-                    pull(ITHScore))
-  #P-value of comparison group (column)
-  #correlated with its respective proper control (row)
-  mwu[comps$ctl[i], comps$comp[i]] <- s$p.value
-  #P-value for each group given proper comparison to respective controls
-  stats[comps$comp[i]] <- s$p.value
-}
+                    pull(ITHScore))$p.value
 
-# Calculate effect size (in figure)
-efs <- matrix(nrow = 19, ncol = 19)
-for (i in seq_along(comps$ctl)) {
-  effect_size <-
+  comps$overlap[i] <-
     overlapping::overlap(list(filter(ith, Sample == better_names[comps$ctl[i]]) %>%
                     pull(ITHScore),
                               filter(ith, Sample == better_names[comps$comp[i]]) %>%
                     pull(ITHScore)))$OV
-  #Effect size of comparison group (column)
-  #correlated with its respective proper control (row)
-  efs[comps$ctl[i], comps$comp[i]] <- effect_size
-  #Effect size for each group given proper comparison to respective controls
-  stats[comps$comp[i], 2] <- effect_size
+
+  comps$eff_size[i] <-
+    effsize::cohen.d(filter(ith, Sample == better_names[comps$ctl[i]]) %>%
+                        pull(ITHScore),
+                     filter(ith, Sample == better_names[comps$comp[i]]) %>%
+                        pull(ITHScore))$estimate
 }
 
-# Correlate p-values with Sample name
-stats <- as.data.frame(stats)
-stats$Sample <- base::unique(ith[["Sample"]]) %>%
-  as.vector()
-stats <- stats[-1, ]
+# Convert overlap to percentage
+comps$overlap <- paste0(format(comps$overlap * 100, digits = 2, trim = T), "%")
 
 # Plot with p-values superimposed for each sample
 repfigure_3b_15 <-
     rplot +
-    xlim(1.1, 2.2) +
-    geom_text(data = stats,
-              aes(x = 2.1, y = Sample),
-                  label = paste0("p=",
-                                 format(stats$V1, digits = 3, trim = TRUE),
-                                  "\neffect size=",
-                                  format(stats$V2, digits = 3, trim = TRUE),
-                                  "\n"),
-                  size = 1.8,
-                  nudge_y = 0.2,
-                  color = "#2b2a2a")
+    geom_text(data = comps,
+              aes(x = 1.95, y = comp_name),
+              label = paste0("overlap ",
+                             comps$overlap,
+                             ", eff. size ",
+                             format(comps$eff_size, digits = 1, trim = T),
+                             "\n"),
+              size = 1.8,
+              nudge_y = 0.2,
+              color = "#2b2a2a")
 repfigure_3b_15
 
 save(repfigure_3b_15,
