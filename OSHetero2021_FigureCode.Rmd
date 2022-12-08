@@ -1584,6 +1584,10 @@ lung_sub_enr <- RenameIdents(lung_sub_enr,
                              "3" = "Remaining Tumor Cells",
                              "6" = "Remaining Tumor Cells")
 
+# Save for use in supplement
+save(lung_sub_enr, file = "Data/lung_sub_enr.RData")
+
+# Create object list for DGEA hallmark analysis
 B.list <- list(OS17 = lung_sub_enr)
 
 # Perform differential gene expression analysis for hallmark pathways
