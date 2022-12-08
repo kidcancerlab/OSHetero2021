@@ -630,7 +630,7 @@ group_names <-
 
 # Find the genes that are variable within each sample, and combine into a vector
 var_genes <- c()
-for(i in seq_along(OS.list_1500)) {
+for (i in seq_along(OS.list_1500)) {
   OS.list_1500[[i]] <- OS.list_1500[[i]] %>%
     NormalizeData(verbose = FALSE) %>%
     FindVariableFeatures(verbose = FALSE)
@@ -693,8 +693,8 @@ ridge_cols <- c("#B8B8B8FF",
                 "#5CB85CFF", "#5CB85CFF", "#5CB85CFF"
 )
 rplot <-
-  ggplot(ith, aes(x = logITH, y = Sample, fill = Sample)) +
-  geom_density_ridges(scale = 2) +
+  ggplot(ith, aes(x = logITH, y = Sample)) +
+  geom_density_ridges(scale = 2, aes(fill = Sample)) +
   scale_y_discrete(expand = c(0, 0), limits = rev) +
   scale_x_continuous(expand = c(0, 0)) +
   scale_fill_manual(values = ridge_cols) +
@@ -726,6 +726,9 @@ comps <- tribble(
 )
 comps$ctl_name <- unique(ith$Sample)[comps$ctl]
 comps$comp_name <- unique(ith$Sample)[comps$comp]
+comps$mwu_p <- NA
+comps$overlap <- NA
+comps$eff_size <- NA
 
 # Calculate Mann-Whitney test (p-value), overlap, and effect size (Cohen d)
 for (i in seq_along(comps$ctl)) {
@@ -739,18 +742,18 @@ for (i in seq_along(comps$ctl)) {
 }
 
 # Convert overlap to percentage
-comps$overlap <- paste0(format(comps$overlap*100, digits = 2, trim = T), "%")
+comps$overlap <- paste0(format(comps$overlap * 100, digits = 2, trim = T), "%")
 
 # Plot with p-values superimposed for each sample
 figure_3b <-
   rplot +
-  geom_text(data = stats,
-    aes(x = 1.8, y = Sample),
+  geom_text(data = comps,
+    aes(x = 1.8, y = comp_name),
     label = paste0("overlap ",
-      comps$overlap,
-      ", eff. size ",
-      format(comps$eff_size, digits = 1, trim = T),
-      "\n"),
+                   comps$overlap,
+                   ", eff. size ",
+                   format(comps$eff_size, digits = 1, trim = T),
+                   "\n"),
     size = 8,
     color = "#2b2a2a")
 figure_3b
