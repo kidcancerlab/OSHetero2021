@@ -25,7 +25,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r Fig1_lib, cache=FALSE}
-source("scSeurat.R")
+#source("scSeurat.R")
 source("Downstream.v2.R")
 set.seed(888)
 # loading libraries
@@ -64,7 +64,7 @@ Note: supplemental numbering in this code reflects the previous version of the p
 library(rrrSingleCellUtils)
 
 # Prior to cell-cycle regression
-load("Data/Raw/os17_cx_raw.RData")
+load("Data/os17_cx_raw.RData")
 
 os17.cx_noccr <- NormalizeData(os17_cx_raw) %>%
   FindVariableFeatures(selection.method = "vst") %>%
@@ -227,7 +227,7 @@ dev.off()
 # S2
 
 ```{r s2}
-load("Data/Raw/osteoblasts.RData")
+load("Data/osteoblasts.RData")
 set.seed(100)
 
 osteoblasts <- NormalizeData(osteoblasts) %>%
@@ -527,9 +527,6 @@ options(future.globals.maxSize= 8912896000000)
 ```{r s4}
 # Determine overlay of replicates with or without the use
 # of batch-effect correction methods such as Harmony, FastMNN
-
-# Clean up environment
-rm(list=setdiff(ls(), "tenXLoadQC"))
 
 source("scSeurat.R")
 source("Downstream.v2.R")
