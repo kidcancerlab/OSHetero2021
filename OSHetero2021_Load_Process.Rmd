@@ -124,6 +124,11 @@ DimPlot(os17_cx,
   coord_fixed() +
   scale_color_npg(alpha = 0.7)
 
+if(!file.exists("Data")){
+  dir.create("Data")
+}
+save(os17_cx, file = "Data/os17_cx_noccr.RData")
+
 # Regress out the effects of cell cycle on these tumor cells
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
@@ -155,9 +160,6 @@ plot
 # Therefore, we decided to proceed with res = 0.1
 os17_cx <- FindClusters(os17_cx, resolution = 0.1)
 
-if(!file.exists("Data")){
-  dir.create("Data")
-}
 save(os17_cx, file = "Data/os17_cx_CCR.RData")
 ```
 
@@ -213,6 +215,7 @@ os17_lung_raw <- process_ltbc(os17_lung_raw,
 
 ```{r Fig5_process, dependson='Fig5_tag', fig.height=8, fig.width=8}
 # Subset all to 2800 cells in each condition
+set.seed(108)
 os17_cx <- subset(os17_cx_raw,
   cells = sample(Cells(os17_cx_raw), 2800))
 os17.tib <- subset(os17_tib_raw,
