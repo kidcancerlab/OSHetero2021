@@ -1164,7 +1164,6 @@ Figure 5. Lung colonization bottleneck enriches for clonal populations with a co
 ### Load
 
 ```{r Fig5load}
-#source("scSeurat.R")
 library(rrrSingleCellUtils)
 
 # Load raw objects for lineage tag analysis
@@ -1210,10 +1209,13 @@ figure_5b <- DimPlot(os17,
                      pt.size = 1,
                      label = T,
                      label.size = 3,
-                     order = FALSE) +
+                     order = FALSE,
+                     cols = c("#E64B35FF",
+                              "#00A087FF",
+                              "#4DBBD5FF")) +
   coord_fixed() +
   ggtitle(" ") +
-  scale_color_npg() +
+  #scale_color_npg() +
   theme(axis.text = element_text(size = 6),
         axis.title = element_text(size = 8),
         legend.text = element_text(size = 6),
@@ -1277,8 +1279,10 @@ dim_plot <- function(x, src_sub, color) {
 }
 
 ltbc_hist <- function(df, fill, n_uniq, title) {
-  ggplot(df, aes(x = stats::reorder(Var1, -freq),
-                 y = freq)) +
+  df %>% 
+    head(n = 40) %>%
+    ggplot(aes(x = stats::reorder(Var1, -freq),
+                   y = freq)) +
     geom_bar(fill = fill, stat = "identity") +
     theme_bw() +
     theme(plot.title = element_text(size = 8),
@@ -1291,7 +1295,7 @@ ltbc_hist <- function(df, fill, n_uniq, title) {
     labs(x = "",
          y = "Percentage of Cells",
          title = title) +
-    ylim(0, 1.75) +
+    ylim(0, 6) +
     annotate("text",
              label = paste(n_uniq,
                            "out of every 1000 clones are unique"),
@@ -1312,7 +1316,6 @@ figure_5c1 <-
                cid_lt = S0016xS0027_ltbc,
                histogram = FALSE,
                title = "Culture, Top 40 Clones",
-               ymax = 1.75,
                col_fill = "#E64B35FF",
                relative = TRUE,
                ret_list = TRUE) %>%
@@ -1341,7 +1344,6 @@ figure_5c2 <- process_ltbc(os17_tib_raw,
                            cid_lt = S0018xS0028_ltbc,
                            histogram = FALSE,
                            title = "Tibia, Top 40 Clones",
-                           ymax = 1.75,
                            col_fill = "#00A087FF",
                            relative = TRUE,
                            ret_list = TRUE) %>%
@@ -1369,7 +1371,6 @@ figure_5c3 <- process_ltbc(os17_lung_raw,
                            cid_lt = S0024xS0029_ltbc,
                            histogram = FALSE,
                            title = "Lung, Top 40 Clones",
-                           ymax = 1.75,
                            col_fill = "#4DBBD5FF",
                            relative = TRUE,
                            ret_list = TRUE) %>%
