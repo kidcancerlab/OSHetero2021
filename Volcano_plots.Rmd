@@ -33,8 +33,9 @@ library(stringr)
 library(harmony)
 library(patchwork)
 library(ggpubr)
-setwd("/gpfs0/home2/gdrobertslab/rsexf001/OSHetero2021")
+
 set.seed(888)
+
 sysfonts::font_add("Arial Narrow", "ARIALN.TTF", bold = "ARIALNB.TTF")
 showtext::showtext_auto()
 theme_set(theme_pubr())
@@ -88,8 +89,8 @@ Then, graph each of those DEG datasets using a volcano plot.
 
 ```{r load, cache=TRUE}
 #From Fig1
-load("Data/os17.cx_CCR.RData") #os17.cx
-load(file ="Data/OS7.cx_CCR.RData") #OS7.cx
+load("Data/os17_cx_CCR.RData") #os17.cx
+load("Data/os7_cx_CCR.RData") #OS7.cx
 
 # From Fig3
 load("Data/OS_list_CCR.RData")
@@ -102,11 +103,11 @@ OS_list$NCHOS2_TL <- OS_list$NCHOS2_TL %>%
 OS_list$NCHOS7_TL <- OS_list$NCHOS7_TL %>%
     FindClusters(resolution = 0.2)
 # From Fig5
-load("/home/gdrobertslab/rsexf001/OSHetero2021/Data/os17.RData") # from figure 5 (culture, tibia, lung)
+load("Data/os17.RData") # from figure 5 (culture, tibia, lung)
 
 tumor_list <- c(
-		os17.cx,
-		OS7.cx,
+		os17_cx,
+		os7_cx,
 		OS_list$OS17_TL,
                 OS_list$`143B_TL`,
                 OS_list$NCHOS2_TL,
