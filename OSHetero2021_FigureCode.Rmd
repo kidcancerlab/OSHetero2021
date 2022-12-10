@@ -1279,7 +1279,7 @@ dim_plot <- function(x, src_sub, color) {
 }
 
 ltbc_hist <- function(df, fill, n_uniq, title) {
-  df %>% 
+  df %>%
     head(n = 40) %>%
     ggplot(aes(x = stats::reorder(Var1, -freq),
                    y = freq)) +
@@ -1298,7 +1298,7 @@ ltbc_hist <- function(df, fill, n_uniq, title) {
     ylim(0, 6) +
     annotate("text",
              label = paste(n_uniq,
-                           "out of every 1000 clones are unique"),
+                           "out of every 1000 cells have a unique clone"),
              x = -Inf,
              y = Inf,
              hjust = -0.4,
@@ -1308,7 +1308,16 @@ ltbc_hist <- function(df, fill, n_uniq, title) {
 
 n_uniq_1 <-
   (table(os17_cx_raw$lt) == 1) %>%
-  sum()
+  sum() / length(unique(na.omit(os17_cx_raw$lt))) * 1000
+#789
+
+cells_w_uniq_clones_1 <-
+    table(na.omit(os17_cx_raw$lt)) %>%
+    as.data.frame() %>%
+    summarize(n = sum(Freq == 1) / sum(Freq) * 1000) %>%
+    pull(n) %>%
+    round()
+# 624
 
 # Plot histograms of lineage tracing tags in the Seurat objects
 figure_5c1 <-
@@ -1319,7 +1328,7 @@ figure_5c1 <-
                col_fill = "#E64B35FF",
                relative = TRUE,
                ret_list = TRUE) %>%
-  ltbc_hist(fill = "#E64B35FF", n_uniq_1, "Culture, Top 40 Clones")
+  ltbc_hist(fill = "#E64B35FF", cells_w_uniq_clones_1, "Culture, Top 40 Clones")
 
 inset_1 <- dim_plot(os17, "Culture", color = "#E64B35FF")
 
@@ -1338,7 +1347,16 @@ dev.off()
 
 n_uniq_2 <-
   (table(os17_tib_raw$lt) == 1) %>%
-  sum()
+  sum() / length(unique(na.omit(os17_tib_raw$lt))) * 1000
+# 817
+
+cells_w_uniq_clones_2 <-
+    table(na.omit(os17_tib_raw$lt)) %>%
+    as.data.frame() %>%
+    summarize(n = sum(Freq == 1) / sum(Freq) * 1000) %>%
+    pull(n) %>%
+    round()
+# 652
 
 figure_5c2 <- process_ltbc(os17_tib_raw,
                            cid_lt = S0018xS0028_ltbc,
@@ -1347,7 +1365,7 @@ figure_5c2 <- process_ltbc(os17_tib_raw,
                            col_fill = "#00A087FF",
                            relative = TRUE,
                            ret_list = TRUE) %>%
-  ltbc_hist(fill = "#00A087FF", n_uniq_2, "Tibia, Top 40 Clones")
+  ltbc_hist(fill = "#00A087FF", cells_w_uniq_clones_2, "Tibia, Top 40 Clones")
 
 inset_2 <- dim_plot(os17, "Tibia", color = "#00A087FF")
 
@@ -1365,7 +1383,16 @@ dev.off()
 
 n_uniq_3 <-
   (table(os17_lung_raw$lt) == 1) %>%
-  sum()
+  sum() / length(unique(na.omit(os17_lung_raw$lt))) * 1000
+# 638
+
+cells_w_uniq_clones_3 <-
+    table(na.omit(os17_lung_raw$lt)) %>%
+    as.data.frame() %>%
+    summarize(n = sum(Freq == 1) / sum(Freq) * 1000) %>%
+    pull(n) %>%
+    round()
+# 243
 
 figure_5c3 <- process_ltbc(os17_lung_raw,
                            cid_lt = S0024xS0029_ltbc,
@@ -1374,7 +1401,7 @@ figure_5c3 <- process_ltbc(os17_lung_raw,
                            col_fill = "#4DBBD5FF",
                            relative = TRUE,
                            ret_list = TRUE) %>%
-  ltbc_hist(fill = "#4DBBD5FF", n_uniq_3, "Lung, Top 40 Clones")
+  ltbc_hist(fill = "#4DBBD5FF", cells_w_uniq_clones_3, "Lung, Top 40 Clones")
 
 inset_3 <- dim_plot(os17, "Lung", color = "#4DBBD5FF")
 
