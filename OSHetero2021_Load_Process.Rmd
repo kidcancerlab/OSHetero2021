@@ -151,11 +151,10 @@ os17_cx_nc <- nRes(os17_cx,
 plot <- pSil(os17_cx_nc, 0.15)
 plot
 
-# With res = 0.15, cells in cluster 3 do not have any significantly different genes that are deferentially regulated
-# Therefore, we decided to proceed with res = 0.1
-os17_cx <- FindClusters(os17_cx, resolution = 0.1)
+# Therefore, we decided to proceed with res = 0.15
+os17_cx <- FindClusters(os17_cx, resolution = 0.15)
 
-if(!file.exists("Data")){
+if(!file.exists("Data")) {
   dir.create("Data")
 }
 save(os17_cx, file = "Data/os17_cx_CCR.RData")
