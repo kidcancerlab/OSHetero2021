@@ -209,7 +209,7 @@ for (t in names_list) {
         x = "NES",
         showCategory = 15,
         font.size = 9) +
-          labs(title = c,
+          labs(title = paste(t, c),
             subtitle = "GO-BP Gene Sets")
     } else {
       plots[[t]][[c]][["GO-BP"]] <-
@@ -218,7 +218,7 @@ for (t in names_list) {
           aes(x = x, y = y, label = text)) +
           geom_text() +
         theme(axis.text = element_text(size = 5)) +
-          labs(title = c,
+          labs(title = paste(t, c),
             subtitle = "GO-BP Gene Sets")
     }
   }
@@ -240,7 +240,7 @@ for (t in names_list) {
         x = "NES",
         showCategory = 15,
         font.size = 9) +
-          labs(title = c,
+          labs(title = paste(t, c),
             subtitle = "Hallmark Gene Sets")
     } else {
       plots[[t]][[c]][["Hallmark"]] <-
@@ -249,7 +249,7 @@ for (t in names_list) {
           aes(x = x, y = y, label = text)) +
           geom_text() +
         theme(axis.text = element_text(size = 5)) +
-          labs(title = c,
+          labs(title = paste(t, c),
             subtitle = "Hallmark Gene Sets")
     }
   }
