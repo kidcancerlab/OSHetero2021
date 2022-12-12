@@ -2601,9 +2601,9 @@ for (i in 1:2) {
     sfig <- combo[[1]] +
       combo[[2]]
 
-    pdf(file = paste0("Figures/supplement/met",
-                      names(gl[1]),
-                      names(gl[i+1]),
+    pdf(file = paste0("Figures/supplement/met/",
+                      names(gl[2]),
+                      names(gl[i+2]),
                       "_combined",
                       ".pdf"),
         height=10,
