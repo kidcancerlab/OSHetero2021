@@ -1329,6 +1329,9 @@ for(i in 6){
           theme(legend.position = "none") +
           ggtitle(str_c(s[i], " basic clustering")))
 }
+
+save(primarytumor,
+     file = "Data/Supplement/primarytumor_preModuleScoring.RData")
 ```
 
 ```{r s5-s6-s7-s8_modules, dependson="s5-s6-s7_processing"}
@@ -1558,12 +1561,7 @@ save(primarytumor, file = "Data/Supplement/PatientData/primarytumor.RData")
 ```
 
 ```{r s5-s6-s7-s8_scatter, dependson=c("s5-s6-s7_processing","s5-s6-s7-s8_modules")}
-# testing <- as.data.frame(primarytumor[["BC22"]]$Glycolysis1) %>% rownames_to_column(testing)
-# colnames(testing) <- c("cellid", "Glycolysis")
-# testing2 <- as.data.frame(primarytumor[["BC22"]]$Hypoxia1) %>% rownames_to_column()
-# colnames(testing) <- c("cellid", "Hypoxia")
-# combo <- merge(x=testing, y=testing2, by="rowname")
-
+#print(hue_pal()(7))
 colors <- c("#F8766D",
             "#C49A00",
             "#53B400",
@@ -1571,43 +1569,44 @@ colors <- c("#F8766D",
             "#00B6EB",
             "#A58AFF",
             "#FB61D7")
+
 #### Glycolysis vs all others ####
 combo <- list()
-for (j in 1:3) {
-  for (i in 1:length(primarytumor)) {
-    p <- FeatureScatter(primarytumor[[i]],
+for (i in 1:3) {
+  for (j in 1:length(primarytumor)) {
+    p <- FeatureScatter(primarytumor[[j]],
                         feature1 = str_c(names(gl[1]),
                                          "1"),
                         
-                        feature2 = str_c(names(gl[j+1]),
+                        feature2 = str_c(names(gl[i+1]),
                                          "1"),
                         group.by = "src",
-                        cols = colors[[i]],
+                        cols = colors[[j]],
                         pt.size = 0.5) +
       theme(aspect.ratio = 1)
     print(p)
     
     # Set up directory
     if(!dir.exists(paste0("Figures/supplement/s5-",
-                          j+5))) {
+                          i+5))) {
       dir.create(paste0("Figures/supplement/s5-",
-                        j+5))
+                        i+5))
     }
     
     pdf(file = paste0("Figures/supplement/s5-",
-                      j+5,
+                      i+5,
                       "/",
                       names(gl[1]),
-                      names(gl[j+1]),
+                      names(gl[i+1]),
                       "_ScatterPlot_",
-                      s[i],
+                      s[j],
                       ".pdf"),
         height = 5,
         width = 5)
     print(p)
     dev.off()
     
-    combo[[i]] <- p
+    combo[[j]] <- p
   }
   sfig <- combo[[1]] +
     combo[[2]] +
@@ -1619,9 +1618,9 @@ for (j in 1:3) {
     plot_layout(ncol = 3)
 
     pdf(file = paste0("Figures/supplement/s5-",
-                      j+5,
+                      i+5,
                       "/s5-",
-                      j+5,
+                      i+5,
                       ".pdf"),
         height=13,
         width=15)
@@ -1631,40 +1630,40 @@ for (j in 1:3) {
 
 #### Hypoxia vs Remaining ####
 combo <- list()
-for (j in 1:2) {
-  for (i in 1:length(primarytumor)) {
-    p <- FeatureScatter(primarytumor[[i]],
+for (i in 1:2) {
+  for (j in 1:length(primarytumor)) {
+    p <- FeatureScatter(primarytumor[[j]],
                         feature1 = str_c(names(gl[2]),
                                          "1"),
                         
-                        feature2 = str_c(names(gl[j+2]),
+                        feature2 = str_c(names(gl[i+2]),
                                          "1"),
                         group.by = "src",
-                        cols = colors[[i]],
+                        cols = colors[[j]],
                         pt.size = 0.5) +
       theme(aspect.ratio = 1)
     print(p)
     
       # Set up directory
   if(!dir.exists(paste0("Figures/supplement/s6-",
-                      j+6))) {
+                      i+6))) {
     dir.create(paste0("Figures/supplement/s6-",
-                      j+6))
+                      i+6))
                }
     pdf(file = paste0("Figures/supplement/s6-",
-                      j+6,
+                      i+6,
                       "/",
                       names(gl[2]),
-                      names(gl[j+2]),
+                      names(gl[i+2]),
                       "_ScatterPlot_",
-                      s[i],
+                      s[j],
                       ".pdf"),
         height = 5,
         width = 5)
     print(p)
     dev.off()
     
-    combo[[i]] <- p
+    combo[[j]] <- p
   }
     sfig <- combo[[1]] +
       combo[[2]] +
@@ -1676,9 +1675,9 @@ for (j in 1:2) {
       plot_layout(ncol = 3)
     
     pdf(file = paste0("Figures/supplement/s6-",
-                      j+6,
+                      i+6,
                       "/s6-",
-                      j+6,
+                      i+6,
                       ".pdf"),
         height=13,
         width=15)
