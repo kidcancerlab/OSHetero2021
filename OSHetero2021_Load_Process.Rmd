@@ -156,9 +156,12 @@ os17_cx_nc <- nRes(os17_cx,
 plot <- pSil(os17_cx_nc, 0.15)
 plot
 
-# With res = 0.15, cells in cluster 3 do not have any significantly different genes that are deferentially regulated
-# Therefore, we decided to proceed with res = 0.1
-os17_cx <- FindClusters(os17_cx, resolution = 0.1)
+# Therefore, we decided to proceed with res = 0.15
+os17_cx <- FindClusters(os17_cx, resolution = 0.15)
+
+if(!file.exists("Data")) {
+  dir.create("Data")
+}
 
 save(os17_cx, file = "Data/os17_cx_CCR.RData")
 ```
@@ -634,7 +637,7 @@ OS.list_1500 <- list(
   OS7.Tibia = os7_tib_raw, 
   OS7.Lung = os7_lung_raw) 
 
-for (i in 1:length(OS.list_1500)) {
+for (i in seq_along(OS.list_1500)) {
   OS.list_1500[[i]] <- NormalizeData(OS.list_1500[[i]]) %>%
     FindVariableFeatures(selection.method = "vst") %>%
     ScaleData() %>%
@@ -650,7 +653,7 @@ for (i in 1:length(OS.list_1500)) {
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
 
-for (i in 1:length(OS.list_1500)) {
+for (i in seq_along(OS.list_1500)) {
   OS.list_1500[[i]] <- CellCycleScoring(object = OS.list_1500[[i]],
     s.features = s.genes,
     g2m.features = g2m.genes,
@@ -688,7 +691,7 @@ lung_list <- list(OS17.Lung = os17_lung_raw,
 
 OS_list <- list()
 
-for (i in 1:length(tibia_list)) {
+for (i in seq_along(tibia_list)) {
   message(i, head(paste(tibia_list[[i]]$model, "_TL", sep = ""), 1))
   # Subset number of cells in each Seurat object to the least in the group
   a <- table(tibia_list[[i]]$orig.ident)
@@ -725,7 +728,7 @@ for (i in 1:length(tibia_list)) {
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
 
-for (i in 1:length(OS_list)) {
+for (i in seq_along(OS_list)) {
   OS_list[[i]] <- NormalizeData(OS_list[[i]]) %>%
     FindVariableFeatures(selection.method = "vst") %>%
     ScaleData() %>%
