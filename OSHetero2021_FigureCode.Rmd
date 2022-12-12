@@ -1155,21 +1155,21 @@ Figure 5. Lung colonization bottleneck enriches for clonal populations with a co
 source("scSeurat.R")
 
 # Load raw objects for lineage tag analysis
-load("Data/Raw/os17_cx.raw.RData")
-load("Data/Raw/os17.tib.raw.RData")
-load("Data/Raw/os17.lung.raw.RData")
+load("Data/os17_cx_raw.RData")
+load("Data/os17_tib_raw.RData")
+load("Data/os17_lung_raw.RData")
 
 # Subset all to 2800 cells in each condition
 set.seed(108)
-os17_cx.raw <- subset(os17_cx.raw,
-                      cells = sample(Cells(os17_cx.raw),
+os17_cx_raw <- subset(os17_cx_raw,
+                      cells = sample(Cells(os17_cx_raw),
                                      2800))
 
-os17.tib.raw <- subset(os17.tib.raw,
-                       cells = sample(Cells(os17.tib.raw),
+os17_tib_raw <- subset(os17_tib_raw,
+                       cells = sample(Cells(os17_tib_raw),
                                       2800))
-os17.lung.raw <- subset(os17.lung.raw,
-                        cells = sample(Cells(os17.lung.raw),
+os17_lung_raw <- subset(os17_lung_raw,
+                        cells = sample(Cells(os17_lung_raw),
                                        2800))
 
 # Load merged and cell cycle regressed OS17 object
@@ -1204,6 +1204,9 @@ figure_5b <- DimPlot(os17,
 
 figure_5b
 
+if(!dir.exists("Figures/figure_5")){
+  dir.create("Figures/figure_5")
+}
 save(figure_5b, file = "Figures/figure_5/figure_5b.RData")
 
 # Save as PDF
@@ -1246,31 +1249,30 @@ dim_plot <- function(x, src_sub, color) {
 }
 
 n_uniq_1 <-
-  (table(os17_cx.raw$lt) == 1) %>%
+  (table(os17_cx_raw$lt) == 1) %>%
   sum()
 
 # Plot histograms of lineage tracing tags in the Seurat objects
-figure_5c1 <- processLTBC(os17_cx.raw,
-                          lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
-                          cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
-                          histogram = T,
-                          plot.only = T,
-                          title = "Culture, Top 40 Clones",
-                          ymax = 1.75,
-                          col.fill = "#E64B35FF",
-                          relative = T) +
+figure_5c1 <- processLTBC(os17_cx_raw,
+    lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
+    cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
+    histogram = T,
+    plot.only = T,
+    title = "Culture, Top 40 Clones",
+    ymax = 1.75,
+    col.fill = "#E64B35FF",
+    relative = T) +
     theme(plot.title = element_text(size = 8),
-          axis.title = element_text(size = 6),
-          axis.text = element_text(size = 6)) +
+      axis.title = element_text(size = 6),
+      axis.text = element_text(size = 6)) +
     labs(x = NULL) +
     annotate("text",
-             label = paste(n_uniq_1,
-                           "out of every 1000 clones are unique"),
-            x = -Inf,
-            y = Inf,
-            hjust = -0.4,
-            vjust = 3,
-            size = 2)
+      label = paste(n_uniq_1, "out of every 1000 clones are unique"),
+      x = -Inf,
+      y = Inf,
+      hjust = -0.4,
+      vjust = 3,
+      size = 2)
 
 inset_1 <- dim_plot(os17, "Culture", color = "#E64B35FF")
 
@@ -1286,12 +1288,11 @@ pdf("Figures/figure_5/figure_5c1.pdf",
 figure_5c1
 dev.off()
 
-
 n_uniq_2 <-
-  (table(os17.tib.raw$lt) == 1) %>%
+  (table(os17_tib_raw$lt) == 1) %>%
   sum()
 
-figure_5c2 <- processLTBC(os17.tib.raw,
+figure_5c2 <- processLTBC(os17_tib_raw,
                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
                           cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
                           histogram = T,
@@ -1328,10 +1329,10 @@ figure_5c2
 dev.off()
 
 n_uniq_3 <-
-  (table(os17.lung.raw$lt) == 1) %>%
+  (table(os17_lung_raw$lt) == 1) %>%
   sum()
 
-figure_5c3 <- processLTBC(os17.lung.raw,
+figure_5c3 <- processLTBC(os17_lung_raw,
                           lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
                           cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
                           histogram = T,
@@ -1353,6 +1354,7 @@ figure_5c3 <- processLTBC(os17.lung.raw,
             size = 2)
 
 inset_3 <- dim_plot(os17, "Lung", color = "#4DBBD5FF")
+# ^^^ This function fails because there is only one lung cell and only one tibia cell in the os17 dataset at this point
 
 figure_5c3 <-
     cowplot::ggdraw() +
@@ -1383,17 +1385,17 @@ D) Overlay of cells sharing a common ancestor onto the dimensional reduction plo
 
 ```{r Fig5d_processing, dependson="Fig5load"}
 # Extract the barcode frequency lists
-cx.lt.list <- processLTBC(os17_cx.raw,
+cx.lt.list <- processLTBC(os17_cx_raw,
                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
                           cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
                           ret.list = TRUE)
 
-tib.lt.list <- processLTBC(os17.tib.raw,
+tib.lt.list <- processLTBC(os17_tib_raw,
                            lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
                            cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
                            ret.list = TRUE)
 
-lung.lt.list <- processLTBC(os17.lung.raw,
+lung.lt.list <- processLTBC(os17_lung_raw,
                             lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
                             cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
                             ret.list = TRUE)
