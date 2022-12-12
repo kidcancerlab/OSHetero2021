@@ -2226,6 +2226,9 @@ intersect_down <- intersect(intersect(D, E), F) %>%
 ## Met Module scores
 
 ```{r METs5-s6-s7-s8_modules, dependson="s5-s6-s7_processing"}
+# Load met samples
+met_comb <- qs::qread("Data/Supplement/PatientData/met_comb.qs")
+
 # Set up directory
 if(!dir.exists("Figures/supplement/met")) {
   dir.create("Figures/supplement/met")
@@ -2249,10 +2252,6 @@ met_tumor[["BC10"]] <- met_tumor[["BC10"]] %>%
   FindNeighbors(dims = 1:20) %>%
   FindClusters(resolution = 0.1) %>%
   RunUMAP(dims = 1:20)
-#print(DimPlot(x, pt.size = 1, label = T) +
-#        coord_fixed() +
-#        theme(legend.position = "none") +
-#        ggtitle(str_c(s[i], " basic clustering")))
 
 met_tumor[["BC17"]] <- met_tumor[["BC17"]] %>%
   NormalizeData() %>%
@@ -2262,14 +2261,8 @@ met_tumor[["BC17"]] <- met_tumor[["BC17"]] %>%
   FindNeighbors(dims = 1:20) %>%
   FindClusters(resolution = 0.1) %>%
   RunUMAP(dims = 1:20)
-################################Set optimum number of clusters using Silhoutte scoring
 
-#data <-met_tumor[[7]] 
-#data.nC <- nRes(data, 
-#                res = seq(from = 0.1, to = 0.9, by = 0.1))
-# Optimum resolution for all samples is 0.1, except for BC21 (res = 0.7)
 for (i in 1:length(met_tumor)){
-  # met_tumor[[i]] <- met_tumor[[i]] %>% FindClusters(resolution = 0.1)
   print(DimPlot(met_tumor[[i]], pt.size = 1, label = T) +
           coord_fixed() +
           theme(legend.position = "none") +
@@ -2277,7 +2270,8 @@ for (i in 1:length(met_tumor)){
 }
 
 for(i in 1:length(met_tumor)){
-  met_tumor[[i]] <- met_tumor[[i]] %>% FindClusters(resolution = 0.7)
+  met_tumor[[i]] <- met_tumor[[i]] %>% 
+    FindClusters(resolution = 0.7)
   print(DimPlot(met_tumor[[i]], pt.size = 1, label = T) +
           coord_fixed() +
           theme(legend.position = "none") +
@@ -2287,7 +2281,7 @@ for(i in 1:length(met_tumor)){
 if (!dir.exists("Figures/supplement/met")) {
   dir.create("Figures/supplement/met")
 }
-# For s5
+# For Glycolysis
 # Apply Glycolysis module score to each of the primary tumor cells
 gl <- list()
 Glycolysis <- read.table(file = "pathways/Glycolysis.txt",
@@ -2301,13 +2295,13 @@ Hypoxia <- read.table(file = "pathways/Hypoxia.txt",
                       sep = ",")
 Hypoxia <- Hypoxia[, 1]
 
-# For S7
+# For EMT
 EMT <- read.table(file = "pathways/EMT.txt",
                   header = FALSE,
                   sep = ",")
 EMT <- EMT[, 1]
 
-# For s8
+# For TNFA
 TNFA <- read.table(file = "pathways/TNFA.txt",
                    header = FALSE,
                    sep = ",")
@@ -2320,9 +2314,52 @@ gl$TNFA <- TNFA
 
 mod_names <- names(gl)
 
-#### S5 ####
+#### Glycolysis ####
 # Glycolysis - Added min.cutoff to isolate for cells most module like
 gly <- list()
+for (i in 1:length(met_tumor)) {
+  met_tumor[[i]] <- AddModuleScore(met_tumor[[i]],
+                             gl[1],
+                             name = names(gl[1]))
+  p <- FeaturePlot(met_tumor[[i]],
+                   features = str_c(names(gl[1]),
+                                    "1"),
+                   min.cutoff = 1,
+                   pt.size = 1,
+                   order = T,
+                   cols = c("lightgoldenrod",
+                            "darkred")) +
+    ggtitle(paste0(s[i])) +
+    theme(aspect.ratio = 1)
+  
+  pdf(file = paste0("Figures/supplement/met/",
+                    names(gl[1]),
+                    "_FeaturePlot_",
+                    s[i],
+                    ".pdf"))
+  print(p)
+  dev.off()
+  
+  gly[[i]] <- p
+}
+
+# Eliminate outlier cell skewing feature plot
+df <- as.data.frame(met_tumor[["BC17"]]$Glycolysis1)
+colnames(df) <- "gly"
+df$cid <- rownames(df)
+df[order(-df$gly), ] %>% head()
+#       gly                     cid
+# 0.2999779 BC17_TTTAGTCAGAGAACCC-1
+# 0.2001013 BC17_CTCATGCGTTCAACGT-1
+# 0.1995038 BC17_CACATGACATCCTTCG-1
+# 0.1954288 BC17_TGAGGTTAGTTGAAGT-1
+# 0.1880591 BC17_TTGCATTTCTCCATAT-1
+# 0.1797822 BC17_GGAGCAATCACAAGGG-1
+odd_cell <- "BC17_TTTAGTCAGAGAACCC-1"
+met_tumor[["BC17"]] <-
+  met_tumor[["BC17"]][, !colnames(met_tumor[["BC17"]]) %in% odd_cell]
+
+# Re-plot
 for (i in 1:length(met_tumor)) {
   met_tumor[[i]] <- AddModuleScore(met_tumor[[i]],
                              gl[1],
@@ -2350,16 +2387,16 @@ for (i in 1:length(met_tumor)) {
   
 }
 
-s5 <- gly[[1]] +
+gly_msplots <- gly[[1]] +
   gly[[2]] 
 
-pdf(file = "Figures/supplement/met/s5.pdf",
+pdf(file = "Figures/supplement/met/gly_msplots.pdf",
     height=10,
     width=10)
-s5
+gly_msplots
 dev.off()
 
-#### S6 ####
+#### Hypoxia ####
 # Hypoxia - Added min.cutoff to isolate for cells most module like
 hypx <- list()
 for (i in 1:length(met_tumor)) {
@@ -2387,16 +2424,16 @@ for (i in 1:length(met_tumor)) {
   
   hypx[[i]] <- p
 }
-s6 <- hypx[[1]] +
+hypx_msplots <- hypx[[1]] +
   hypx[[2]] 
 
-pdf(file = "Figures/supplement/met/s6.pdf",
+pdf(file = "Figures/supplement/met/hypx_msplots.pdf",
     height=10,
     width=10)
-s6
+hypx_msplots
 dev.off()
 
-#### S7 ####
+#### EMT ####
 # EMT - Added min.cutoff to isolate for cells most module like
 emt <- list()
 for (i in 1:length(met_tumor)) {
@@ -2425,16 +2462,16 @@ for (i in 1:length(met_tumor)) {
   emt[[i]] <- p
 }
 
-s7 <- emt[[1]] +
+emt_msplots <- emt[[1]] +
   emt[[2]]
 
-pdf(file = "Figures/supplement/met/s7.pdf",
+pdf(file = "Figures/supplement/met/emt_msplots.pdf",
     height=10,
     width=10)
-s7
+emt_msplots
 dev.off()
 
-#### S8 ####
+#### TNFA ####
 # TNFA - Added min.cutoff to isolate for cells most module like
 tnf <- list()
 for (i in 1:length(met_tumor)) {
@@ -2463,25 +2500,21 @@ for (i in 1:length(met_tumor)) {
   tnf[[i]] <- p
 }
 
-s8 <- tnf[[1]] +
+tnf_msplots <- tnf[[1]] +
   tnf[[2]]
 
-pdf(file = "Figures/supplement/met/s8.pdf",
+pdf(file = "Figures/supplement/met/tnf_msplots.pdf",
     height=10,
     width=10)
-s8
+tnf_msplots
 dev.off()
 
+# Note that this object has one outlier cell removed
 save(met_tumor, file = "Data/Supplement/PatientData/met_tumor.RData")
 ```
 
 ```{r METs5-s6-s7-s8_scatter, dependson=c("s5-s6-s7_processing","s5-s6-s7-s8_modules")}
-# testing <- as.data.frame(met_tumor[["BC22"]]$Glycolysis1) %>% rownames_to_column(testing)
-# colnames(testing) <- c("cellid", "Glycolysis")
-# testing2 <- as.data.frame(met_tumor[["BC22"]]$Hypoxia1) %>% rownames_to_column()
-# colnames(testing) <- c("cellid", "Hypoxia")
-# combo <- merge(x=testing, y=testing2, by="rowname")
-
+# Define colors
 colors <- c("#F8766D",
             "#C49A00",
             "#53B400",
@@ -2494,16 +2527,16 @@ s <- c("BC10", "BC17")
 
 #### Glycolysis vs all others ####
 combo <- list()
-for (j in 1:3) {
-  for (i in 1:length(met_tumor)) {
-    p <- FeatureScatter(met_tumor[[i]],
+for (i in 1:3) {
+  for (j in 1:length(met_tumor)) {
+    p <- FeatureScatter(met_tumor[[j]],
                         feature1 = str_c(names(gl[1]),
                                          "1"),
                         
-                        feature2 = str_c(names(gl[j+1]),
+                        feature2 = str_c(names(gl[i+1]),
                                          "1"),
                         group.by = "src",
-                        cols = colors[[i]],
+                        cols = colors[[j]],
                         pt.size = 0.5) +
       theme(aspect.ratio = 1)
     print(p)
@@ -2511,23 +2544,24 @@ for (j in 1:3) {
 
     pdf(file = paste0("Figures/supplement/met/",
                       names(gl[1]),
-                      names(gl[j+1]),
+                      names(gl[i+1]),
                       "_ScatterPlot_",
-                      s[i],
+                      s[j],
                       ".pdf"),
         height = 5,
         width = 5)
     print(p)
     dev.off()
     
-    combo[[i]] <- p
+    combo[[j]] <- p
   }
   sfig <- combo[[1]] +
     combo[[2]] 
 
-    pdf(file = paste0("Figures/supplement/met",
-                      "/s5-",
-                      j+5,
+    pdf(file = paste0("Figures/supplement/met/",
+                      names(gl[1]),
+                      names(gl[i+1]),
+                      "_combined",
                       ".pdf"),
         height=10,
         width=10)
@@ -2537,38 +2571,40 @@ for (j in 1:3) {
 
 #### Hypoxia vs Remaining ####
 combo <- list()
-for (j in 1:2) {
-  for (i in 1:length(met_tumor)) {
-    p <- FeatureScatter(met_tumor[[i]],
+for (i in 1:2) {
+  for (j in 1:length(met_tumor)) {
+    p <- FeatureScatter(met_tumor[[j]],
                         feature1 = str_c(names(gl[2]),
                                          "1"),
                         
-                        feature2 = str_c(names(gl[j+2]),
+                        feature2 = str_c(names(gl[i+2]),
                                          "1"),
                         group.by = "src",
-                        cols = colors[[i]],
+                        cols = colors[[j]],
                         pt.size = 0.5) +
       theme(aspect.ratio = 1)
     print(p)
 
     pdf(file = paste0("Figures/supplement/met/",
                       names(gl[2]),
-                      names(gl[j+2]),
+                      names(gl[i+2]),
                       "_ScatterPlot_",
-                      s[i],
+                      s[j],
                       ".pdf"),
         height = 5,
         width = 5)
     print(p)
     dev.off()
-    
-    combo[[i]] <- p
+
+    combo[[j]] <- p
   }
     sfig <- combo[[1]] +
-      combo[[2]] 
+      combo[[2]]
+
     pdf(file = paste0("Figures/supplement/met",
-                      "/s6-",
-                      j+6,
+                      names(gl[1]),
+                      names(gl[i+1]),
+                      "_combined",
                       ".pdf"),
         height=10,
         width=10)
@@ -2608,12 +2644,15 @@ combo <- list()
     sfig <- combo[[1]] +
       combo[[2]] 
     
-    pdf(file = paste0("Figures/supplement/met/s7-8.pdf"),
+    pdf(file = paste0("Figures/supplement/met/",
+                      names(gl[3]),
+                      names(gl[4]),
+                      "_combined",
+                      ".pdf"),
         height=10,
         width=10)
     print(sfig)
     dev.off()
-
 ```
 
 
