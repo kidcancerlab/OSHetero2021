@@ -269,8 +269,11 @@ for (t in names_list) {
   }
 message(paste0("**", t, " Analyses Completed**"))
 }
+```
 
+```{r savepdfs, dependson='load', cache=TRUE}
 message("Generating PDF of plot panels")
+
 # Prepare the PDF device
 pdf("Figures/supplement/volcano_plots/panels.pdf",
   width = 18,
