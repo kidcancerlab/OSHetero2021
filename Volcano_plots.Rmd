@@ -33,6 +33,8 @@ library(stringr)
 library(harmony)
 library(patchwork)
 library(ggpubr)
+library(foreach)
+library(doParallel)
 
 set.seed(888)
 
@@ -78,6 +80,13 @@ rFeaturePlot <- function(object, features, title = "Unlabeled Plot", subtitle = 
     coord_fixed()
   print(p)
   return(p)
+
+clust <- makeCluster(8, type = "FORK")
+
+unregister_dopar <- function() {
+  env <- foreach:::.foreachGlobals
+  rm(list=ls(name=env), pos=env)
+}
 }
 ```
 
@@ -133,6 +142,8 @@ Then, graph each of those DEG datasets using a volcano plot.
 scresults <- list()
 plots <- list()
 
+time1 <- Sys.time()
+
 for (t in names_list) {
   tumor <- tumor_list[[t]]
   clusters <- levels(factor(tumor$seurat_clusters))
@@ -142,25 +153,38 @@ for (t in names_list) {
   message(paste("Generating DEG Lists and Creating Volcano Plots for",
     t, "..."))
 
-  Idents(tumor) <- tumor$seurat_clusters
-  for(c in names(clusters)) {
-    scresults[[t]][[c]]$results <-
-      FindMarkers(tumor, ident.1 = clusters[c]) %>%
-      arrange(-abs(avg_log2FC))
+  # Prepare for parallel computing
+  registerDoParallel(clust)
+  out <- list()
 
-    labs <- head(scresults[[t]][[c]]$results, n = 20)
-    plots[[t]][[c]]$volcano <-
-      ggplot(scresults[[t]][[c]]$results, aes(avg_log2FC, -log10(p_val_adj))) +
-        geom_point() +
-        geom_label_repel(data = labs,
-          aes(label = rownames(labs)),
-          max.overlaps = 20) +
-        labs(title = paste(c, "Genes"),
-          subtitle = paste(t, "method"))
-  }
+  Idents(tumor) <- tumor$seurat_clusters
+  scresults[[t]] <-
+    foreach(c = names(clusters), .packages = "magrittr") %dopar% {
+      out[[c]]$results <-
+        Seurat::FindMarkers(tumor, ident.1 = clusters[c]) %>%
+        dplyr::arrange(-abs(avg_log2FC))
+      return(out)
+    }
+
+  plots[[t]] <-
+    foreach(c = names(clusters), .packages = "ggplot2") %dopar% {
+      labs <- head(scresults[[t]][[c]]$results, n = 20)
+      out[[c]]$volcano <-
+        ggplot(scresults[[t]][[c]]$results, aes(avg_log2FC, -log10(p_val_adj))) +
+          geom_point() +
+          ggrepel::geom_label_repel(data = labs,
+            aes(label = rownames(labs)),
+            max.overlaps = 20) +
+          labs(title = paste(c, "Genes"),
+            subtitle = paste(t, "method"))
+      return(out)
+    }
+
+  unregister_dopar()
 }
 
 message("Finished all DEG lists and volcano plots.")
+message(paste("Total run time: ", Sys.time() - time1))
 ```
 
 # Perform a GSEA on each gene list
