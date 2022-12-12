@@ -4,13 +4,13 @@ author: "Ryan Roberts and Emily Franz"
 date: "`r format(Sys.time(), '%m/%d/%Y')`"
 output: 
   html_document:
-    toc: true
-    toc_float: true
-    toc_depth: 5
-    number_sections: false
-    code_folding: hide
+  toc: true
+toc_float: true
+toc_depth: 5
+number_sections: false
+code_folding: hide
 ---
-
+  
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -33,18 +33,26 @@ library(stringr)
 library(harmony)
 library(patchwork)
 library(ggpubr)
+library(msigdbr)
+library(clusterProfiler)
 
 set.seed(888)
 
 sysfonts::font_add("Arial Narrow", "ARIALN.TTF", bold = "ARIALNB.TTF")
 showtext::showtext_auto()
 theme_set(theme_pubr())
-plot_cols <- c("#D43F3AFF", "#EEA236FF", "#357EBDFF", "#5CB85CFF", "#B8B8B8FF",
-  "#9632B8FF",  "#46B8DAFF", "#90302DFF", "#A66D04FF", "#2D577FFF", "#3E7E3EFF",
-  "#7D7D7DFF", "#6D1D87FF", "#097F9AFF", "#FF6E6AFF", "#FFBB70FF", "#68A4E3FF",
-  "#79D379FF", "#CDCDCDFF", "#BF6BE2FF", "#69D1F3FF")
-rDimPlot <- function(object, title = "Unlabeled Plot", subtitle = NA,
-  label = T, pt.size = 1, ...) {
+plot_cols <- c("#D43F3AFF", "#EEA236FF", "#357EBDFF",
+               "#5CB85CFF", "#B8B8B8FF", "#9632B8FF",
+               "#46B8DAFF", "#90302DFF", "#A66D04FF",
+               "#2D577FFF", "#3E7E3EFF", "#7D7D7DFF",
+               "#6D1D87FF", "#097F9AFF", "#FF6E6AFF",
+               "#FFBB70FF", "#68A4E3FF", "#79D379FF",
+               "#CDCDCDFF", "#BF6BE2FF", "#69D1F3FF")
+rDimPlot <- function(object,
+                     title = "Unlabeled Plot",
+                     subtitle = NA,
+                     label = T,
+                     pt.size = 1, ...) {
   if(length(levels(Idents(object))) < 22) {
     p <- Seurat::DimPlot(
       object = object, 
@@ -63,8 +71,12 @@ rDimPlot <- function(object, title = "Unlabeled Plot", subtitle = NA,
     print("Too many identity classes to use this function. Requires <22.")
   }
 }
-rFeaturePlot <- function(object, features, title = "Unlabeled Plot", subtitle = NA,
-  pt.size = 1, order = T, ...) {
+rFeaturePlot <- function(object,
+                         features,
+                         title = "Unlabeled Plot",
+                         subtitle = NA,
+                         pt.size = 1,
+                         order = T, ...) {
   p <- Seurat::FeaturePlot(
     object = object,
     features = features,
@@ -79,14 +91,22 @@ rFeaturePlot <- function(object, features, title = "Unlabeled Plot", subtitle = 
   print(p)
   return(p)
 }
+# Prepare directory
+if(!dir.exists("Figures/supplement")) {
+  dir.create("Figures/supplement")
+}
+if(!dir.exists("Figures/supplement/Volcano_plots")) {
+  dir.create("Figures/supplement/Volcano_plots")
+}
 ```
 
 # Load and organize the datasets
 
 ```{r load, cache=TRUE}
 #From Fig1
-load("Data/os17_cx_CCR.RData") 
-load("Data/os7_cx_CCR.RData") 
+
+load("Data/os17_cx_CCR.RData") #os17_cx 
+load("Data/os7_cx_CCR.RData") #os7_cx
 
 # From Fig3
 load("Data/OS_list_CCR.RData")
@@ -100,16 +120,16 @@ OS_list$NCHOS7_TL <- OS_list$NCHOS7_TL %>%
   FindClusters(resolution = 0.2)
 
 # From Fig5
-load("Data/os17.RData") 
+load("Data/os17.RData") # from figure 5 (culture, tibia, lung)
 
 tumor_list <- c(
   os17_cx,
   os7_cx,
   OS_list$OS17_TL,
-    OS_list$`143B_TL`,
-    OS_list$NCHOS2_TL,
-    OS_list$NCHOS7_TL,
-    os17)
+  OS_list$`143B_TL`,
+  OS_list$NCHOS2_TL,
+  OS_list$NCHOS7_TL,
+  os17)
 
 names_list <- c(
   "Figure 1 OS-17",
@@ -157,6 +177,7 @@ for (t in names_list) {
           max.overlaps = 20) +
         labs(title = paste(c, "Genes"),
           subtitle = paste(t, "method"))
+    }
   }
 }
 
@@ -165,7 +186,7 @@ message("Finished all DEG lists and volcano plots.")
 
 # Perform a GSEA on each gene list
 
-```{r matrixform, dependson='load', cache=TRUE}
+```{r matrixform2, dependson='load', cache=TRUE}
 # Load gene sets for hallmark
 hm_genes <- msigdbr::msigdbr(species = "Homo sapiens", category = "H") %>%
   distinct(gs_name, gene_symbol) %>%
@@ -285,4 +306,8 @@ for(t in names_list) {
 }
 
 dev.off()
+```
+
+```{r versions}
+sessionInfo()
 ```

@@ -39,7 +39,7 @@ library(Seurat)
 # library(future)
 library(ggplot2)
 library(msigdbr)
-# library(clusterProfiler)
+library(clusterProfiler)
 # library(SingleR)
 # library(dplyr)
 # library(pheatmap)
@@ -103,15 +103,14 @@ cid <- sort(unique(os17_cx@active.ident))
 vplayout <- function(x, y) viewport(layout.pos.row = x,
                                     layout.pos.col = y)
 
-
 pdf("Figures/figure_1/figure_1a_os17_pie.pdf",
     width = 6,
     height = 2)
 
 grid.newpage()
-pushViewport(viewport(layout = grid.layout(1, 4)))
+pushViewport(viewport(layout = grid.layout(1, length(unique(os17_cx@active.ident)))))
 
-for(i in 1:3){
+for(i in 1:length(unique(os17_cx@active.ident))){
   temp <- WhichCells(os17_cx,
                      idents = cid[[i]])
   LT.cells <- subset(os17_cx,
@@ -132,7 +131,7 @@ for(i in 1:3){
     ggtitle(paste("Cluster",
                   cid[[i]]))
   print(pie,
-        vp = vplayout(ceiling(i/4),
+        vp = vplayout(ceiling(i/length(unique(os17_cx@active.ident))),
                       i))
 }
 dev.off()
@@ -178,8 +177,8 @@ pdf("Figures/figure_1/figure_1b_nchos7_pie.pdf",
     height = 2)
 
 grid.newpage()
-pushViewport(viewport(layout = grid.layout(1, 4)))
-for(i in 1:4){
+pushViewport(viewport(layout = grid.layout(1, length(unique(os7_cx@active.ident)))))
+for(i in 1:length(unique(os7_cx@active.ident))){
   temp <- WhichCells(os7_cx,
                      idents = cid[[i]]) 
   LT.cells <- subset(os7_cx,
@@ -202,7 +201,7 @@ for(i in 1:4){
                   cid[[i]]))
   
   print(pie,
-        vp=vplayout(ceiling(i/4),
+        vp=vplayout(ceiling(i/length(unique(os7_cx@active.ident))),
                     i))
 }
 dev.off()
@@ -258,6 +257,7 @@ cx.pd.log <- -log10(cx.pd)
 colnames(cx.pd.log) <- c("A0",
                          "A1",
                          "A2",
+                         "A3",
                          "B0",
                          "B1",
                          "B2",
@@ -317,7 +317,7 @@ set.seed(100)
 OS$tissue <- OS$src %>%
   stringr::str_replace("Flank", "Culture")
 
-OS <- subset(OS, subset = model != "osteoblasts")
+OS <- subset(OS, subset = model != "Osteoblasts")
 
 Idents(OS) <- OS$tissue
 
@@ -606,6 +606,7 @@ dev.off()
 # Figure 3
 
 Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
+
 ## Figure 3B
 
 *statistical method subject to change*
@@ -645,7 +646,7 @@ for (i in seq_along(group_names)) {
     group_names[i] %>%
     str_replace("\\.", " ") %>%
     str_replace("cx", "Culture") %>%
-    str_replace("OB", "Osteoblast") %>%
+    str_replace("osteoblasts", "Osteoblasts") %>%
     str_replace("t143", "143")
 
   sub_obj <- subset(merged_sobjs, group == group_names[i]) %>%
@@ -682,7 +683,7 @@ ith <- pivot_longer(raw_ith,
                 fct_relevel(group_names %>%
                         str_replace("\\.", " ") %>%
                         str_replace("cx", "Culture") %>%
-                        str_replace("OB", "Osteoblast") %>%
+                        str_replace("osteoblasts", "Osteoblasts") %>%
                         str_replace("t143", "143")))
 
 ith$logITH <- log10(ith$ITHScore)
@@ -757,6 +758,11 @@ figure_3b <-
     size = 8,
     color = "#2b2a2a")
 figure_3b
+
+#Save as PDF
+if(!dir.exists("Figures/figure_3")) {
+  dir.create("Figures/figure_3")
+}
 
 # Save as PDF
 pdf("Figures/figure_3/figure_3b.pdf",
@@ -1152,12 +1158,15 @@ Figure 5. Lung colonization bottleneck enriches for clonal populations with a co
 ### Load
 
 ```{r Fig5load}
-source("scSeurat.R")
+library(rrrSingleCellUtils)
 
 # Load raw objects for lineage tag analysis
 load("Data/os17_cx_raw.RData")
 load("Data/os17_tib_raw.RData")
 load("Data/os17_lung_raw.RData")
+
+# Load merged and cell cycle regressed OS17 object
+load("Data/os17.RData")
 
 # Subset all to 2800 cells in each condition
 set.seed(108)
@@ -1172,8 +1181,10 @@ os17_lung_raw <- subset(os17_lung_raw,
                         cells = sample(Cells(os17_lung_raw),
                                        2800))
 
-# Load merged and cell cycle regressed OS17 object
-load("Data/os17.RData")
+# Load lineage tracing data
+S0016xS0027_ltbc <- read.delim("Data/S0016xS0027.ltbc")
+S0018xS0028_ltbc <- read.delim("Data/S0018xS0028.ltbc")
+S0024xS0029_ltbc <- read.delim("Data/S0024xS0029.ltbc")
 ```
 
 ## Figure 5B
@@ -1181,7 +1192,7 @@ load("Data/os17.RData")
 B) UMAP analysis of lineage tagged OS-17 cells in culture, implanted into tibia, or inoculated to generate lung metastases. These lineage tags are heritable allowing us to track the transcriptional profiles of daughter cells originating from the same ancestor. Metastatic and orthotopic samples share many cells with similar phenotypes, though cultured cells are dramatically different (n = 2800 per condition)
 
 ```{r Fig5b, dependson="Fig5load"}
-# Set cell identities to proper cluster resolution 
+# Set cell identities to proper cluster resolution
 Idents(os17) <- os17$RNA_snn_res.0.3
 
 # Plot os17
@@ -1193,10 +1204,13 @@ figure_5b <- DimPlot(os17,
                      pt.size = 1,
                      label = T,
                      label.size = 3,
-                     order = FALSE) +
+                     order = FALSE,
+                     cols = c("#E64B35FF",
+                              "#00A087FF",
+                              "#4DBBD5FF")) +
   coord_fixed() +
   ggtitle(" ") +
-  scale_color_npg() +
+  #scale_color_npg() +
   theme(axis.text = element_text(size = 6),
         axis.title = element_text(size = 8),
         legend.text = element_text(size = 6),
@@ -1207,6 +1221,7 @@ figure_5b
 if(!dir.exists("Figures/figure_5")){
   dir.create("Figures/figure_5")
 }
+
 save(figure_5b, file = "Figures/figure_5/figure_5b.RData")
 
 # Save as PDF
@@ -1222,25 +1237,34 @@ dev.off()
 C) Frequency distribution of clones identified in each of the conditions. A high level of clonal diversity is maintained in the orthotopic tumors (78% unique clones in primary tumor compared to 86% unique clones in cell culture); though dominant clones emerge in the lung (only 33% unique clones). 
 
 ```{r Fig5c, dependson="Fig5load"}
-# There are exactly two cells in lung/tibia that cluster with the culture cells and throw off the DimPlots
-odd_2_cells <-
-  subset(os17, subset = src == "Tibia" | src == "Lung") %>%
-  Embeddings("umap") %>%
-  as.data.frame() %>%
-  dplyr::filter(UMAP_1 > 0) %>%
-  rownames()
+library(rrrSingleCellUtils)
+
+# There are cells in lung/tibia that cluster with the culture cells and throw off the DimPlots and vise versa
+
+odd_cells <-
+  c(subset(os17, subset = src == "Tibia" | src == "Lung") %>%
+        Embeddings("umap") %>%
+        as.data.frame() %>%
+        dplyr::filter(UMAP_1 < 0) %>%
+        rownames(),
+    subset(os17, subset = src == "Culture") %>%
+        Embeddings("umap") %>%
+        as.data.frame() %>%
+        dplyr::filter(UMAP_1 > 0) %>%
+        rownames())
+
 
 # kick out those two cells
 os17 <-
-  os17[, !colnames(os17) %in% odd_2_cells]
+  os17[, !colnames(os17) %in% odd_cells]
 
 dim_plot <- function(x, src_sub, color) {
-    sub_sobj <- subset(x, subset = src == src_sub)
-    sub_sobj <- subset(sub_sobj, cell = names(is.na(sub_sobj$lt) == FALSE))
-    DimPlot(sub_sobj,
-            group.by = "src",
-            pt.size = 0.1,
-            cols = color) +
+  sub_sobj <- subset(x, subset = src == src_sub)
+  sub_sobj <- subset(sub_sobj, cell = names(is.na(sub_sobj$lt) == FALSE))
+  DimPlot(sub_sobj,
+          group.by = "src",
+          pt.size = 0.1,
+          cols = color) +
     theme_void() +
     NoLegend() +
     NoAxes() +
@@ -1248,38 +1272,64 @@ dim_plot <- function(x, src_sub, color) {
     theme(plot.background = element_rect(colour = "black"))
 }
 
+ltbc_hist <- function(df, fill, n_uniq, title) {
+  df %>%
+    head(n = 40) %>%
+    ggplot(aes(x = stats::reorder(Var1, -freq),
+                   y = freq)) +
+    geom_bar(fill = fill, stat = "identity") +
+    theme_bw() +
+    theme(plot.title = element_text(size = 8),
+          axis.title = element_text(size = 6),
+          axis.text = element_text(size = 6),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
+    labs(x = "",
+         y = "Percentage of Cells",
+         title = title) +
+    ylim(0, 6) +
+    annotate("text",
+             label = paste(n_uniq,
+                           "out of every 1000 cells have a unique clone"),
+             x = -Inf,
+             y = Inf,
+             hjust = -0.4,
+             vjust = 3,
+             size = 2)
+}
+
 n_uniq_1 <-
   (table(os17_cx_raw$lt) == 1) %>%
-  sum()
+  sum() / length(unique(na.omit(os17_cx_raw$lt))) * 1000
+#789
+
+cells_w_uniq_clones_1 <-
+    table(na.omit(os17_cx_raw$lt)) %>%
+    as.data.frame() %>%
+    summarize(n = sum(Freq == 1) / sum(Freq) * 1000) %>%
+    pull(n) %>%
+    round()
+# 624
 
 # Plot histograms of lineage tracing tags in the Seurat objects
-figure_5c1 <- processLTBC(os17_cx_raw,
-    lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
-    cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
-    histogram = T,
-    plot.only = T,
-    title = "Culture, Top 40 Clones",
-    ymax = 1.75,
-    col.fill = "#E64B35FF",
-    relative = T) +
-    theme(plot.title = element_text(size = 8),
-      axis.title = element_text(size = 6),
-      axis.text = element_text(size = 6)) +
-    labs(x = NULL) +
-    annotate("text",
-      label = paste(n_uniq_1, "out of every 1000 clones are unique"),
-      x = -Inf,
-      y = Inf,
-      hjust = -0.4,
-      vjust = 3,
-      size = 2)
+figure_5c1 <-
+  process_ltbc(os17_cx_raw,
+               cid_lt = S0016xS0027_ltbc,
+               histogram = FALSE,
+               title = "Culture, Top 40 Clones",
+               col_fill = "#E64B35FF",
+               relative = TRUE,
+               ret_list = TRUE) %>%
+  ltbc_hist(fill = "#E64B35FF", cells_w_uniq_clones_1, "Culture, Top 40 Clones")
 
 inset_1 <- dim_plot(os17, "Culture", color = "#E64B35FF")
 
 figure_5c1 <-
-    cowplot::ggdraw() +
-    cowplot::draw_plot(figure_5c1) +
-    cowplot::draw_plot(inset_1, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
+  cowplot::ggdraw() +
+  cowplot::draw_plot(figure_5c1) +
+  cowplot::draw_plot(inset_1, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
 pdf("Figures/figure_5/figure_5c1.pdf",
@@ -1290,36 +1340,33 @@ dev.off()
 
 n_uniq_2 <-
   (table(os17_tib_raw$lt) == 1) %>%
-  sum()
 
-figure_5c2 <- processLTBC(os17_tib_raw,
-                          lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
-                          cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
-                          histogram = T,
-                          plot.only = T,
-                          title = "Tibia, Top 40 Clones",
-                          ymax = 1.75,
-                          col.fill = "#00A087FF",
-                          relative = T) +
-    theme(plot.title = element_text(size = 8),
-          axis.title = element_text(size = 6),
-          axis.text = element_text(size = 6)) +
-    labs(x = NULL) +
-    annotate("text",
-             label = paste(n_uniq_2,
-                           "out of every 1000 clones are unique"),
-            x = -Inf,
-            y = Inf,
-            hjust = -0.4,
-            vjust = 3,
-            size = 2)
+  sum() / length(unique(na.omit(os17_tib_raw$lt))) * 1000
+# 817
+
+cells_w_uniq_clones_2 <-
+    table(na.omit(os17_tib_raw$lt)) %>%
+    as.data.frame() %>%
+    summarize(n = sum(Freq == 1) / sum(Freq) * 1000) %>%
+    pull(n) %>%
+    round()
+# 652
+
+figure_5c2 <- process_ltbc(os17_tib_raw,
+                           cid_lt = S0018xS0028_ltbc,
+                           histogram = FALSE,
+                           title = "Tibia, Top 40 Clones",
+                           col_fill = "#00A087FF",
+                           relative = TRUE,
+                           ret_list = TRUE) %>%
+  ltbc_hist(fill = "#00A087FF", cells_w_uniq_clones_2, "Tibia, Top 40 Clones")
 
 inset_2 <- dim_plot(os17, "Tibia", color = "#00A087FF")
 
 figure_5c2 <-
-    cowplot::ggdraw() +
-    cowplot::draw_plot(figure_5c2) +
-    cowplot::draw_plot(inset_2, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
+  cowplot::ggdraw() +
+  cowplot::draw_plot(figure_5c2) +
+  cowplot::draw_plot(inset_2, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
 pdf("Figures/figure_5/figure_5c2.pdf",
@@ -1330,36 +1377,34 @@ dev.off()
 
 n_uniq_3 <-
   (table(os17_lung_raw$lt) == 1) %>%
-  sum()
 
-figure_5c3 <- processLTBC(os17_lung_raw,
-                          lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
-                          cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
-                          histogram = T,
-                          plot.only = T,
-                          title = "Lung, Top 40 Clones",
-                          ymax = 1.75,
-                          relative = T) +
-    theme(plot.title = element_text(size = 8),
-          axis.title = element_text(size = 6),
-          axis.text = element_text(size = 6),
-          ) +
-    annotate("text",
-             label = paste(n_uniq_3,
-                           "out of every 1000 clones are unique"),
-            x = -Inf,
-            y = Inf,
-            hjust = -0.4,
-            vjust = 3,
-            size = 2)
+  sum() / length(unique(na.omit(os17_lung_raw$lt))) * 1000
+# 638
+
+cells_w_uniq_clones_3 <-
+    table(na.omit(os17_lung_raw$lt)) %>%
+    as.data.frame() %>%
+    summarize(n = sum(Freq == 1) / sum(Freq) * 1000) %>%
+    pull(n) %>%
+    round()
+# 243
+
+figure_5c3 <- process_ltbc(os17_lung_raw,
+                           cid_lt = S0024xS0029_ltbc,
+                           histogram = FALSE,
+                           title = "Lung, Top 40 Clones",
+                           col_fill = "#4DBBD5FF",
+                           relative = TRUE,
+                           ret_list = TRUE) %>%
+  ltbc_hist(fill = "#4DBBD5FF", cells_w_uniq_clones_3, "Lung, Top 40 Clones")
 
 inset_3 <- dim_plot(os17, "Lung", color = "#4DBBD5FF")
 # ^^^ This function fails because there is only one lung cell and only one tibia cell in the os17 dataset at this point
 
 figure_5c3 <-
-    cowplot::ggdraw() +
-    cowplot::draw_plot(figure_5c3) +
-    cowplot::draw_plot(inset_3, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
+  cowplot::ggdraw() +
+  cowplot::draw_plot(figure_5c3) +
+  cowplot::draw_plot(inset_3, x = 0.7, y = 0.3, width = 0.2, height = 0.7)
 
 # Save as PDF
 pdf("Figures/figure_5/figure_5c3.pdf",
@@ -1369,10 +1414,10 @@ figure_5c3
 dev.off()
 
 figure_5c <-
-    gridExtra::grid.arrange(figure_5c1,
-                            figure_5c2,
-                            figure_5c3,
-                            ncol = 1)
+  gridExtra::grid.arrange(figure_5c1,
+                          figure_5c2,
+                          figure_5c3,
+                          ncol = 1)
 
 save(figure_5c, file = "Figures/figure_5/figure_5c.RData")
 ```
@@ -1383,93 +1428,73 @@ D) Overlay of cells sharing a common ancestor onto the dimensional reduction plo
 
 ### Processing
 
-```{r Fig5d_processing, dependson="Fig5load"}
+```{r Fig5d_processing, dependson=c("Fig5load","Fig5b","Fig5c")}
 # Extract the barcode frequency lists
-cx.lt.list <- processLTBC(os17_cx_raw,
-                          lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/lt.fq",
-                          cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0016/outs/cid.fq",
-                          ret.list = TRUE)
 
-tib.lt.list <- processLTBC(os17_tib_raw,
-                           lt.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/lt.fq",
-                           cid.loc = "/gpfs0/home/gdrobertslab/lab/Counts/S0018xS0028/outs/cid.fq",
-                           ret.list = TRUE)
+cx_lt_list <- process_ltbc(os17_cx_raw,
+                           cid_lt = S0016xS0027_ltbc,
+                           ret_list = TRUE)
 
-lung.lt.list <- processLTBC(os17_lung_raw,
-                            lt.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/lt.fq",
-                            cid.loc = "/gpfs0/home2/gdrobertslab/lab/Counts/S0024xS0029/outs/cid.fq",
-                            ret.list = TRUE)
+tib_lt_list <- process_ltbc(os17_tib_raw,
+                           cid_lt = S0018xS0028_ltbc,
+                           ret_list = TRUE)
+
+lung_lt_list <- process_ltbc(os17_lung_raw,
+                            cid_lt = S0024xS0029_ltbc,
+                            ret_list = TRUE)
 
 # Subset the three samples, but retain the current umap data
-cx.sub <- subset(os17, subset = src == "Culture")
-tib.sub <- subset(os17, subset = src == "Tibia")
-lung.sub <- subset(os17, subset = src == "Lung")
+cx_sub <- subset(os17, subset = src == "Culture")
+tib_sub <- subset(os17, subset = src == "Tibia")
+lung_sub <- subset(os17, subset = src == "Lung")
 
 # Subset to cells that have a lineage tag
 # Culture
 Culture.LTcells <- vector(mode = "character")
-for (i in 1:nrow(cx.lt.list)) {
-  temp <- WhichCells(cx.sub,
-                     expression = lt == cx.lt.list[[i, 1]])
-  Culture.LTcells <- append(Culture.LTcells,
-                            temp)
+for (i in 1:nrow(cx_lt_list)) {
+    temp <- WhichCells(cx_sub,
+                        expression = lt == cx_lt_list[[i, 1]])
+    Culture.LTcells <- append(Culture.LTcells,
+                                temp)
 }
 
-cx.tagged <- subset(cx.sub,
+cx.tagged <- subset(cx_sub,
                     cells = Culture.LTcells)
 
-# Tibia
-# Remove outlier cells (names may vary in different runs of the code)
-# This doesn't appear to do anything since those are already the only clusters
-# tib.sub <- subset(tib.sub,
-#                   idents = c("0",
-#                              "1",
-#                              "3",
-#                              "6")) 
-
 tib.LTcells <- vector(mode = "character")
-for (i in 1:nrow(tib.lt.list)) {
-  temp <- WhichCells(tib.sub,
-                     expression = lt == tib.lt.list[[i, 1]])
+for (i in 1:nrow(tib_lt_list)) {
+  temp <- WhichCells(tib_sub,
+                     expression = lt == tib_lt_list[[i, 1]])
   tib.LTcells <- append(tib.LTcells, temp)
 }
-tib.tagged <- subset(tib.sub,
+tib.tagged <- subset(tib_sub,
                      cells = tib.LTcells)
 
-# Lung
-# Remove outlier cells (names may vary in different runs of the code)
-# This doesn't appear to do anything since those are already the only clusters
-# lung.sub <- subset(lung.sub,
-#                    idents = c("0",
-#                               "1",
-#                               "3",
-#                               "6"))
-
 lung.LTcells <- vector(mode = "character")
-for (i in 1:nrow(lung.lt.list)) {
-  temp <- WhichCells(lung.sub,
-                     expression = lt == lung.lt.list[[i, 1]])
+for (i in 1:nrow(lung_lt_list)) {
+  temp <- WhichCells(lung_sub,
+                     expression = lt == lung_lt_list[[i, 1]])
   lung.LTcells <- append(lung.LTcells,
                          temp)
 }
-lung.tagged <- subset(lung.sub,
+lung.tagged <- subset(lung_sub,
                       cells = lung.LTcells)
 ```
 
 
 ### Make enriched clone DimPlots
-```{r eval=FALSE}
+```{r Fig5d, dependson=c("Fig5load","Fig5b","Fig5c","Fig5d_processing")}
 dataset_list <- list(cx.tagged,
                      tib.tagged,
                      lung.tagged)
 
-lt_list <- list(cx.lt.list,
-                tib.lt.list,
-                lung.lt.list)
+lt_list <- list(cx_lt_list,
+                tib_lt_list,
+                lung_lt_list)
 
-sub_list <- list(cx.sub,
-                 tib.sub,
-                 lung.sub)
+sub_list <- list(cx_sub,
+                 tib_sub,
+                 lung_sub)
 
 color_list <- list("#E64B35FF",
                    "#00A087FF",
@@ -1479,34 +1504,34 @@ figure_5d_list <- list()
 plot_num <- 1
 
 for (i in seq_len(length(dataset_list))) {
-    dataset <- dataset_list[[i]]
-    lt_data <- lt_list[[i]]
-    sub_data <- sub_list[[i]]
-    data_color <- color_list[[i]]
-    for (j in 1:4) {
-        figure_5d_list[[plot_num]] <-
-              patchwork::patchworkGrob(DimPlot(dataset,
+  dataset <- dataset_list[[i]]
+  lt_data <- lt_list[[i]]
+  sub_data <- sub_list[[i]]
+  data_color <- color_list[[i]]
+  for (j in 1:4) {
+    figure_5d_list[[plot_num]] <-
+      patchwork::patchworkGrob(DimPlot(dataset,
                                        reduction = "umap",
                                        pt.size = 0.1,
                                        cells.highlight = WhichCells(sub_data,
                                                                     expression = lt == lt_data[[j, 1]]),
                                        cols.highlight = data_color,
                                        sizes.highlight = 1) +
-                            coord_fixed() +
-                            theme(legend.position = "none") +
-                            ggtitle(paste("Clone",
-                                          lt_data[[j, 1]])) +
-                            NoLegend() +
-                            NoAxes() +
-              theme(title = element_text(size = 6),
-                    plot.margin = unit(c(0, 0, 0, 0), "cm"),
-                    plot.title = element_text(hjust = 0.5)))
-        plot_num <- plot_num + 1
-    }
+                                 coord_fixed() +
+                                 theme(legend.position = "none") +
+                                 ggtitle(paste("Clone",
+                                               lt_data[[j, 1]])) +
+                                 NoLegend() +
+                                 NoAxes() +
+                                 theme(title = element_text(size = 6),
+                                       plot.margin = unit(c(0, 0, 0, 0), "cm"),
+                                       plot.title = element_text(hjust = 0.5)))
+    plot_num <- plot_num + 1
+  }
 }
 
 figure_5d <-
-    gridExtra::grid.arrange(grobs = figure_5d_list, ncol = 4)
+  gridExtra::grid.arrange(grobs = figure_5d_list, ncol = 4)
 
 save(figure_5d, file = "Figures/figure_5/figure_5d.RData")
 ```
@@ -1515,14 +1540,14 @@ save(figure_5d, file = "Figures/figure_5/figure_5d.RData")
 
 E) UMAP visualization of cells belonging to top ten enriched clonal families highlighted in red.
 
-```{r Fig5e, dependson='Fig5d_processing'}
+```{r Fig5e, dependson=c("Fig5load","Fig5b","Fig5c","Fig5d_processing")}
 # Compare Enriched vs non-enriched 
 # Group first 10 against the tagged Lung
 LT <- vector(mode = "character")
 
 for (i in 1:10) {
   temp <- WhichCells(lung.tagged,
-                     expression = lt == lung.lt.list[[i, 1]])
+                     expression = lt == lung_lt_list[[i, 1]])
   LT <- append(LT, temp)
 }
 
@@ -1531,7 +1556,7 @@ Idents(lung.tagged, cells = LT) <- "Enriched clones"
 cell.ids <- sample(colnames(lung.tagged))
 
 # Culture plots
-figure_5e <- DimPlot(lung.sub,
+figure_5e <- DimPlot(lung_sub,
                      reduction = "umap",
                      pt.size = 1,
                      cells.highlight = WhichCells(lung.tagged,
@@ -1567,24 +1592,28 @@ dev.off()
 
 F) Pathway enrichment analysis for hallmark gene sets comparing enriched clones relative to the remaining metastatic tumor cells identifies Hypoxia, Glycolysis, EMT and MTORC1 signaling related genes to be significantly upregulated
 
-```{r Fig5f, dependson='Fig5e'}
+```{r Fig5f, dependson=c("Fig5load","Fig5b","Fig5c","Fig5d_processing","Fig5e")}
 # Pathways associated with Enriched clonal families
 source("Downstream.v2.R")
 
 # Rename identities from the total lung tumor to include enriched clones
-lung.sub.enr <- SetIdent(lung.sub,
+lung_sub_enr <- SetIdent(lung_sub,
                          cells = WhichCells(lung.tagged,
                                             idents = "Enriched clones"),
                          value = "Enriched clones")
 
 # Analyze enriched clones against the remaining tumor cells in the lung
-lung.sub.enr <- RenameIdents(lung.sub.enr,
+lung_sub_enr <- RenameIdents(lung_sub_enr,
                              "0" = "Remaining Tumor Cells",
                              "1" = "Remaining Tumor Cells",
                              "3" = "Remaining Tumor Cells",
                              "6" = "Remaining Tumor Cells")
 
-B.list <- list(OS17 = lung.sub.enr)
+# Save for use in supplement
+save(lung_sub_enr, file = "Data/lung_sub_enr.RData")
+
+# Create object list for DGEA hallmark analysis
+B.list <- list(OS17 = lung_sub_enr)
 
 # Perform differential gene expression analysis for hallmark pathways
 set.seed(100)
@@ -1618,10 +1647,10 @@ temp1 <- rownames_to_column(temp1,
 
 # Order by -log10pvalue for plotting
 temp1 <-
-    temp1 %>%
-    mutate(Pathway = str_wrap(Pathway, width = 30) %>%
-        as.factor() %>%
-        fct_reorder(pvalue))
+  temp1 %>%
+  mutate(Pathway = str_wrap(Pathway, width = 30) %>%
+           as.factor() %>%
+           fct_reorder(pvalue))
 
 # Plot 
 figure_5f <- ggplot(temp1,
@@ -1656,97 +1685,97 @@ load("Data/os17.RData")
 
 n_clones <- 30
 top_clones <-
-    tibble(src = os17$src,
-           clone = os17$lt,
-           cluster = paste0("c_", os17$seurat_clusters)) %>%
-    na.omit() %>%
-    group_by(src, clone, cluster) %>%
-    mutate(n_cells_in_cluster = n()) %>%
-    ungroup() %>%
-    group_by(src, clone) %>%
-    mutate(n_cells_in_clone = n()) %>%
-    ungroup() %>%
-    group_by(src) %>%
-    arrange(desc(n_cells_in_clone), clone, .by_group = TRUE) %>%
-    unique() %>%
-    pivot_wider(id_cols = c(src, clone, n_cells_in_clone),
-                names_from = cluster,
-                values_from = n_cells_in_cluster) %>%
-    filter(n_cells_in_clone >= 5) %>%
-    #slice_head(n = n_clones) %>%
-    ungroup() %>%
-    pivot_longer(cols = starts_with("c_"),
-                 names_to = "cluster",
-                 values_to = "n_cells_in_cluster") %>%
-    na.omit() %>%
-    mutate(clone = fct_reorder(clone, n_cells_in_clone))
+  tibble(src = os17$src,
+         clone = os17$lt,
+         cluster = paste0("c_", os17$seurat_clusters)) %>%
+  na.omit() %>%
+  group_by(src, clone, cluster) %>%
+  mutate(n_cells_in_cluster = n()) %>%
+  ungroup() %>%
+  group_by(src, clone) %>%
+  mutate(n_cells_in_clone = n()) %>%
+  ungroup() %>%
+  group_by(src) %>%
+  arrange(desc(n_cells_in_clone), clone, .by_group = TRUE) %>%
+  unique() %>%
+  pivot_wider(id_cols = c(src, clone, n_cells_in_clone),
+              names_from = cluster,
+              values_from = n_cells_in_cluster) %>%
+  filter(n_cells_in_clone >= 5) %>%
+  #slice_head(n = n_clones) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with("c_"),
+               names_to = "cluster",
+               values_to = "n_cells_in_cluster") %>%
+  na.omit() %>%
+  mutate(clone = fct_reorder(clone, n_cells_in_clone))
 
 cell_counts_to_test <-
-    top_clones$n_cells_in_clone %>%
-    unique() %>%
-    sort()
+  top_clones$n_cells_in_clone %>%
+  unique() %>%
+  sort()
 
 names(cell_counts_to_test) <- paste0("c_", cell_counts_to_test)
 
 # Get the number of clusters represented by n randomly selected cells
 max_per_cluster_n_cells <- function(sobj, n_cells) {
-    selected_cell_indexes <-
-        sample(seq_len(ncol(sobj)),
-               size = n_cells,
-               replace = FALSE)
-
-    max_n_per_cluster <-
-        sobj$seurat_clusters[selected_cell_indexes] %>%
-        table() %>%
-        max()
-    return(max_n_per_cluster)
+  selected_cell_indexes <-
+    sample(seq_len(ncol(sobj)),
+           size = n_cells,
+           replace = FALSE)
+  
+  max_n_per_cluster <-
+    sobj$seurat_clusters[selected_cell_indexes] %>%
+    table() %>%
+    max()
+  return(max_n_per_cluster)
 }
 
 # bootstrap the data n_perms times to get a distribution
 perm_n_times <- function(sobj, n_cells, n_perms = 1000) {
-    message("Testing ", n_cells, " cells")
-    n_clusters <- replicate(n_perms, max_per_cluster_n_cells(sobj, n_cells))
-    return(n_clusters)
+  message("Testing ", n_cells, " cells")
+  n_clusters <- replicate(n_perms, max_per_cluster_n_cells(sobj, n_cells))
+  return(n_clusters)
 }
 
 # Do this for all observed cells/clone
 n_perms <- 100000
 perm_table <-
-    sapply(cell_counts_to_test,
-           function(cell_num) perm_n_times(os17,
-                                           cell_num,
-                                           n_perms = n_perms),
-           USE.NAMES = TRUE) %>%
-    as.data.frame()
+  sapply(cell_counts_to_test,
+         function(cell_num) perm_n_times(os17,
+                                         cell_num,
+                                         n_perms = n_perms),
+         USE.NAMES = TRUE) %>%
+  as.data.frame()
 
 top_clones %>%
-    rowwise() %>%
-    mutate(p_value = (
-        sum(perm_table[[paste0("c_", n_cells_in_clone)]] >=
-             n_cells_in_cluster) /
-         n_perms
-                     ),
-           signif = p_value <= 0.05,
-           cluster = str_remove(cluster, "c_")) %>%
-    ggplot(aes(x = cluster,
-               y = clone,
-               fill = n_cells_in_cluster)) +
-    geom_tile() +
-    geom_text(aes(label = n_cells_in_cluster,
-                  color = signif)) +
-    scale_color_manual(values = c("gray", "red")) +
-    facet_grid(src ~ ., scales = "free_y", space = "free") +
-    labs(x = "Cluster",
-         y = "Clone",
-         fill = "Cells in Cluster",
-         color = "Enriched Cluster") +
-    theme_bw()
+  rowwise() %>%
+  mutate(p_value = (
+    sum(perm_table[[paste0("c_", n_cells_in_clone)]] >=
+          n_cells_in_cluster) /
+      n_perms
+  ),
+  signif = p_value <= 0.05,
+  cluster = str_remove(cluster, "c_")) %>%
+  ggplot(aes(x = cluster,
+             y = clone,
+             fill = n_cells_in_cluster)) +
+  geom_tile() +
+  geom_text(aes(label = n_cells_in_cluster,
+                color = signif)) +
+  scale_color_manual(values = c("gray", "red")) +
+  facet_grid(src ~ ., scales = "free_y", space = "free") +
+  labs(x = "Cluster",
+       y = "Clone",
+       fill = "Cells in Cluster",
+       color = "Enriched Cluster") +
+  theme_bw()
 
 ```
 
 
 ### Panel Figure 5
-```{r eval=FALSE}
+```{r Fig5_panel, dependson=c("Fig5load","Fig5b","Fig5c","Fig5d_processing","Fig5e","Fig5f")}
 load("Figures/figure_5/figure_5b.RData")
 load("Figures/figure_5/figure_5c.RData")
 load("Figures/figure_5/figure_5d.RData")
@@ -1761,13 +1790,13 @@ pdf("Figures/figure_5/figure_5.pdf",
     width = 8,
     height = 11)
 gridExtra::grid.arrange(grobs = list(figure_5b,
-                          figure_5c,
-                          figure_5d,
-                          figure_5e,
-                          figure_5f),
-             layout_matrix = layout_matrix,
-             ncol = 2,
-             nrow = 3)
+                                     figure_5c,
+                                     figure_5d,
+                                     figure_5e,
+                                     figure_5f),
+                        layout_matrix = layout_matrix,
+                        ncol = 2,
+                        nrow = 3)
 dev.off()
 ```
 
