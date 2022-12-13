@@ -1,4 +1,19 @@
-# OSHetero2021
-Files supporting data analysis for the heterogeneity in osteosarcoma tissue tropism paper (Sanjana lead)
+# **Data analysis supporting the manuscript "*Osteosarcoma tumors maintain intra-tumoral transcriptional heterogeneity during bone and lung colonization*"**
 
-Osteosarcoma exhibits marked patient-to-patient heterogeneity, but little is known about heterogeneity within individual tumors. This study focuses on the roles that phenotypic plasticity and clonal selection play as tumors adapt to primary and metastatic microenvironments. We show that osteosarcomas have a high degree of transcriptional heterogeneity that is retained even after prolonged cell culture or adaptation to changing microenvironments. We find that both cell lines and PDXs grown in cell culture or as flank tumors adopt markedly different transcriptional profiles when grown as primary bone tumors or metastatic lung lesions. By combining lineage tracing with single-cell transcriptomics, we find that very little clonal selection occurs when tumors grow in the tibia, but significant expansion of select clones occurs when grown as experimental metastases in the lung. Interestingly, the selective pressures that drive clonal expansion do not cause narrowing of transcriptional phenotypes. By comparing the phenotypes from transcriptional clusters in orthotopic/metastatic tumor pairs, we identify a transcriptional signature that is shared among clusters that become enriched during lung colonization. This includes responses to IFNG, TNF, PDGF, previously unidentified IL1B, and a shift away from genes associated with glycolysis and toward those associated with oxidative metabolism. The metastatic microenvironment enriches for phenotypically diverse clones that each display metabolic properties that engender fitness within the metastatic microenvironment. Together, these data suggest that an underlying program, possibly a developmental program retained from the tissue of origin, maintains phenotypic heterogeneity, even during adaptation to changing microenvironmental conditions.
+## **Manuscript abstract**
+
+>**Background**
+>
+>Tumors are complex tissues containing collections of phenotypically diverse malignant and nonmalignant cells. We know little of the mechanisms that govern heterogeneity of tumor cells nor of the role heterogeneity plays in overcoming stresses, such as adaptation to different microenvironments. Osteosarcoma is an ideal model for studying these mechanisms—it exhibits widespread inter- and intra-tumoral heterogeneity, predictable patterns of metastasis, and a lack of clear targetable driver mutations. Understanding the processes that facilitate adaptation to primary and metastatic microenvironments could inform the development of therapeutic targeting strategies.
+>
+>**Results**
+>
+>We investigated single-cell RNA-sequencing profiles of 47,977 cells obtained from cell line and patient-derived xenograft models as cells adapted to growth within primary bone and metastatic lung environments. Tumor cells maintained phenotypic heterogeneity as they responded to the selective pressures imposed during bone and lung colonization. Heterogenous subsets of cells defined by distinct transcriptional profiles were maintained within bone- and lung-colonizing tumors, despite high-level selection. One prominent heterogenous feature involving glucose metabolism was clearly validated using immunofluorescence staining. Finally, using concurrent lineage tracing and single-cell transcriptomics, we found that lung colonization enriches for multiple clones with distinct transcriptional profiles that are preserved across cellular generations.
+>
+>**Conclusions**
+>
+>Response to environmental stressors occurs through complex and dynamic phenotypic adaptations. Heterogeneity is maintained, even in conditions that enforce clonal selection. These findings likely reflect the influences of developmental processes promoting diversification of tumor cell subpopulations, which are retained, even in the face of selective pressures. 
+>
+
+## **Purpose**
+This set of code is intended to document the analyses performed to generate the data presented in the above manuscript. This is not intended a plug-and-play pipeline for use by others. The code may be useful, however, as a reference for how to perform some of the analyses.
