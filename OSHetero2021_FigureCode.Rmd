@@ -20,7 +20,8 @@ knitr::opts_chunk$set(
   tidy.opts = list(width.cutoff = 95),
   message = FALSE,
   warning = FALSE,
-  cache.lazy = FALSE
+  cache.lazy = FALSE,
+  include = FALSE
 )
 ```
 
@@ -31,34 +32,20 @@ knitr::opts_chunk$set(
 **Cell line and PDX models of osteosarcoma display transcriptional heterogeneity.**
 
 ```{r Fig1_lib, cache=FALSE}
-# source("scSeurat.R")
 source("Downstream.v2.R")
 set.seed(888)
+
 # loading libraries
 library(Seurat)
-# library(future)
 library(ggplot2)
 library(msigdbr)
 library(clusterProfiler)
-# library(SingleR)
-# library(dplyr)
-# library(pheatmap)
-# library(RColorBrewer)
-# library(viridis) # inferno color palette
 library(grid)
-# library(ggsci)
 library(data.table)
-# library(ggvenn)
-# library(tibble)
-# library(tidyr)
 library(tidyverse)
-# library(stringr)
-# library(reshape2)
-# library(pzfx)
 library(ggridges)
-# library(effsize)
-# library(perm)
-# library(celldex)
+
+message(paste("Working directory: ", getwd()))
 ```
 
 ## Figure 1A
@@ -110,7 +97,7 @@ pdf("Figures/figure_1/figure_1a_os17_pie.pdf",
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(1, length(unique(os17_cx@active.ident)))))
 
-for(i in 1:length(unique(os17_cx@active.ident))){
+for(i in seq_along(unique(os17_cx@active.ident))){
   temp <- WhichCells(os17_cx,
                      idents = cid[[i]])
   LT.cells <- subset(os17_cx,
@@ -125,13 +112,13 @@ for(i in 1:length(unique(os17_cx@active.ident))){
   pie <- bp +
     coord_polar("y",
                 start = 0) +
-    scale_fill_brewer(palette ="Blues") +
+    scale_fill_brewer(palette = "Blues") +
     theme_minimal() +
     NoAxes() + NoLegend() +
     ggtitle(paste("Cluster",
                   cid[[i]]))
   print(pie,
-        vp = vplayout(ceiling(i/length(unique(os17_cx@active.ident))),
+        vp = vplayout(ceiling(i / length(unique(os17_cx@active.ident))),
                       i))
 }
 dev.off()
@@ -144,15 +131,15 @@ dev.off()
 B) UMAP analysis of NCH-OS-7 cells (n = 1998) grown as subcutaneous flank tumor. Cell cycle distribution of cells is visualized as pie charts.
 
 ```{r Fig1b_NCHOS7}
-load(file ="Data/os7_cx_CCR.RData")
+load(file = "Data/os7_cx_CCR.RData")
 
 # Flank plots
 
 figure_1b <- DimPlot(os7_cx,
                      reduction = "umap",
                      pt.size = 1,
-                     label = T) + 
-  coord_fixed() + 
+                     label = T) +
+  coord_fixed() +
   ggtitle("NCHOS7 in Flank") +
   NoAxes() +
   scale_color_npg(alpha = 1)
@@ -178,7 +165,7 @@ pdf("Figures/figure_1/figure_1b_nchos7_pie.pdf",
 
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(1, length(unique(os7_cx@active.ident)))))
-for(i in 1:length(unique(os7_cx@active.ident))){
+for(i in seq_along(unique(os7_cx@active.ident))){
   temp <- WhichCells(os7_cx,
                      idents = cid[[i]]) 
   LT.cells <- subset(os7_cx,
@@ -221,11 +208,11 @@ B.list <- list(OS17 = os17_cx,
 
 em.hm.list <- list()
 
-for (i in 1:length(B.list)) {
+for (i in seq_along(B.list)) {
   em.hm.list[[i]] <- DGEA(B.list[[i]])
 }
 
-for(i in 1:(length(em.hm.list))) {
+for(i in seq_along(em.hm.list)) {
   em.hm.list[[i]] <- setDT(em.hm.list[[i]],
                            keep.rownames = TRUE)[]
 }
@@ -532,10 +519,10 @@ figure_2c <-
   geom_hline(yintercept = c(-1.5, 1.5),
              color = "gray",
              linetype = 2,
-             size = 0.5) +
+             linewidth = 0.5) +
   geom_hline(yintercept = 0,
              color = "black",
-             size = 0.5) +
+             linewidth = 0.5) +
   geom_text(data = fig_2c_data,
             aes(x = -1 * order,
                 y = label_y * 4,
@@ -1340,7 +1327,6 @@ dev.off()
 
 n_uniq_2 <-
   (table(os17_tib_raw$lt) == 1) %>%
-
   sum() / length(unique(na.omit(os17_tib_raw$lt))) * 1000
 # 817
 
@@ -1377,7 +1363,6 @@ dev.off()
 
 n_uniq_3 <-
   (table(os17_lung_raw$lt) == 1) %>%
-
   sum() / length(unique(na.omit(os17_lung_raw$lt))) * 1000
 # 638
 
@@ -1618,7 +1603,7 @@ B.list <- list(OS17 = lung_sub_enr)
 # Perform differential gene expression analysis for hallmark pathways
 set.seed(100)
 em.hm.list <- list()
-for (i in 1:length(B.list)) {
+for (i in seq_along(B.list)) {
   em.hm.list[[i]] <- DGEA(B.list[[i]])
 }
 
@@ -1663,7 +1648,7 @@ figure_5f <- ggplot(temp1,
   geom_vline(xintercept = 1.5,
              color = "gray",
              linetype = 2,
-             size = 1) +
+             linewidth = 1) +
   theme(axis.text = element_text(size = 6),
         axis.title = element_text(size = 8))
 

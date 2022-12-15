@@ -13,5 +13,5 @@ PrimaryTumor/GSE152048/*
 Data/*
 .tsv
 Figures/*
-*_cache*
-*_files*
+./*_cache*
+./*_files*

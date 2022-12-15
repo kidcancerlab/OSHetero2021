@@ -20,7 +20,8 @@ knitr::opts_chunk$set(
   tidy.opts = list(width.cutoff = 95),
   message = FALSE,
   warning = FALSE,
-  cache.lazy = FALSE
+  cache.lazy = FALSE,
+  include = FALSE
 )
 ```
 
