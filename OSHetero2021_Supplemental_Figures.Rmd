@@ -1,5 +1,5 @@
 ---
-title: "OSHetero2021 Supplement"
+title: "Updated OSHetero2021 Supplement"
 author: "Sanjana Rajan, Emily Franz, Matthew Cannon"
 date: "`r format(Sys.time(), '%m/%d/%Y')`"
 output: 
@@ -56,7 +56,7 @@ library(perm)
 options(future.globals.maxSize= 89128960000)
 ```
 
-Note: supplemental numbering in this code reflects the previous version of the paper submitted, visible on bioRx. Edits on supplemental numbering is made in Illustrator. 
+Note: supplemental numbering within the code chunks reflects the previous version of the paper submitted, visible on bioRx. Edits on supplemental numbering was previously made in Illustrator. 
 
 # S1
 
@@ -224,7 +224,8 @@ s1_v2
 dev.off()
 ```
 
-# S2
+# S5
+(old S2)
 
 ```{r s2}
 load("Data/osteoblasts.RData")
@@ -395,7 +396,6 @@ plot(sfig_s2_b)
 dev.off()
 ```
 
-
 ```{r s2_group, dependson=c("s2","obplot")}
 layout <- "
 AAAA#DD
@@ -414,7 +414,8 @@ s2
 dev.off()
 ```
 
-# S3
+# S7
+(old S3)
 
 ```{r S3}
 # Load merged OS models
@@ -523,9 +524,11 @@ rm(list=setdiff(ls(), "tenx_load_qc"))
 options(future.globals.maxSize= 8912896000000)
 ```
 
-# S4
+# S8
+(old S4)
+
 ## Batch Correction Test
-### 4A
+### S8A
 
 ```{r s4}
 # Determine overlay of replicates with or without the use
@@ -789,7 +792,7 @@ sfig_s4_a3
 dev.off()
 ```
 
-### 4B
+### S8B
 
 ```{r s4_b, dependson="s4"}
 library(sctransform)
@@ -906,7 +909,7 @@ s4_ab
 dev.off()
 ```
 
-### 4C
+### S8C
 
 ```{r s4_c}
 set.seed(108)
@@ -971,7 +974,8 @@ options(future.globals.maxSize= 8912896000000)
 rm(list=setdiff(ls(), "tenx_load_qc"))
 ```
 
-# S5 & S6 & S7
+# S19-28: Patient Data
+(old S5 & S6 & S7)
 Patient data
 
 ```{r s5-s6-s7_processing}
@@ -1334,6 +1338,8 @@ save(primarytumor,
      file = "Data/Supplement/primarytumor_preModuleScoring.RData")
 ```
 
+## S19-22 Module score FeaturePlots
+
 ```{r s5-s6-s7-s8_modules, dependson="s5-s6-s7_processing"}
 # Set up directory
 if(!dir.exists("Figures/supplement/s5")) {
@@ -1560,6 +1566,8 @@ dev.off()
 save(primarytumor, file = "Data/Supplement/PatientData/primarytumor.RData")
 ```
 
+## S22-28 Module score ScatterPlots
+
 ```{r s5-s6-s7-s8_scatter, dependson=c("s5-s6-s7_processing","s5-s6-s7-s8_modules")}
 #print(hue_pal()(7))
 colors <- c("#F8766D",
@@ -1735,9 +1743,13 @@ combo <- list()
 
 ```
 
-# S9 & S10 - Imaging
+# S29 & S30: Imaging
+(old S9 & S10 - Imaging)
 
-# S11
+# S32
+(old S11)
+
+## Processing & S32B (cell culture)
 
 ```{r s11_1}
 #source("scSeurat.R")
@@ -1907,6 +1919,8 @@ sfig_s11_b1
 dev.off()
 ```
 
+## Processing & S32B (lung)
+
 ```{r s11_2}
 #source("scSeurat.R")
 library(dplyr)
@@ -2037,6 +2051,8 @@ pdf("Figures/supplement/s11/sfig_s11_b2.pdf",
 sfig_s11_b2
 dev.off()
 ```
+
+## S32A and Panel Grouping
 
 ```{r s11_correctplots, dependson=c("s11_1","s11_2")}
 library(rrrSingleCellUtils)

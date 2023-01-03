@@ -56,12 +56,11 @@ library(perm)
 
 # Reviewer Requests
 
-
-## Add downregulated pathways
+## S3: Add downregulated pathways
 
 *6. Figure 1C, 3D, 5F— please include the pathway enrichment analysis on the downregulated genes, or please clarify the reason for only focusing on the upregulated genes for pathway enrichment analysis.*
 
-### 1C
+### From Fig 1C
 
 ```{r 1c3d5fdown}
 source("Downstream.v3.R")
@@ -171,7 +170,7 @@ figure_1c_down
 dev.off()
 ```
 
-### 3D
+### From Fig 3D
 
 ```{r Fig3_down}
 load("Data/OS_list_CCR.RData")
@@ -338,7 +337,7 @@ figure_3d_down
 dev.off()
 ```
 
-### 5F
+### From Fig 5F
 
 ```{r Fig5f_down}
 #source("scSeurat.R")
@@ -410,7 +409,7 @@ figure_5f_down
 dev.off()
 ```
 
-### Test if clones tend to be enriched within a single cluster
+## S33: Test if clones tend to be enriched within a single cluster
 
 ```{r bootstrapCloneEnrich, eval=TRUE}
 load("Data/os17.RData")
@@ -504,7 +503,7 @@ contin
 dev.off()
 ```
 
-## Replicates in other cell lines
+## S4-5: Replicates in other cell lines (mouse)
 
 ### K7M2
 
@@ -878,9 +877,9 @@ F420_umap
 dev.off()
 ```
 
-### Replicate Analyses
+### S4
 
-#### Figure 2C
+#### Repeat Figure 2C
 
 C) Pathway enrichment analysis with adjusted p values for hallmark gene sets associated with these shared genes
 
@@ -1185,11 +1184,11 @@ save(repfigure_2c, file = "Figures/supplement/requests/k7m2_f420/repfigure_2c.RD
 save(repfigure_2c, file = "Figures/supplement/requests/k7m2_f420/repfig_2c_data.RData")
 ```
 
-### Repeat Figure 3
+### S6: Repeat Figure 3
 
 Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
 
-#### Repeat Figure 3B
+##### S6A (Repeat Figure 3B)
 
 *statistical method subject to change*
 
@@ -1412,7 +1411,7 @@ repfigure_3b_15
 dev.off()
 ```
 
-### Repeat Figure 3C
+### S6B (Repeat Figure 3C)
 
 C) UMAP analysis for merged primary and metastatic samples in each of the four models. Cells in grey represent remaining cells in merged sample. Cluster enrichment analysis shows distribution of cells in each cluster in the two microenvironment conditions (tibia, lung). While some cells in the primary and metastatic lesions adopted shared phenotypes, others adopted distinct phenotypes.
 
@@ -1610,7 +1609,7 @@ save(suppFigure_3c_barplots,
      file = "Figures/supplement/requests/k7m2_f420/suppFigure_3c_barplots.RData")
 ```
 
-### Repeat Figure 3D
+### S6C (Repeat Figure 3D)
 
 D) Metabolic heterogeneity in glycolysis activation. We used a pathway enrichment
 analysis for hallmark gene sets using genes differentially upregulated in each
@@ -1656,7 +1655,6 @@ head(cx.pd)
 write_tsv(cx.pd, file = "Data/Supplement/k7m2_f420/cxpd.tsv")
 rm(OS_list)
 ```
-
 
 ```{r repfig3d, eval=F}
 lung_percent <-
@@ -1764,7 +1762,6 @@ repfigure_3d
 dev.off()
 ```
 
-
 ```{r assemblingFig3, eval=F}
 load("Figures/supplement/requests/k7m2_f420/repfigure_3b_15.RData")
 load("Figures/supplement/requests/k7m2_f420/suppFigure_3c_umaps.RData")
@@ -1808,8 +1805,6 @@ dev.off()
 ```
 
 ## Patient tumors and cell lines
-
-Pull out the DEG between patient primary vs met, do the same for PDXs, then compare gene lists using venn diagram.
 
 ```{r patientvpdx}
 # Start from this stopping point
@@ -2079,151 +2074,9 @@ for (tissue_name in c("Primary", "Lung Met")) {
 save(patient_de_genes_dir, file="Data/Supplement/patient_de_genes_dir.RData")
 ```
 
-```{r pdxdeg, eval = F}
-### Extract genes that are shared in these datasets
-load("Data/OS_merged_postCCR.RData")
-# Set seed before subsetting and DE analysis to ensure consistent results
-set.seed(100)
+## Fig4C, S19B-28B: Met Module scores and Scatter Plots
 
-data <- list(
-  NCHOS2 = subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-2")),
-  NCHOS7 = subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-7"))
-)
-
-pdx_data <- tibble()
-de_genes_dir <- list()
-for (direction in c("up", "down")) {
-  de_genes <- list()
-  for (i in seq_len(length(data))) {
-    Idents(data[[i]]) <- data[[i]]$src
-    de_genes[[i]] <-
-      FindMarkers(data[[i]],
-                  ident.1 = "Lung",
-                  ident.2 = "Tibia",
-                  only.pos = FALSE,
-                  min.pct = 0.1)
-    
-    # Select genes that change in the direction of interest
-    if (direction == "up") {
-      de_genes_dir[[i]][["up"]] <-
-        de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
-                        de_genes[[i]]$avg_log2FC > 0, ]
-    } else {
-      de_genes_dir[[i]][["down"]] <-
-        de_genes[[i]][de_genes[[i]]$p_val_adj < 0.05 &
-                        de_genes[[i]]$avg_log2FC < 0, ]
-    }
-  }
-}
-
-save(de_genes_dir, file="Data/Supplement/de_genes_dir.RData")
-```
-
-```{r compare, eval=FALSE}
-NCHOS2 <- subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-2"))
-NCHOS7 <- subset(OS, cells = WhichCells(OS, expression = model == "NCH-OS-7"))
-all_tumor <- qs::qread("Data/Supplement/PatientData/all_tumor.qs")
-
-# Plot
-all_tumor$tissue <- all_tumor$type %>%
-  stringr::str_replace("Lung Met", "Lung")
-NCHOS2$tissue <- NCHOS2$src %>%
-  stringr::str_replace("Tibia", "Primary")
-NCHOS7$tissue <- NCHOS7$src %>%
-  stringr::str_replace("Tibia", "Primary")
-
-models <- c(all_tumor,
-            NCHOS2,
-            NCHOS7)
-model_names <- c("Patient Tumors",
-                 "NCHOS2 PDX",
-                 "NCHOS7 PDX")
-names(models) <- model_names
-
-de_out <- list()
-for (cl_name in model_names) {
-  Idents(models[[cl_name]]) <- models[[cl_name]]$tissue
-  temp_de_out <-
-    FindMarkers(models[[cl_name]],
-                ident.1 = "Lung",
-                ident.2 = "Primary",
-                min.pct = 0.1) %>%
-    filter(p_val_adj <= 0.05)
-  
-  de_out[["up"]][[cl_name]] <-
-    temp_de_out %>%
-    filter(avg_log2FC > 0) %>%
-    rownames()
-  
-  de_out[["down"]][[cl_name]] <-
-    temp_de_out %>%
-    filter(avg_log2FC < 0) %>%
-    rownames()
-  
-  rm(temp_de_out)
-}
-
-pdx_v_patient <- list()
-for (cl_name in model_names) {
-  for (direction in c("up", "down")) {
-    pdx_v_patient[[direction]] <-
-      ggvenn::ggvenn(de_out[[direction]],
-                     fill_color = c("#0073C2FF",
-                                    "#EFC000FF",
-                                    "#868686FF",
-                                    "#CD534CFF"),
-                     stroke_size = 0.1,
-                     set_name_size = 2,
-                     text_size = 2,
-                     show_percentage = TRUE) +
-      ggtitle(paste0(direction)) +
-      theme(plot.title = element_text(hjust = 0.5,
-                                      size = 10,
-                                      face = "bold"))
-  }
-}
-
-#Save as PDF
-pdf("figures/supplement/requests/pdx_v_patient.pdf",
-    width = 5,
-    height = 10)
-# Put all four plots into one image
-gridExtra::grid.arrange(grobs = pdx_v_patient,
-                        vp = viewport(width = 1.0, height = 0.9))
-dev.off()
-```
-
-```{r degs, eval = F}
-# Load pdx
-load("Data/Supplement/de_genes_dir.RData")
-
-# Load patient DEG list between mets and primary tumors
-load("Data/Supplement/patient_de_genes_dir.RData")
-
-# Up
-## Patient DEGs
-A <- rownames(patient_de_genes[["up"]])
-
-## PDX DEGs
-B <- rownames(de_genes[[1]][["up"]])
-C <- rownames(de_genes[[2]][["up"]])
-
-# Down
-## Patient DEGs
-D <- rownames(patient_de_genes[["down"]])
-
-## PDX DEGs
-E <- rownames(de_genes[[1]][["down"]])
-F <- rownames(de_genes[[2]][["down"]])
-
-intersect_up <- intersect(intersect(A, B), C) %>%
-      unique()
-
-intersect_down <- intersect(intersect(D, E), F) %>%
-      unique()
-```
-
-## Met Module scores
+### Fig4C, S19B-22B Module Score Feature plots
 
 ```{r METs5-s6-s7-s8_modules, dependson="s5-s6-s7_processing"}
 # Load met samples
@@ -2513,6 +2366,8 @@ dev.off()
 save(met_tumor, file = "Data/Supplement/PatientData/met_tumor.RData")
 ```
 
+### S23B-28B: Met Module score scatter plots
+
 ```{r METs5-s6-s7-s8_scatter, dependson=c("s5-s6-s7_processing","s5-s6-s7-s8_modules")}
 # Define colors
 colors <- c("#F8766D",
@@ -2655,8 +2510,9 @@ combo <- list()
     dev.off()
 ```
 
+## S9-18: Module Scores and Scatter Plots for Cell lines and PDXs
 
-## Module Scores and Scatter Plots for Cell lines and PDXs
+### S9-12 Module Scores
 
 ```{r ms}
 library(rrrSingleCellUtils)
@@ -2925,6 +2781,8 @@ dev.off()
 save(OS.list_1500, file = "Data/Supplement/PatientData/OS.list_1500_ms.RData")
 ```
 
+## S13-18 Scatter Plots
+
 ```{r cellpdx_scatter}
 # Temporarily edited for one dataset of interest
 
@@ -3077,5 +2935,12 @@ combo <- list()
     print(sfig)
     dev.off()
 }
+```
+
+# S31 - Cell Line Imaging 
+(no coding needed)
+
+```{r}
+sessionInfo()
 ```
 
