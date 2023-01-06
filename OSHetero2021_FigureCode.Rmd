@@ -50,8 +50,6 @@ message(paste("Working directory: ", getwd()))
 
 ## Figure 1A
 
-*DONE*
-
 A) UMAP analysis of OS-17 cells (n = 3178) grown in cell culture. Cell cycle distribution of cells (n = 3178) is visualized as pie charts.
 
 ```{r Fig1a_OS17}
@@ -126,8 +124,6 @@ dev.off()
 
 ## Figure 1B
 
-*DONE*
-
 B) UMAP analysis of NCH-OS-7 cells (n = 1998) grown as subcutaneous flank tumor. Cell cycle distribution of cells is visualized as pie charts.
 
 ```{r Fig1b_NCHOS7}
@@ -197,8 +193,6 @@ dev.off()
 ## Figure 1C
 
 C) Pathway enrichment analysis for hallmark gene sets associated with genes upregulated in distinct clusters identified in the two osteosarcoma models. P values were adjusted for multiple comparisons. Boxes in grey identify non-significant enrichments, whereas boxes in red identify statistically significant enrichments. MTORC1: mechanistic target of rapamycin (mTOR) complex 1. PI3K: Phosphoinositide 3-kinase. AKT: Protein kinase B. TGF: Transforming growth-factor. TNF: tumor necrosis factor. NFKB: Nuclear Factor kappa-light-chain-enhancer of activated B cells.
-
-*Need correct input for this figure heatmap.*
 
 ```{r Fig1c_dgea, dependson='Fig1b_NCHOS7'}
 # Pathway enrichment analysis
@@ -595,8 +589,6 @@ dev.off()
 Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive changes in response to changing microenvironments. A) Schematic outlining scRNA-seq bioinformatics workflow. In B-D, samples subset to equal number of cells to allow inter-model comparison (n=1500 per condition).
 
 ## Figure 3B
-
-*statistical method subject to change*
 
 B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown in cell culture (####p <0.001). Within model comparison, identified increase in ITH scores as cells colonize tibia and lung microenvironments, with the exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák multiple comparisons test.
 

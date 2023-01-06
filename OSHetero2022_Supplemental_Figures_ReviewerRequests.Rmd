@@ -20,7 +20,8 @@ knitr::opts_chunk$set(
   tidy.opts = list(width.cutoff = 95),
   message = FALSE,
   warning = FALSE,
-  cache.lazy = FALSE
+  cache.lazy = FALSE,
+  include = FALSE
 )
 ```
 
@@ -1194,7 +1195,7 @@ Figure 3. Osteosarcoma cells retain phenotypic heterogeneity despite adaptive ch
 
 B) Osteosarcoma cells exhibited higher ITH scores than that of osteoblasts grown in cell culture (####p <0.001). Within model comparison, identified increase in ITH scores as cells colonize tibia and lung microenvironments, with the exception of NCH-OS-7 (****p <0.001). P values were adjusted using Šidák multiple comparisons test.
 
-```{r repfig3b, eval=F}
+```{r repfig3b, eval=T}
 # Load OS data that was subsetted to be equal cell numbers across 
 load("Data/Supplement/k7m2_f420/F420_tumor.RData")
 load("Data/Supplement/k7m2_f420/k7m2_tumor.RData")
@@ -1415,7 +1416,7 @@ dev.off()
 
 C) UMAP analysis for merged primary and metastatic samples in each of the four models. Cells in grey represent remaining cells in merged sample. Cluster enrichment analysis shows distribution of cells in each cluster in the two microenvironment conditions (tibia, lung). While some cells in the primary and metastatic lesions adopted shared phenotypes, others adopted distinct phenotypes.
 
-```{r repfig3c, eval=F}
+```{r repfig3c, eval=T}
 load("Data/OS_list_CCR.RData")
 
 OS_list$OS17_TL <- OS_list$OS17_TL %>%
@@ -1620,7 +1621,7 @@ Bar plot shows percentage of cells identified per cluster in lung metastases.
 In B-D, samples subset to equal number of cells to allow inter-model comparison
 (n=1500 per condition).
 
-```{r repfig3d_process, dependson='repfig3c', eval=F}
+```{r repfig3d_process, dependson='repfig3c', eval=T}
 library(data.table)
 #library(pheatmap)
 #Create list of objects used in repfigure 3 heatmap
@@ -1656,7 +1657,7 @@ write_tsv(cx.pd, file = "Data/Supplement/k7m2_f420/cxpd.tsv")
 rm(OS_list)
 ```
 
-```{r repfig3d, eval=F}
+```{r repfig3d, eval=T}
 lung_percent <-
     read_tsv("Data/Supplement/k7m2_f420/repfig3d_lung_prop_tbl.tsv") %>%
     mutate(sample_order = rank(sample) * 1000 - lung_perc,
@@ -1762,7 +1763,7 @@ repfigure_3d
 dev.off()
 ```
 
-```{r assemblingFig3, eval=F}
+```{r assemblingFig3, eval=T}
 load("Figures/supplement/requests/k7m2_f420/repfigure_3b_15.RData")
 load("Figures/supplement/requests/k7m2_f420/suppFigure_3c_umaps.RData")
 load("Figures/supplement/requests/k7m2_f420/suppFigure_3c_barplots.RData")
