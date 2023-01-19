@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
   message = FALSE,
   warning = FALSE,
   cache.lazy = FALSE,
-  include = FALSE
+  fig.show='hide'
 )
 ```
 
@@ -968,7 +968,8 @@ for (tissue_name in c("Tibia", "Lung")) {
                    human != "LILRB3" &
                    human != "LILRB4" &
                    human != "HLA-A" & 
-                   human != "HBA2") %>% 
+                   human != "HBA2" &
+                   human != "H3F3A") %>% 
           column_to_rownames("human")
         message(paste0(tissue_name, " ",  direction, " for de_genes_6 DONE"))
 
@@ -1622,6 +1623,7 @@ In B-D, samples subset to equal number of cells to allow inter-model comparison
 (n=1500 per condition).
 
 ```{r repfig3d_process, dependson='repfig3c', eval=T}
+source("Downstream.v3.R")
 library(data.table)
 #library(pheatmap)
 #Create list of objects used in repfigure 3 heatmap
@@ -1756,7 +1758,7 @@ repfigure_3d
 
 save(repfigure_3d, file = "Figures/supplement/requests/k7m2_f420/repfigure_3d.RData")
 
-pdf("Figures/supplement/k7m2_f420/repfigure_3d.pdf",
+pdf("Figures/supplement/requests/k7m2_f420/repfigure_3d.pdf",
        width = 15,
        height = 8)
 repfigure_3d
@@ -1807,8 +1809,11 @@ dev.off()
 
 ## Patient tumors and cell lines
 
+*Note: this code chunk depends on objects created in OSHetero2021_Supplemental_Figures.Rmd*
+
 ```{r patientvpdx}
-# Start from this stopping point
+library(harmony)
+# Start from this stopping point from OSHetero2021_Supplemental_Figures.Rmd
 comb <- qs::qread("Data/Supplement/PatientData/comb.qs")
 
 DimPlot(comb, reduction = "umap", label = T, repel = T) +
@@ -2785,10 +2790,11 @@ save(OS.list_1500, file = "Data/Supplement/PatientData/OS.list_1500_ms.RData")
 ## S13-18 Scatter Plots
 
 ```{r cellpdx_scatter}
-# Temporarily edited for one dataset of interest
+load("Data/Supplement/PatientData/OS.list_1500_ms.RData")
 
 # Define colors
-#print(hue_pal()(12))
+# library(scales)
+# print(hue_pal()(13))
 colors <- c("#F8766D",
             "#DE8C00",
             "#B79F00",
@@ -2800,7 +2806,9 @@ colors <- c("#F8766D",
             "#619CFF",
             "#C77CFF",
             "#F564E3",
-            "#FF64B0")
+            "#FF64B0",
+            "#FF65AC")
+
 
 if (!dir.exists("Figures/supplement/requests/cellms")) {
   dir.create("Figures/supplement/requests/cellms")
@@ -2808,7 +2816,7 @@ if (!dir.exists("Figures/supplement/requests/cellms")) {
 #### Glycolysis vs all others ####
 combo <- list()
 for (j in 1:3) {
-  for (i in 1:length(OS.list_1500[[i]])) {
+  for (i in 1:length(OS.list_1500)) {
     p <- FeatureScatter(OS.list_1500[[i]],
                         feature1 = str_c(names(gl[1]),
                                          "1"),
@@ -2830,27 +2838,37 @@ for (j in 1:3) {
         width = 5)
     print(p)
     dev.off()
-    sfig <- combo[[1]] +
-      combo[[2]] +
-      combo[[3]] +
-      combo[[4]] +
-      combo[[5]] +
-      combo[[6]] +
-      combo[[7]] +
-      plot_layout(ncol = 3)
-
-    pdf(file = paste0("Figures/supplement/requests/cellms",
-                      j+5,
-                      ".pdf"),
-        height=13,
-        width=15)
-    print(sfig)
-    dev.off()  }
+    
+    combo[[i]] <- p
+  }
+  sfig <- combo[[1]] +
+    combo[[2]] +
+    combo[[3]] +
+    combo[[4]] +
+    combo[[5]] +
+    combo[[6]] +
+    combo[[7]] +
+    combo[[8]] +
+    combo[[9]] +
+    combo[[10]] +
+    combo[[11]] +
+    combo[[12]] +
+    combo[[13]] +
+    plot_layout(ncol = 3)
+  
+  pdf(file = paste0("Figures/supplement/requests/cellms/cellscatter_",
+                    j+5,
+                    ".pdf"),
+      height=13,
+      width=15)
+  print(sfig)
+  dev.off()
 }
+
 #### Hypoxia vs Remaining ####
 combo <- list()
 for (j in 1:2) {
-  for (i in 1:length(OS.list_1500[[i]])) {
+  for (i in 1:length(OS.list_1500)) {
   p <- FeatureScatter(OS.list_1500[[i]],
                       feature1 = str_c(names(gl[2]),
                                        "1"),
@@ -2882,21 +2900,27 @@ for (j in 1:2) {
     combo[[5]] +
     combo[[6]] +
     combo[[7]] +
+    combo[[8]] +
+    combo[[9]] +
+    combo[[10]] +
+    combo[[11]] +
+    combo[[12]] +
+    combo[[13]] +
     plot_layout(ncol = 3)
   
-  pdf(file = paste0("Figures/supplement/requests/cellms",
+  pdf(file = paste0("Figures/supplement/requests/cellms/cellscatter_",
                     j+6,
                     ".pdf"),
       height=13,
       width=15)
   print(sfig)
   dev.off()
-  }
+}
 
 #### Last Two vs Each other ####
 combo <- list()
 
-  for (i in 1:length(OS.list_1500[[i]])) {
+  for (i in 1:length(OS.list_1500)) {
     p <- FeatureScatter(OS.list_1500[[i]],
                         feature1 = str_c(names(gl[3]),
                                          "1"),
@@ -2920,22 +2944,27 @@ combo <- list()
     dev.off()
     
     combo[[i]] <- p
- }
-    sfig <- combo[[1]] +
-      combo[[2]] +
-      combo[[3]] +
-      combo[[4]] +
-      combo[[5]] +
-      combo[[6]] +
-      combo[[7]] +
-      plot_layout(ncol = 3)
+  }
+sfig <- sfig <- combo[[1]] +
+  combo[[2]] +
+  combo[[3]] +
+  combo[[4]] +
+  combo[[5]] +
+  combo[[6]] +
+  combo[[7]] +
+  combo[[8]] +
+  combo[[9]] +
+  combo[[10]] +
+  combo[[11]] +
+  combo[[12]] +
+  combo[[13]] +
+  plot_layout(ncol = 3)
 
-    pdf(file = paste0("Figures/supplement/requests/cellscatter.pdf"),
-        height=13,
-        width=15)
-    print(sfig)
-    dev.off()
-}
+pdf(file = paste0("Figures/supplement/requests/cellms/cellscatter_9.pdf"),
+    height=13,
+    width=15)
+print(sfig)
+dev.off()
 ```
 
 # S31 - Cell Line Imaging 
