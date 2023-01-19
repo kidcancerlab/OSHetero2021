@@ -21,11 +21,11 @@ knitr::opts_chunk$set(
   message = FALSE,
   warning = FALSE,
   cache.lazy = FALSE,
-  include = FALSE
+  fig.show='hide'
 )
 ```
 
-```{r Fig1_lib, cache=FALSE}
+```{r lib, cache=FALSE}
 #source("scSeurat.R")
 source("Downstream.v2.R")
 set.seed(888)
@@ -53,6 +53,7 @@ library(pzfx)
 library(ggridges)
 library(effsize)
 library(perm)
+library(patchwork)
 
 options(future.globals.maxSize= 89128960000)
 ```
@@ -228,7 +229,7 @@ dev.off()
 # S5
 (old S2)
 
-```{r s2}
+```{r s5}
 load("Data/osteoblasts.RData")
 set.seed(100)
 
@@ -266,7 +267,7 @@ if(!dir.exists("Data/Supplement")) {
 save(osteoblasts_ccr, file = "Data/Supplement/osteoblasts_ccr.RData")
 ```
 
-```{r obplot, dependson="s2"}
+```{r obplot, dependson="s5"}
 #### S2 A1: Osteoblasts UMAP ####
 osteoblasts_ccr <- RunPCA(osteoblasts_ccr,
                           pc.genes = osteoblasts_ccr@var.genes,
@@ -397,7 +398,7 @@ plot(sfig_s2_b)
 dev.off()
 ```
 
-```{r s2_group, dependson=c("s2","obplot")}
+```{r s5_group, dependson=c("s5","obplot")}
 layout <- "
 AAAA#DD
 AAAA#DD
@@ -418,7 +419,7 @@ dev.off()
 # S7
 (old S3)
 
-```{r S3}
+```{r s7}
 # Load merged OS models
 load("Data/OS_merged_postCCR.RData")
 
@@ -509,7 +510,7 @@ sfig_s3_b
 dev.off()
 ```
 
-```{r s3_group, dependson="S3"}
+```{r s7_group, dependson="s7"}
 s3 <- (sfig_s3_a2 | sfig_s3_b)
 s3
 
@@ -531,7 +532,7 @@ options(future.globals.maxSize= 8912896000000)
 ## Batch Correction Test
 ### S8A
 
-```{r s4}
+```{r s8}
 # Determine overlay of replicates with or without the use
 # of batch-effect correction methods such as Harmony, FastMNN
 
@@ -719,7 +720,7 @@ save(Rep1_H_v3, file = "Data/Supplement/Rep1_H_v3-FastMNN.RData")
 save(Rep1_H, file = "Data/Supplement/Rep1_H.RData")
 ```
 
-```{r s4_a, dependson="s4"}
+```{r s8_a, dependson="s8"}
 library(Seurat)
 library(tidyverse)
 
@@ -795,7 +796,7 @@ dev.off()
 
 ### S8B
 
-```{r s4_b, dependson="s4"}
+```{r s8_b, dependson="s8"}
 library(sctransform)
 library(Seurat)
 library(ggsci)
@@ -899,7 +900,7 @@ dev.off()
 
 ### Group
 
-```{r s4_abgroup, dependson=c("s4","s4_a","s4_b")}
+```{r s8_abgroup, dependson=c("s8","s8_a","s8_b")}
 s4_ab <- (sfig_s4_a1 | sfig_s4_a2 | sfig_s4_a3) /
   (sfig_s4_b1 | sfig_s4_b2 | sfig_s4_b3)
 
@@ -912,7 +913,7 @@ dev.off()
 
 ### S8C
 
-```{r s4_c}
+```{r s8_c}
 set.seed(108)
 library(harmony)
 library(Seurat)
@@ -956,7 +957,7 @@ dev.off()
 
 ### Group
 
-```{r s4_group, dependson=c("s4","s4_a","s4_b","s4_c")}
+```{r s8_group, dependson=c("s8","s8_a","s8_b","s8_c")}
 s4 <- (sfig_s4_a1 | sfig_s4_a2 | sfig_s4_a3) /
   (sfig_s4_b1 | sfig_s4_b2 | sfig_s4_b3) /
   (sfig_s4_c[[1]] | sfig_s4_c[[2]] | sfig_s4_c[[3]] | sfig_s4_c[[4]])
@@ -979,7 +980,7 @@ rm(list=setdiff(ls(), "tenx_load_qc"))
 (old S5 & S6 & S7)
 Patient data
 
-```{r s5-s6-s7_processing}
+```{r s19-28_processing}
 library(rrrSingleCellUtils)
 library(patchwork)
 library(Seurat)
@@ -1341,7 +1342,7 @@ save(primarytumor,
 
 ## S19-22 Module score FeaturePlots
 
-```{r s5-s6-s7-s8_modules, dependson="s5-s6-s7_processing"}
+```{r s19-28_modules, dependson="s19-28_processing"}
 # Set up directory
 if(!dir.exists("Figures/supplement/s5")) {
   dir.create("Figures/supplement/s5")
@@ -1569,7 +1570,7 @@ save(primarytumor, file = "Data/Supplement/PatientData/primarytumor.RData")
 
 ## S22-28 Module score ScatterPlots
 
-```{r s5-s6-s7-s8_scatter, dependson=c("s5-s6-s7_processing","s5-s6-s7-s8_modules")}
+```{r s19-28_scatter, dependson=c("s19-28_processing","s19-28_modules")}
 #print(hue_pal()(7))
 colors <- c("#F8766D",
             "#C49A00",
@@ -1752,7 +1753,7 @@ combo <- list()
 
 ## Processing & S32B (cell culture)
 
-```{r s11_1}
+```{r s32_1}
 #source("scSeurat.R")
 #loading libraries
 library(Seurat)
@@ -1799,7 +1800,9 @@ if(!file.exists("Data/S0015-cellecta.ltbc")){
     verbose = TRUE,
     output = "Data/S0015-cellecta.ltbc",
     samtools_module = "SAMtools")
-  ltbc <- read.table("Data/S0015-cellecta.ltbc", header = T, sep = "\t")
+  ltbc <- read.table("Data/S0015-cellecta.ltbc",
+                     header = T,
+                     sep = "\t")
   if(substr(ltbc[[1, 1]], 1, 5)=="CB:Z:") {
     ltbc$cid <- substr(ltbc$cid, 6, 22)
     write.table(ltbc, "Data/S0015-cellecta.ltbc", sep = "\t")
@@ -1817,6 +1820,7 @@ cellecta.cx.raw  <- process_ltbc(cellecta.cx.raw ,
 
 zymo.cx.raw <- process_ltbc(zymo.cx.raw,
                             cid_lt = read.table("Data/S0016xS0027.ltbc",
+                                                header = T,
                                                 sep = "\t"),
                             histogram = F,
                             relative = F,
@@ -1922,7 +1926,7 @@ dev.off()
 
 ## Processing & S32B (lung)
 
-```{r s11_2}
+```{r s32_2}
 #source("scSeurat.R")
 library(dplyr)
 library(ggplot2)
@@ -1959,7 +1963,9 @@ if(!file.exists("Data/S0023-cellecta-lung.ltbc")){
     verbose = TRUE,
     output = "Data/S0023-cellecta-lung.ltbc",
     samtools_module = "SAMtools")
-  ltbc <- read.table("Data/S0023-cellecta-lung.ltbc", header = T, sep = "\t")
+  ltbc <- read.table("Data/S0023-cellecta-lung.ltbc",
+                     header = T,
+                     sep = "\t")
   if(substr(ltbc[[1, 1]], 1, 5)=="CB:Z:") {
     ltbc$cid <- substr(ltbc$cid, 6, 22)
     write.table(ltbc, "Data/S0023-cellecta-lung.ltbc", sep = "\t")
@@ -1977,6 +1983,7 @@ cellecta.lung.raw  <- process_ltbc(cellecta.lung.raw ,
 
 zymo.lung.raw <- process_ltbc(zymo.lung.raw,
                               cid_lt = read.table("Data/S0024xS0029.ltbc",
+                                                  header = T,
                                                   sep = "\t"),
                               histogram = F,
                               relative = F,
@@ -2055,7 +2062,7 @@ dev.off()
 
 ## S32A and Panel Grouping
 
-```{r s11_correctplots, dependson=c("s11_1","s11_2")}
+```{r s32_correctplots, dependson=c("s32_1","s32_2")}
 library(rrrSingleCellUtils)
 # Histogram of linage tags
 ltbc_hist <- function(df, fill, n_uniq, title, subtitle) {
