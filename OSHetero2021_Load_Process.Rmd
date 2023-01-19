@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
   message = FALSE,
   warning = FALSE,
   cache.lazy = FALSE,
-  include = FALSE
+  fig.show='hide'
 )
 ```
 
@@ -203,12 +203,14 @@ os17_cx_raw <- process_ltbc(os17_cx_raw,
 
 os17_tib_raw <- process_ltbc(os17_tib_raw,
                              cid_lt = read.table("Data/S0018xS0028.ltbc",
+                                                 header = T,
                                                  sep = "\t"),
                              histogram = F,
                              relative = T)
 
 os17_lung_raw <- process_ltbc(os17_lung_raw,
                               cid_lt = read.table("Data/S0024xS0029.ltbc",
+                                                  header = T,
                                                   sep = "\t"),
                               histogram = F,
                               relative = T)
