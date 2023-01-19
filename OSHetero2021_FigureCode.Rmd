@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
   message = FALSE,
   warning = FALSE,
   cache.lazy = FALSE,
-  include = FALSE
+  fig.show='hide'
 )
 ```
 
@@ -1128,7 +1128,9 @@ dev.off()
 
 Figure 4. Heterogeneity in Glycolysis activation identified within metastatic osteosarcoma lesions.
 
-Figure 4 of this paper is composed of microscopy images and so is not part of the code for this paper. 
+Most of figure 4 of this paper is composed of microscopy images and so is not part of the code for this paper. 
+
+Please see OSHetero2021_Supplemental_Figures.Rmd for the patient data code.
 
 # Figure 5
 
